@@ -112,6 +112,43 @@ test("returns null when nothing is configured", () => {
   assert.equal(inferDriverFromEnv({}), null)
 })
 
+// ── Vercel Marketplace「一键连接数据库」注入变量 ─────────────────────────────
+
+test("Vercel KV / Upstash integration variable maps to upstash", () => {
+  assert.equal(
+    inferDriverFromEnv({
+      KV_REST_API_URL: "https://x.upstash.io",
+      KV_REST_API_TOKEN: "t",
+    }),
+    "upstash",
+  )
+})
+
+test("Supabase connection-pool host maps to pgrest", () => {
+  assert.equal(
+    inferFromUrl(
+      "postgres://u:p@aws-0-us-east-1.pooler.supabase.com:6543/postgres",
+    ),
+    "pgrest",
+  )
+})
+
+test("Vercel-injected POSTGRES_URL_NON_POOLING is recognized", () => {
+  assert.equal(
+    inferDriverFromEnv({
+      POSTGRES_URL_NON_POOLING: "postgres://u:p@ep-1.aws.neon.tech/db",
+    }),
+    "neon",
+  )
+})
+
+test("Nile integration variable maps to pghttp", () => {
+  assert.equal(
+    inferDriverFromEnv({ NILEDB_URL: "postgres://u:p@db.nile.dev/db" }),
+    "pghttp",
+  )
+})
+
 // ── 环境变量读取 ──────────────────────────────────────────────────────────
 
 test("envValue respects key priority order", () => {

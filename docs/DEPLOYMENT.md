@@ -8,8 +8,8 @@
 | 平台 | 入口文件 | 推荐存储 | 备注 |
 |---|---|---|---|
 | **Cloudflare Workers** | `src/backend/worker.ts` | KV / D1 / R2 / Neon | 首推，免费额度大、无冷启动 |
-| 腾讯云 EdgeOne Makers | `api/_makers.ts` | Blob / KV / Neon | 国内访问快，需提交 `cloud-functions/` 产物 |
-| Vercel | `api/[...route].ts` | Neon / Supabase / Upstash | 无平台 KV，必须配外部库 |
+| 腾讯云 EdgeOne Makers | `api/_makers.ts` | KV(优先) / Blob / Neon | 自动探测 KV→Blob；需提交 `cloud-functions/` 产物 |
+| Vercel | `api/[...route].ts` | Neon / Supabase / Upstash / Turso | 无平台 KV，Marketplace 一键连接数据库（见 [ONE_CLICK_DATABASE.md](./ONE_CLICK_DATABASE.md)） |
 | 阿里云 ESA | `esa-entry.ts` | EdgeKV / Neon | 手动构建 + 上传 |
 | Netlify | `netlify/functions/api.ts` | Neon / Supabase / Upstash | ⚠️ Functions 限 10s，大目录易超时 |
 
@@ -82,10 +82,14 @@ EdgeOne 的 Edge Functions 只注入 KV/Blob 给边缘函数，Node 云函数拿
 
 3. 在 EdgeOne 控制台接入 Git，选择 Makers 类型部署。
 
-4. 环境变量 / KV 绑定在控制台配置：
-   - `JWT_SECRET`（必填）
-   - `DB_DRIVER=blob`（推荐，零配置）或 `kv`（需先绑定 KV 命名空间）
-   - 想用外部数据库：`DATABASE_URL=postgres://…@ep-xxx.neon.tech/…`
+4. 存储自动探测（`DB_DRIVER=auto`，默认）：应用会**自动探测可用存储，优先
+   KV，其次 Blob**，无需手工指定：
+   - **KV（优先）**：把 KV 命名空间绑定到 Edge Functions，并设置
+     `EO_KV_URLS` + `JWT_SECRET`（经 `functions/kv-*` 代理给云函数）；
+   - **Blob（零配置兜底）**：无需绑定，`@edgeone/pages-blob` 首次写入即自动建库；
+   - 外部数据库（优先级最高）：`DATABASE_URL=postgres://…@ep-xxx.neon.tech/…`。
+   - 也可显式写 `DB_DRIVER=kv` 或 `DB_DRIVER=blob`（显式指定则不做回退）。
+   - `JWT_SECRET` 必填。
 
 5. 若 Node 云函数拿到了 KV 绑定却报 401，检查 `EO_KV_URLS` 是否指向正确 origin，
    以及它与 Edge Functions 是否使用了**同一个** `JWT_SECRET`。
@@ -94,7 +98,13 @@ EdgeOne 的 Edge Functions 只注入 KV/Blob 给边缘函数，Node 云函数拿
 
 ## 3. Vercel
 
-Vercel 没有平台级 KV，**必须配置外部数据库**（Neon 最省事，Vercel 市场可直接开）。
+Vercel 没有平台级 KV，**必须配置外部数据库**。最省事的方式：在部署页下方的
+**Marketplace Database Providers** 里「一键连接数据库」（Neon / Upstash /
+Supabase / Turso …）—— 连接后 Vercel 会自动注入连接变量，本项目 `DB_DRIVER=auto`
+（默认）会自动识别并接通，无需手改代码。完整支持矩阵与分步说明见
+[ONE_CLICK_DATABASE.md](./ONE_CLICK_DATABASE.md)。
+
+也可以手工配：
 
 ```bash
 # 1. 导入仓库到 Vercel，框架检测选 Other（配置读 vercel.json）
@@ -136,6 +146,12 @@ JWT_SECRET=<随机串>
 DATABASE_URL=postgres://…@ep-xxx.neon.tech/neondb   # 跨实例共享最可靠
 DB_FORMAT=map
 ```
+
+> **存储自动探测**（`DB_DRIVER=auto`，默认）：ESA 上 EdgeKV 会被自动识别为
+> `kv` 驱动（优先）；若配了外部数据库（`DATABASE_URL` 等）则优先用外部库；
+> ESA Blob 绑定（`ESA_BLOB`）会被识别为 `blob` 驱动。Vercel Marketplace 式
+> 的连接变量（`KV_REST_API_URL` / `TURSO_DATABASE_URL` 等）同样适用，
+> 见 [ONE_CLICK_DATABASE.md](./ONE_CLICK_DATABASE.md)。
 
 > ESA 每个请求对 KV 子请求有次数上限，若坚持用平台 EdgeKV，
 > 建议 `DB_FORMAT=map`（整库一个 key，读写各一次）。

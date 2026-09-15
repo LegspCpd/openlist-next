@@ -11,9 +11,11 @@
  *   https://my-gateway.example.com/sql            → pghttp（自建网关）
  *
  * 同时也兼容各家的专属变量名（NEON_DATABASE_URL、TURSO_URL、SUPABASE_URL…
- * 以及 Vercel/Netlify 等平台注入的 POSTGRES_URL、DATABASE_URL），
+ * 以及 Vercel/Netlify 等平台注入的 POSTGRES_URL、POSTGRES_URL_NON_POOLING、
+ * POSTGRES_PRISMA_URL、KV_REST_API_URL、NILEDB_URL、DATABASE_URL），
  * 优先级：专属变量 > 通用 DATABASE_URL。这样「平台自动注入」与「手工指定」
- * 两种用法都能工作。
+ * 两种用法都能工作。Vercel Marketplace「一键连接数据库」注入了哪些变量，
+ * 见 docs/ONE_CLICK_DATABASE.md。
  */
 
 export type DsnScheme =
@@ -216,8 +218,11 @@ interface UrlProbe {
 const URL_PROBES: UrlProbe[] = [
   { keys: ["NEON_DATABASE_URL", "NEON_URL", "NEON_POSTGRES_URL"], driver: "neon", scheme: ["postgres"] },
   { keys: ["TURSO_DATABASE_URL", "TURSO_URL", "LIBSQL_URL"], driver: "turso", scheme: ["libsql", "https", "http"] },
-  { keys: ["SUPABASE_URL", "SUPABASE_DB_URL", "POSTGREST_URL"], driver: "pgrest", scheme: ["https", "http", "postgres"] },
-  { keys: ["UPSTASH_REDIS_REST_URL", "UPSTASH_URL", "REDIS_URL", "REDIS_HTTP_URL"], driver: "upstash", scheme: ["https", "http", "redis", "rediss"] },
+  { keys: ["SUPABASE_URL", "SUPABASE_DB_URL", "POSTGREST_URL", "NEXT_PUBLIC_SUPABASE_URL"], driver: "pgrest", scheme: ["https", "http", "postgres"] },
+  // Vercel Marketplace：Upstash 集成 / Vercel KV 会注入 KV_REST_API_URL + KV_REST_API_TOKEN
+  { keys: ["KV_REST_API_URL", "UPSTASH_REDIS_REST_URL", "UPSTASH_URL", "REDIS_HTTP_URL", "REDIS_URL"], driver: "upstash", scheme: ["https", "http", "redis", "rediss"] },
+  // Nile：Postgres 重新实现，Vercel 集成注入 NILEDB_URL / NILE_DATABASE_URL（Postgres 连接串）
+  { keys: ["NILEDB_URL", "NILE_DATABASE_URL", "NILE_URL"], driver: "pghttp", scheme: ["postgres", "https", "http"] },
   { keys: ["PG_HTTP_URL", "POSTGRES_HTTP_URL", "PSQL_HTTP_URL"], driver: "pghttp", scheme: ["https", "http", "postgres"] },
   { keys: ["MYSQL_HTTP_URL", "MYSQL_GATEWAY_URL", "MARIADB_HTTP_URL"], driver: "mysqlhttp", scheme: ["https", "http"] },
 ]
@@ -252,6 +257,8 @@ export function inferDriverFromEnv(env: any): string | null {
     "DATABASE_URL",
     "OPENLIST_DATABASE_URL",
     "POSTGRES_URL",
+    "POSTGRES_URL_NON_POOLING",
+    "POSTGRES_PRISMA_URL",
     "POSTGRESQL_URL",
     "MYSQL_URL",
     "MARIADB_URL",
@@ -272,8 +279,8 @@ export function inferFromUrl(url: string): string | null {
     case "postgres":
       // Neon 的 endpoint 形如 ep-xxx.<region>.aws.neon.tech
       if (/neon\.tech$/i.test(dsn.host)) return "neon"
-      // Supabase 直连：db.<project>.supabase.co
-      if (/supabase\.(co|in|net)$/i.test(dsn.host)) return "pgrest"
+      // Supabase 直连 db.<project>.supabase.co，或连接池 *.pooler.supabase.com
+      if (/supabase\.(co|in|net|com)$/i.test(dsn.host)) return "pgrest"
       // 其余 postgres:// 走 HTTP 网关（Workers 无裸 TCP）
       return "pghttp"
 
@@ -289,7 +296,7 @@ export function inferFromUrl(url: string): string | null {
     case "https":
     case "http":
       if (/neon\.tech/i.test(dsn.host)) return "neon"
-      if (/supabase\.(co|in|net)/i.test(dsn.host)) return "pgrest"
+      if (/supabase\.(co|in|net|com)/i.test(dsn.host)) return "pgrest"
       if (/upstash\.io/i.test(dsn.host)) return "upstash"
       if (/turso\.io/i.test(dsn.host)) return "turso"
       return "pghttp"
@@ -323,6 +330,8 @@ export function resolveConnectionUrl(
     "DATABASE_URL",
     "OPENLIST_DATABASE_URL",
     "POSTGRES_URL",
+    "POSTGRES_URL_NON_POOLING",
+    "POSTGRES_PRISMA_URL",
     "POSTGRESQL_URL",
     "MYSQL_URL",
     "MARIADB_URL",
