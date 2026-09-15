@@ -20,7 +20,7 @@
 | **Supabase** — Postgres backend | Postgres | `SUPABASE_URL`（+`SUPABASE_KEY`）、`POSTGRES_URL`、`POSTGRES_PRISMA_URL` | `pgrest` | `map` | ✅ 支持 |
 | **Turso** — Serverless SQLite | libSQL / SQLite | `TURSO_DATABASE_URL`、`TURSO_AUTH_TOKEN`、`LIBSQL_URL` | `turso` | `map` | ✅ 完全支持 |
 | **Nile** — Postgres for B2B | Postgres | `NILEDB_URL`、`NILE_DATABASE_URL` | `pghttp` | `map` | ⚠️ 需 Postgres-over-HTTP 网关（见下） |
-| **Prisma Postgres** — Instant Serverless Postgres | Postgres | `DATABASE_URL`（`prisma+postgres://…`）、`PRISMA_DATABASE_URL` | `pghttp`（尽力而为） | `map` | ⚠️ 仅当暴露标准 Postgres-over-HTTP 时可用 |
+| **Prisma Postgres** — Instant Serverless Postgres | Postgres | `DATABASE_URL`（`prisma+postgres://…`）、`PRISMA_DATABASE_URL` | `pghttp`（尽力而为） | `map` | ⚠️ 已能自动识别（`prisma+postgres://` 会归一化为 Postgres），但需 Postgres-over-HTTP 网关才能真读写 |
 | **AWS** — Serverless, reliable, secure | RDS/Aurora（Postgres）/ S3 | `DATABASE_URL` / `S3_*` | `pghttp` / `s3` | `map` | ⚠️ 仅 S3 直连；RDS 需网关 |
 | **Redis** — Official Redis for Vercel | Redis / TCP | `REDIS_URL`（`redis://…`） | — | — | ❌ 边缘无裸 TCP；仅在 Node 容器另行接入 |
 | **MotherDuck** — Analytics Database | DuckDB | `MOTHERDUCK_TOKEN` | — | — | ❌ 协议不兼容 |
@@ -66,20 +66,49 @@ Turso**（以及任何提供 Postgres-over-HTTP 网关的库）；纯 TCP（Redi
 2. **厂商专属变量**：
    - `NEON_DATABASE_URL` / `NEON_URL` → `neon`
    - `TURSO_DATABASE_URL` / `LIBSQL_URL` → `turso`
-   - `SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_URL` → `pgrest`
-   - `KV_REST_API_URL` / `UPSTASH_REDIS_REST_URL` → `upstash`
+   - `SUPABASE_URL` / `SUPABASE_DB_URL` / `SUPABASE_POOLER_URL` /
+     `SUPABASE_REST_URL` / `NEXT_PUBLIC_SUPABASE_URL` → `pgrest`
+   - `KV_REST_API_URL`（Vercel KV / Upstash 集成）/ `UPSTASH_REDIS_REST_URL` → `upstash`
    - `NILEDB_URL` / `NILE_DATABASE_URL` → `pghttp`
+   - `PRISMA_DATABASE_URL` / `PRISMA_POSTGRES_URL` → `pghttp`
+   - `PG_HTTP_URL` / `MYSQL_HTTP_URL` 等自建网关 → `pghttp` / `mysqlhttp`
 3. **通用连接串**：`DATABASE_URL` / `POSTGRES_URL` / `POSTGRES_URL_NON_POOLING` /
-   `POSTGRES_PRISMA_URL` / `MYSQL_URL` → 按 scheme + 主机特征推断
+   `POSTGRES_PRISMA_URL` / `DATABASE_URL_UNPOOLED` / `MYSQL_URL` → 按 scheme +
+   主机特征推断
    （`*.neon.tech` → neon；`*.supabase.co` / `*.pooler.supabase.com` → pgrest；
    `libsql://` → turso；`redis://` → upstash；其余 `postgres://` → pghttp）。
+
+**scheme 归一化**：`postgresql`/`pg` → `postgres`，`mariadb` → `mysql`，
+`rediss` → `redis`，`prisma+postgres`/`prisma` → `postgres`。
+所以 Prisma Postgres 那种 `prisma+postgres://accelerate.prisma-data.net/?api_key=…`
+也能被识别（否则会被当成未知 scheme 直接跳过）。
 
 平台原生绑定（Cloudflare KV/D1/R2、EdgeOne KV/Blob、Netlify Blobs）始终排在
 **外部数据库之后**——只要你接了外部库，就一定优先用外部库。
 
 ---
 
-## 4. 自定义（非 Marketplace 的）数据库
+## 4. 部署后确认（别只看「部署成功」）
+
+部署成功不代表存储接通了 —— 最坏情况是驱动悄悄回退到 `memory`，
+站点能打开、能登录，但**一重启所有数据就没了**。用统一脚本确认：
+
+```bash
+pnpm run deploy:vercel -- --no-deploy --url https://<你的域名>
+```
+
+输出会告诉你：
+
+- `storage.driver` —— 实际生效的驱动（应为 `neon` / `upstash` / `pgrest` / `turso` / …）；
+- 是否 `memory`（**必须处理**）与驱动健康状态；
+- `jwt.ready` —— `JWT_SECRET` 是否配好（不配的话加密字段解不开）。
+
+退出码 `0` = 存储已就绪，`2` = 未就绪。也可以直接访问
+`https://<你的域名>/api/public/env_check` 看同样内容。
+
+---
+
+## 5. 自定义（非 Marketplace 的）数据库
 
 任何数据库只要暴露 **HTTPS 查询接口**都能接：
 

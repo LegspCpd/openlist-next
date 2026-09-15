@@ -1,9 +1,10 @@
 {
   "name": "openlist-next",
-  "entry": "./dist/esa-entry.js",
+  "entry": "./dist-server/esa-entry.js",
   "installCommand": "pnpm install --no-frozen-lockfile",
   "buildCommand": "pnpm run build",
   "assets": {
-    "directory": "./dist"
+    "directory": "./dist",
+    "notFoundStrategy": "singlePageApplication"
   }
 }

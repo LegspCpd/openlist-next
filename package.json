@@ -3,6 +3,9 @@
   "version": "4.2.3",
   "type": "module",
   "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": "22.x"
+  },
   "cloudflare": {
     "bindings": {
       "JWT_SECRET": {
@@ -50,6 +53,9 @@
     "dev:worker": "wrangler dev",
     "deploy:worker": "wrangler deploy --yes",
     "deploy": "node scripts/deploy.js",
+    "deploy:edgeone": "node scripts/deploy-platform.mjs edgeone",
+    "deploy:esa": "node scripts/deploy-platform.mjs esa",
+    "deploy:vercel": "node scripts/deploy-platform.mjs vercel",
     "build:all": "npm run build",
     "test:189": "tsx --test src/backend/drivers/189/*.test.ts",
     "test:drivers": "tsx --test \"src/backend/drivers/**/*.test.ts\"",

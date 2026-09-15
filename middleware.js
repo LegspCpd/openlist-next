@@ -17,7 +17,10 @@ export function middleware(context) {
   const accept = request.headers.get("accept") || ""
 
   const isBackend =
-    pathname === "/health" || /^\/(api|d|p|sd|kv-get|kv-put|kv-delete|kv-list)(\/|$)/.test(pathname)
+    pathname === "/health" ||
+    /^\/(api|d|p|sd|kv-get|kv-put|kv-delete|kv-list|storage-probe)(\/|$)/.test(
+      pathname,
+    )
 
   if (
     !isBackend &&

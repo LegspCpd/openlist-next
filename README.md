@@ -38,13 +38,39 @@
 
 ---
 
+## 一键部署
+
+| 平台 | 一键部署入口 | 存储方案 |
+|---|---|---|
+| **Cloudflare Workers** | `pnpm run build && pnpm wrangler deploy`（KV 由 wrangler 自动预配） | KV / D1 / R2 / Neon |
+| **Vercel** | [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/LegspCpd/openlist-next) | 部署页下方 **Marketplace 一键连接数据库**（Neon / Upstash / Supabase / Turso …），变量自动识别 |
+| **EdgeOne Pages** | 控制台接入 Git 仓库（Makers 部署） | **自动探测 KV（优先）→ Blob**；Blob 零配置，首次写入自动建库 |
+| **阿里云 ESA** | 控制台导入 GitHub 仓库 | EdgeKV（优先） / 外部库 |
+| **Netlify** | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/LegspCpd/openlist-next) | Neon / Supabase / Upstash |
+
+> **部署 ≠ 存储可用。** 部署完成后跑一次探测，确认数据真的会持久化：
+>
+> ```bash
+> pnpm run deploy:vercel -- --no-deploy --url https://<你的域名>
+> # 或 deploy:edgeone / deploy:esa
+> ```
+>
+> 它会读 `/api/public/env_check`（EdgeOne 上还会读 `/storage-probe`），
+> 直接告诉你「当前实际用的驱动 / 是否持久化 / 还差什么」。
+
+- 📖 [多平台部署指南](./docs/DEPLOYMENT.md)
+- 🗄️ [一键连接数据库（Vercel Marketplace 支持矩阵）](./docs/ONE_CLICK_DATABASE.md)
+- 🔌 [外部存储配置](./docs/EXTERNAL_STORAGE.md)
+
+---
+
 ## 快速开始：部署到 Cloudflare Workers
 
 > 推荐先用 Workers 验证 —— 这是本项目支持最完整的目标平台。
 
 ### 前置条件
 
-- Node.js **>= 20**（推荐 22 LTS）
+- Node.js **>= 22**（与 `package.json` 的 `engines` 及各平台运行时一致）
 - **pnpm**（本项目锁定 `pnpm@9.15.4`）
 - 一个 Cloudflare 账号
 
