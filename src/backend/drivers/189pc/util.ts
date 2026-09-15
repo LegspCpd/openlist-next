@@ -1,5 +1,5 @@
 // 189PC utility functions
-import { createHash, createHmac } from "crypto"
+import CryptoJS from "crypto-js"
 import { Cloud189PCAddition } from "./types"
 import {
   AppID,
@@ -54,9 +54,8 @@ export class Cloud189PCClient {
     const signStr = keys.map((k) => `${k}=${params[k]}`).join("&")
     
     // HMAC-SHA1 signature
-    const hmac = createHmac("sha1", this.sessionSecret)
-    hmac.update(signStr)
-    return hmac.digest("hex").toUpperCase()
+    const hmac = CryptoJS.HmacSHA1(signStr, this.sessionSecret)
+    return hmac.toString().toUpperCase()
   }
 
   async request(
@@ -162,9 +161,13 @@ export class Cloud189PCClient {
 }
 
 export function calcMD5(buffer: Buffer): string {
-  return createHash("md5").update(buffer).digest("hex").toUpperCase()
+  return CryptoJS.MD5(CryptoJS.lib.WordArray.create(buffer as any))
+    .toString()
+    .toUpperCase()
 }
 
 export function calcSHA1(buffer: Buffer): string {
-  return createHash("sha1").update(buffer).digest("hex").toUpperCase()
+  return CryptoJS.SHA1(CryptoJS.lib.WordArray.create(buffer as any))
+    .toString()
+    .toUpperCase()
 }

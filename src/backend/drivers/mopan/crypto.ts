@@ -1,28 +1,45 @@
-import { createCipheriv, createDecipheriv, randomBytes } from "crypto"
+import CryptoJS from "crypto-js"
 
 /**
- * AES-128-CBC encryption
+ * AES-128-CBC encryption (zero IV)
+ *
+ * 改用纯 JS 的 crypto-js，使其可在 Cloudflare Workers / EdgeOne / ESA 等边缘运行时运行
+ * （原实现依赖 Node 内置 `crypto`，在边缘环境无法加载）。
  */
 export function aesEncrypt(data: Buffer, key: Buffer): Buffer {
-  const iv = Buffer.alloc(16, 0) // Zero IV
-  const cipher = createCipheriv("aes-128-cbc", key.slice(0, 16), iv)
-  return Buffer.concat([cipher.update(data), cipher.final()])
+  const iv = CryptoJS.enc.Hex.parse("00000000000000000000000000000000")
+  const keyWA = CryptoJS.lib.WordArray.create(key as any).slice(0, 4) // 前 16 字节
+  const dataWA = CryptoJS.lib.WordArray.create(data as any)
+  const cipher = CryptoJS.AES.encrypt(dataWA, keyWA, {
+    iv,
+    mode: CryptoJS.mode.CBC,
+    padding: CryptoJS.pad.Pkcs7,
+  })
+  const hex = cipher.ciphertext.toString(CryptoJS.enc.Hex)
+  return Buffer.from(hex, "hex")
 }
 
 /**
- * AES-128-CBC decryption
+ * AES-128-CBC decryption (zero IV)
  */
 export function aesDecrypt(data: Buffer, key: Buffer): Buffer {
-  const iv = Buffer.alloc(16, 0) // Zero IV
-  const decipher = createDecipheriv("aes-128-cbc", key.slice(0, 16), iv)
-  return Buffer.concat([decipher.update(data), decipher.final()])
+  const iv = CryptoJS.enc.Hex.parse("00000000000000000000000000000000")
+  const keyWA = CryptoJS.lib.WordArray.create(key as any).slice(0, 4)
+  const dataWA = CryptoJS.lib.WordArray.create(data as any)
+  const plain = CryptoJS.AES.decrypt(dataWA, keyWA, {
+    iv,
+    mode: CryptoJS.mode.CBC,
+    padding: CryptoJS.pad.Pkcs7,
+  })
+  // 移动云设备信息为 UTF-8 JSON，按 UTF-8 还原为字符串再转 Buffer。
+  return Buffer.from(plain.toString(CryptoJS.enc.Utf8), "utf-8")
 }
 
 /**
  * Generate random secret key (16 bytes for AES-128)
  */
 export function generateSecretKey(): string {
-  return randomBytes(16).toString("hex").slice(0, 16)
+  return CryptoJS.lib.WordArray.random(16).toString().slice(0, 16)
 }
 
 /**
@@ -60,6 +77,9 @@ MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDN8TyHJhEVoT6t5A/9Q3+2/v3n
 /**
  * Simple RSA encryption stub (for demo purposes)
  * In production, use proper RSA encryption with node:crypto or a library
+ *
+ * 注意：移动云的密钥 RSA 加密使用 PKCS#1 v1.5，Web Crypto 不支持该填充方式，
+ * 无法在边缘运行时实现；当前为占位实现，真实加密需 Node 运行时或引入纯 JS RSA 库。
  */
 export function rsaEncrypt(data: string, _publicKey: string): string {
   // This is a placeholder - real implementation would use proper RSA

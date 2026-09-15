@@ -1,27 +1,50 @@
 // 189PC encryption utilities
-import { createCipheriv, randomBytes, publicEncrypt } from "crypto"
+//
+// 边缘安全说明：原实现直接 `import { createCipheriv, randomBytes, publicEncrypt }`
+// 来自 Node 内置 `crypto`，在 Cloudflare Workers / EdgeOne / ESA / Netlify 等无 Node
+// 兼容模块的边缘运行时无法加载该模块，导致驱动整体不可用。
+//
+// 这里把「哈希 / HMAC / AES / 随机数」全部改用纯 JS 的 crypto-js（已是项目依赖，
+// 可在任意边缘运行时打包运行）；仅 RSA 密码加密依赖 PKCS#1 v1.5，而 Web Crypto
+// 不支持 PKCS1 v1.5 加密，故保留 Node 运行时专属的 `node:crypto`，并在边缘环境
+// 给出清晰报错（登录步骤需要 Node，浏览/签名等其余功能已可在边缘运行）。
+import CryptoJS from "crypto-js"
 
-export function encryptPassword(password: string, publicKey: string): string {
-  // RSA encrypt password
+export async function encryptPassword(
+  password: string,
+  publicKey: string,
+): Promise<string> {
+  // RSA PKCS#1 v1.5 —— 仅 Node 运行时可用（Web Crypto 不支持 PKCS1 v1.5 加密）。
   const pemKey = `-----BEGIN PUBLIC KEY-----\n${publicKey}\n-----END PUBLIC KEY-----`
-  const encrypted = publicEncrypt(
-    {
-      key: pemKey,
-      padding: 1, // RSA_PKCS1_PADDING
-    },
-    Buffer.from(password)
-  )
-  return encrypted.toString("hex")
+  try {
+    const SPEC: string = "node:crypto"
+    const cryptoMod: any = await import(SPEC)
+    const encrypted = cryptoMod.publicEncrypt(
+      { key: pemKey, padding: 1 }, // padding: 1 = RSA_PKCS1_PADDING
+      Buffer.from(password),
+    )
+    return encrypted.toString("hex")
+  } catch {
+    throw new Error(
+      "[189pc] RSA password encryption requires Node.js runtime " +
+        "(PKCS#1 v1.5 is not available in edge/serverless runtimes)",
+    )
+  }
 }
 
 export function generateDeviceId(): string {
-  return randomBytes(16).toString("hex").toUpperCase()
+  return CryptoJS.lib.WordArray.random(16).toString().toUpperCase()
 }
 
 export function encryptAES(data: string, key: string): string {
-  const iv = randomBytes(16)
-  const cipher = createCipheriv("aes-128-cbc", Buffer.from(key, "utf8").slice(0, 16), iv)
-  let encrypted = cipher.update(data, "utf8", "hex")
-  encrypted += cipher.final("hex")
-  return iv.toString("hex") + encrypted
+  const iv = CryptoJS.lib.WordArray.random(16)
+  // 与 Node 端 `Buffer.from(key, "utf8").slice(0, 16)` 对齐：取 UTF-8 编码后的前 16 字节。
+  const keyWA = CryptoJS.enc.Utf8.parse(key).slice(0, 4) // 4 words = 16 bytes
+  const cipher = CryptoJS.AES.encrypt(CryptoJS.enc.Utf8.parse(data), keyWA, {
+    iv,
+    mode: CryptoJS.mode.CBC,
+    padding: CryptoJS.pad.Pkcs7,
+  })
+  // 输出格式保持与 Node 一致：iv(hex) + ciphertext(hex)。
+  return iv.toString() + cipher.ciphertext.toString()
 }
