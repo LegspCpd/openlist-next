@@ -1,5 +1,5 @@
 {
-  "name": "openlist",
+  "name": "openlist-next",
   "version": "4.2.3",
   "type": "module",
   "packageManager": "pnpm@9.15.4",
@@ -23,20 +23,24 @@
     }
   },
   "author": {
-    "name": "The OpenListTeam Contributors"
+    "name": "LegspCpd"
   },
-  "description": "A file list program that supports multiple storages, powered by OpenList (TypeScript / Cloudflare Workers port)",
+  "contributors": [
+    "The OpenListTeam Contributors (upstream OpenList / OpenList-Worker)",
+    "The OpenList-Frontend Contributors (frontend artifacts, fetched at build time)"
+  ],
+  "description": "Fork of OpenList / OpenList-Worker: a file list program for edge runtimes, extended with external database storage drivers (Neon, Turso, Postgres/MySQL over HTTP, Supabase, Upstash, R2, S3).",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/OpenListTeam/OpenList.git"
+    "url": "git+https://github.com/LegspCpd/openlist-next.git"
   },
   "bugs": {
-    "url": "https://github.com/OpenListTeam/OpenList/issues"
+    "url": "https://github.com/LegspCpd/openlist-next/issues"
   },
   "files": [
     "dist"
   ],
-  "homepage": "https://doc.oplist.org",
+  "homepage": "https://github.com/LegspCpd/openlist-next#readme",
   "scripts": {
     "start": "node dist-server/api/[...route].js",
     "fetch:frontend": "node scripts/fetch-frontend.mjs",
@@ -51,10 +55,13 @@
     "test:drivers": "tsx --test \"src/backend/drivers/**/*.test.ts\"",
     "test:server": "tsx --test \"src/backend/server/*.test.ts\"",
     "test:store": "tsx --test src/backend/internal/model/store/store.test.ts",
+    "test:dialect": "tsx --test src/backend/internal/model/store/dialect.test.ts",
+    "test:dsn": "tsx --test src/backend/internal/model/store/dsn.test.ts",
+    "test:http-sql": "tsx --test src/backend/internal/model/store/http-sql.test.ts",
     "test:regress": "tsx scripts/_regress.mjs",
     "test:deploy": "node scripts/test-deploy.js",
     "env:check": "tsx scripts/env-check.mjs",
-    "test:all": "npm run test:189 && npm run test:drivers && npm run test:server && npm run test:store && npm run test:regress",
+    "test:all": "npm run test:189 && npm run test:drivers && npm run test:server && npm run test:store && npm run test:dialect && npm run test:dsn && npm run test:http-sql && npm run test:regress",
     "sls:deploy": "serverless deploy",
     "sls:package": "serverless package",
     "sls:info": "serverless info",

@@ -29,6 +29,9 @@ import { DriverFebBox } from "../../drivers/febbox/driver"
 import { DriverDegoo } from "../../drivers/degoo/driver"
 import { DriverNeteaseMusic } from "../../drivers/netease_music/driver"
 import { DriverHalalCloudOpen } from "../../drivers/halalcloud_open/driver"
+import { HalalCloudDriver } from "../../drivers/halalcloud/driver"
+import { Link123Driver } from "../../drivers/123_link/driver"
+import { ILanZouDriver } from "../../drivers/ilanzou/driver"
 import { Pan123Driver } from "../../drivers/123pan/driver"
 import {
   BaiduDriver,
@@ -392,6 +395,11 @@ async function createDriver(
   ) {
     driver = new DriverNeteaseMusic(parseAddition(storageConfig))
     await driver.init?.()
+  } else if (normDriver === "halalcloud") {
+    // 清真云 refresh_token + 自填 App 三件套版。上游依赖 gRPC，边缘运行时仅能降级占位。
+    const addition = parseAddition(storageConfig)
+    driver = new HalalCloudDriver(addition)
+    await driver.init?.()
   } else if (
     normDriver === "halalcloudopen" ||
     normDriver === "halalcloud_open" ||
@@ -671,10 +679,31 @@ async function createDriver(
       }
     })
     await driver.init?.()
+  } else if (normDriver === "ilanzou") {
+    const addition = parseAddition(storageConfig)
+    driver = new ILanZouDriver(addition, async (persist: any) => {
+      try {
+        const db = await getDb()
+        const st = (db.storages || []).find(
+          (s: any) => s.id === storageConfig?.id,
+        )
+        if (!st) return
+        const stAddition =
+          typeof st.addition === "string"
+            ? JSON.parse(st.addition || "{}")
+            : st.addition || {}
+        if (persist?.uuid) stAddition.uuid = persist.uuid
+        if (persist?.token) stAddition.token = persist.token
+        st.addition = JSON.stringify(stAddition)
+        await saveDb(db)
+      } catch (e) {
+        console.warn("[ilanzou] failed to persist uuid/token:", e)
+      }
+    })
+    await driver.init?.()
   } else if (
     normDriver === "lanzou" ||
     normDriver === "lanzoupan" ||
-    normDriver === "ilanzou" ||
     normDriver === "lanzoui" ||
     normDriver === "lanzous"
   ) {
@@ -993,10 +1022,14 @@ async function createDriver(
     const addition = parseAddition(storageConfig)
     driver = new Pan115ShareDriver(addition)
     await driver.init?.()
+  } else if (normDriver === "123link") {
+    // 123 云盘直链 / 秒传链接解析驱动（只读，文本 URL 树 + auth_key 签名）
+    const addition = parseAddition(storageConfig)
+    driver = new Link123Driver(addition)
+    await driver.init?.()
   } else if (
     normDriver === "123share" ||
     normDriver === "123panshare" ||
-    normDriver === "123link" ||
     (normDriver.includes("123") && normDriver.includes("share"))
   ) {
     const addition = parseAddition(storageConfig)

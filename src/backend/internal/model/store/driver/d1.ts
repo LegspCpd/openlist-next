@@ -55,6 +55,7 @@ async function ensureSchema(db: any, env?: any): Promise<void> {
 
 export const d1Driver: Driver = {
   name: "d1",
+  dialect: "sqlite",
 
   async isAvailable(env?: any): Promise<boolean> {
     return getD1(env) != null

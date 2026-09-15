@@ -12,7 +12,9 @@
 #
 # 本地开发：复制为 `.dev.vars`（已被 .gitignore 忽略）并填入真实值。
 #
-# 完整变量说明见：
+# 本项目新增的外部存储（Neon / Turso / Supabase / MySQL 网关 / Upstash / R2 / S3）
+#   见：./docs/EXTERNAL_STORAGE.md
+# 上游通用环境变量的权威说明（非本项目文档）：
 #   https://doc.oplist.org/ecosystem/official_worker/guide_env
 # =============================================================================
 
@@ -40,6 +42,52 @@ MYSQL_URLS=
 # 此处填写部署的 origin，如 https://your-project.edgeone.app
 # 留空时自动使用当前请求的 origin（同一部署自调用）；跨域或本地调试才需显式设置。
 EO_KV_URLS=
+
+# ── 外部数据库（推荐，任意平台通用）─────────────────────────────────────────
+#
+# 最省事的做法：只填 DATABASE_URL，保持 DB_DRIVER=auto，系统会按 scheme 和
+# host 自动选择驱动。下列专属变量优先级高于 DATABASE_URL，需要额外凭据时
+# （如 Supabase 的 key、Turso 的 token）再单独填。
+#
+# 完整说明见 docs/EXTERNAL_STORAGE.md
+
+# 通用连接串（自动识别）：
+#   postgres://user:pass@ep-xxx.neon.tech/neondb   → Neon（HTTP，边缘可用）
+#   libsql://db.turso.io                           → Turso
+#   https://xxx.supabase.co                        → Supabase / PostgREST
+#   mysql://user:pass@host:3306/db                 → MySQL（配合 MYSQL_HTTP_URL 网关，
+#                                                    或仅在 Node 容器下直连）
+DATABASE_URL=
+
+# Neon Serverless Postgres
+NEON_DATABASE_URL=
+
+# Turso / libSQL
+TURSO_DATABASE_URL=
+TURSO_AUTH_TOKEN=
+
+# Supabase / PostgREST
+SUPABASE_URL=
+SUPABASE_KEY=
+
+# 自建 Postgres HTTP 网关
+PG_HTTP_URL=
+PG_HTTP_TOKEN=
+
+# MySQL / MariaDB 的 HTTP 转发网关（边缘访问外部 MySQL 的唯一途径）
+MYSQL_HTTP_URL=
+MYSQL_HTTP_TOKEN=
+
+# Upstash Redis
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
+
+# S3 兼容对象存储（含 R2 / MinIO / B2 等）
+S3_BUCKET=
+S3_REGION=
+S3_ENDPOINT=
+S3_ACCESS_KEY_ID=
+S3_SECRET_ACCESS_KEY=
 
 # Cloudflare KV REST API 凭据（DB_DRIVER=cfkv 时三项均必填）。
 # 账户 ID

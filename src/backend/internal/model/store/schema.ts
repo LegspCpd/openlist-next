@@ -28,6 +28,8 @@
  * 因此这里刻意排除，只保留其 DDL（见 TABLES），与 Go 共享同一物理库时
  * 既不破坏也不接管该表。
  */
+import { dialectOps, type Dialect } from "./dialect"
+
 export const TABLE_NAMES = [
   "settings",
   "storages",
@@ -402,12 +404,16 @@ export function entityToRow(table: DdlTableName, entity: any): {
 }
 
 /** SQL 列类型 → 方言类型。 */
-function sqlType(col: ColumnDef, dialect: "sqlite" | "mysql"): string {
+function sqlType(col: ColumnDef, dialect: Dialect): string {
   switch (col.type) {
     case "number":
-      return dialect === "mysql" ? "BIGINT" : "INTEGER"
+      if (dialect === "mysql") return "BIGINT"
+      if (dialect === "postgres") return "BIGINT"
+      return "INTEGER"
     case "bool":
-      return dialect === "mysql" ? "TINYINT(1)" : "INTEGER"
+      if (dialect === "mysql") return "TINYINT(1)"
+      if (dialect === "postgres") return "BOOLEAN"
+      return "INTEGER"
     case "string":
     case "json":
     case "date":
@@ -417,22 +423,29 @@ function sqlType(col: ColumnDef, dialect: "sqlite" | "mysql"): string {
   }
 }
 
-/** 列标识符统一加反引号（SQLite 与 MySQL 均支持）。 */
+/**
+ * 列标识符引用。
+ *
+ * SQLite / MySQL 用反引号，PostgreSQL 用双引号 —— 由 dialect.ts 统一决定，
+ * 这里不再硬编码。
+ */
 function quote(name: string): string {
-  return "`" + name + "`"
+  return dialectOps().quote(name)
+}
+
+/** 按方言包裹标识符（供需要显式指定方言的 DDL 生成使用）。 */
+function quoteAs(name: string, dialect: Dialect): string {
+  return dialectOps(dialect).quote(name)
 }
 
 /**
  * 生成单张表的建表语句（含主键与唯一索引）。
  */
-function buildTableDdl(
-  def: TableDef,
-  dialect: "sqlite" | "mysql",
-  tableName: string,
-): string {
+function buildTableDdl(def: TableDef, dialect: Dialect, tableName: string): string {
+  const q = (s: string) => quoteAs(s, dialect)
   const parts: string[] = []
   for (const col of def.columns) {
-    let line = `${quote(col.name)} ${sqlType(col, dialect)}`
+    let line = `${q(col.name)} ${sqlType(col, dialect)}`
     if (col.pk) {
       line += " PRIMARY KEY"
     } else if (!col.nullable) {
@@ -443,23 +456,24 @@ function buildTableDdl(
     }
     parts.push(line)
   }
-  return `CREATE TABLE IF NOT EXISTS ${quote(tableName)} (${parts.join(", ")})`
+  return `CREATE TABLE IF NOT EXISTS ${q(tableName)} (${parts.join(", ")})`
 }
 
 /**
  * 生成 schema_info 表（标记 SQL 格式是否已初始化）。
  */
-function buildSchemaInfoDdl(dialect: "sqlite" | "mysql"): string {
+function buildSchemaInfoDdl(dialect: Dialect): string {
+  const q = (s: string) => quoteAs(s, dialect)
   const k = dialect === "mysql" ? "VARCHAR(255)" : "TEXT"
   const v = "TEXT"
-  return `CREATE TABLE IF NOT EXISTS ${quote("schema_info")} (${quote("k")} ${k} PRIMARY KEY, ${quote("v")} ${v})`
+  return `CREATE TABLE IF NOT EXISTS ${q("schema_info")} (${q("k")} ${k} PRIMARY KEY, ${q("v")} ${v})`
 }
 
 /**
  * 生成完整的建表语句数组（幂等）。表名固定为 "x_" 前缀（对齐 Go），
  * 复数表名对齐 Go 的 GORM 命名策略。
  */
-export function buildDdl(dialect: "sqlite" | "mysql", env?: any): string[] {
+export function buildDdl(dialect: Dialect, env?: any): string[] {
   const out: string[] = [buildSchemaInfoDdl(dialect)]
   // 建表覆盖全部 DDL 表（含不参与往返的 sshkeys），保证与 Go 共享库时结构一致
   for (const name of DDL_TABLE_NAMES) {
@@ -481,9 +495,20 @@ export const MYSQL_SCHEMA: string[] = buildDdl("mysql")
  * 列式表。驱动层需同时创建这两类表。
  */
 export const KV_SCHEMA_SQLITE: string[] = [
-  `CREATE TABLE IF NOT EXISTS ${quote("kv")} (${quote("key")} TEXT PRIMARY KEY, ${quote("value")} TEXT NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS ${quoteAs("kv", "sqlite")} (${quoteAs("key", "sqlite")} TEXT PRIMARY KEY, ${quoteAs("value", "sqlite")} TEXT NOT NULL)`,
 ]
 
 export const KV_SCHEMA_MYSQL: string[] = [
-  "CREATE TABLE IF NOT EXISTS `kv` (`key` VARCHAR(512) PRIMARY KEY, `value` LONGTEXT NOT NULL)",
+  `CREATE TABLE IF NOT EXISTS ${quoteAs("kv", "mysql")} (${quoteAs("key", "mysql")} VARCHAR(512) PRIMARY KEY, ${quoteAs("value", "mysql")} LONGTEXT NOT NULL)`,
 ]
+
+export const KV_SCHEMA_POSTGRES: string[] = [
+  `CREATE TABLE IF NOT EXISTS ${quoteAs("kv", "postgres")} (${quoteAs("key", "postgres")} VARCHAR(512) PRIMARY KEY, ${quoteAs("value", "postgres")} TEXT NOT NULL)`,
+]
+
+/** 按方言取 KV 表建表语句。 */
+export function kvSchema(dialect: Dialect): string[] {
+  if (dialect === "mysql") return KV_SCHEMA_MYSQL
+  if (dialect === "postgres") return KV_SCHEMA_POSTGRES
+  return KV_SCHEMA_SQLITE
+}

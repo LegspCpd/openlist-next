@@ -64,6 +64,7 @@ function getStub(env?: any): any | null {
 
 export const doDriver: Driver = {
   name: "do",
+  dialect: "sqlite",
 
   async isAvailable(env?: any): Promise<boolean> {
     return getDoBinding(env) != null

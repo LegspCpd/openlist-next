@@ -1,52 +1,147 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/OpenListTeam/Logo/main/logo.svg" width="128" height="128" alt="logo" />
 
-  <p><em>OpenList 是一个多功能的目录列表工具，支持数十种网盘文件挂载和文件预览/下载/分享等功能</em></p>
-  <p>本仓库是官方 <a href="https://github.com/OpenListTeam/OpenList">OpenListTeam/OpenList</a> 项目的 TypeScript + Serverless 架构移植版</p>
-  <p>基于 Cloudflare Workers / EdgeOne Cloud Function / Alibaba Cloud ESA 运行</p>
+# OpenList Next · 社区加速分支
 
-<a href="https://github.com/OpenListTeam/OpenList-Worker/blob/main/LICENSE"><img src="https://img.shields.io/github/license/OpenListTeam/OpenList-Worker" alt="License" /></a>
-<a href="https://github.com/OpenListTeam/OpenList-Worker/actions/workflows/edgeone-artifact-guard.yml"><img src="https://img.shields.io/github/actions/workflow/status/OpenListTeam/OpenList-Worker/edgeone-artifact-guard.yml?branch=main" alt="Build status" /></a>
-<a href="https://github.com/OpenListTeam/OpenList-Worker/releases"><img src="https://img.shields.io/github/release/OpenListTeam/OpenList-Worker" alt="latest version" /></a>
-<a href="https://github.com/OpenListTeam/OpenList-Worker/discussions"><img src="https://img.shields.io/github/discussions/OpenListTeam/OpenList-Worker?color=%23ED8936" alt="discussions" /></a>
-<a href="https://github.com/OpenListTeam/OpenList-Worker/releases"><img src="https://img.shields.io/github/downloads/OpenListTeam/OpenList-Worker/total?color=%239F7AEA&logo=github" alt="Downloads" /></a>
-
-📘 [使用文档](https://doc.oplist.org) · 🌏 [使用文档（中国大陆）](https://doc.oplist.org.cn)  · ⚖️ [使用条款](https://doc.oplist.org/terms)  · 🔒 [隐私政策](https://doc.oplist.org/privacy)
+**整合官方全部驱动 · 任意平台直连外部数据库 · 五平台部署**
 
 </div>
+
+> **这是什么**：本分支基于官方 [OpenList-Worker](https://github.com/OpenListTeam/OpenList-Worker)，并吸收了社区项目 [openlistnext](https://github.com/Polonium-salts/openlistnext) 的成果。它保留了官方的全部存储驱动与 API 契约，重点补齐了上游最卡脖子的一环 —— **在任何边缘运行时上直连外部数据库**。
+>
+> **为什么要这么做**：官方版本中 `mysql` 驱动只能跑在 Node 容器里，一旦部署到 Cloudflare Workers（没有裸 TCP）就只能用平台自带的 KV。本分支新增了 8 个纯 `fetch` 实现的存储驱动，**一条 `DATABASE_URL` 就能接上 Neon、Supabase、Turso、外部 MySQL/MariaDB、Redis、S3**，彻底摆脱平台绑定。
+>
+> | 相比上游 | 变化 |
+> |---|---|
+> | 存储驱动 | 7 → **15** 个（新增 neon / turso / pgrest / pghttp / mysqlhttp / upstash / r2 / s3） |
+> | SQL 方言 | 2 种（SQLite、MySQL）→ **3 种**（新增 PostgreSQL，含 `$n` 占位符） |
+> | 网盘驱动 | 78 → **81** 个（补齐 `123_link`、`ilanzou`、`halalcloud`） |
+> | 部署平台 | CF / EdgeOne / ESA → 增加 **Netlify**，并统一了环境变量配置方式 |
+>
+> 📖 [外部存储配置指南](./docs/EXTERNAL_STORAGE.md) · 🚀 [多平台部署指南](./docs/DEPLOYMENT.md)
+
+---
 
 <div align="center">
+  <p><em>OpenList 是一个多功能的目录列表工具，支持数十种网盘挂载与文件预览/下载/分享</em></p>
+  <p><b>本仓库是 OpenList Next</b>：以官方 OpenList-Worker 为基线的 TypeScript 社区衍生版，运行于 Cloudflare Workers 等边缘平台</p>
 
-[English](readmes/README_en.md) | 简体中文 | [繁體中文](readmes/README_zh-TW.md) | [日本語](readmes/README_ja.md) | [한국어](readmes/README_ko.md) | [Français](readmes/README_fr.md) | [Deutsch](readmes/README_de.md) 
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg" alt="License" /></a>
+  <a href="https://github.com/LegspCpd/openlist-next/issues"><img src="https://img.shields.io/github/issues/LegspCpd/openlist-next" alt="Issues" /></a>
 
-[Português](readmes/README_pt.md) | [Русский](readmes/README_ru.md) | [العربية](readmes/README_ar.md) | [Italiano](readmes/README_it.md) | [हिन्दी](readmes/README_hi.md) | [Español](readmes/README_es.md)
-
-[上游项目](https://github.com/OpenListTeam/OpenList) · [贡献指南](https://github.com/OpenListTeam/OpenList-Worker/blob/main/CONTRIBUTING.md) · [行为准则](https://github.com/OpenListTeam/OpenList-Worker/blob/main/CODE_OF_CONDUCT.md) · [许可证](./LICENSE)
-
-[🌎 全球 Demo](https://new.oplist.org) 　|　 [🇨🇳 中国 Demo](https://new.oplist.org.cn)
-
+  📖 [外部存储配置](./docs/EXTERNAL_STORAGE.md) · 🚀 [多平台部署](./docs/DEPLOYMENT.md) · ⚖️ [归属与许可声明](./NOTICE.md)
 </div>
+
+> [!WARNING]
+> **本项目不是 OpenList 官方发布物**，与 OpenListTeam 无任何隶属、授权或背书关系。
+> 有问题请在本仓库提 Issue，**不要去上游官方仓库反馈本分支的问题**。
+> 代码来源、版权与许可证说明见 [NOTICE.md](./NOTICE.md)。
+
+---
+
+## 快速开始：部署到 Cloudflare Workers
+
+> 推荐先用 Workers 验证 —— 这是本项目支持最完整的目标平台。
+
+### 前置条件
+
+- Node.js **>= 20**（推荐 22 LTS）
+- **pnpm**（本项目锁定 `pnpm@9.15.4`）
+- 一个 Cloudflare 账号
+
+```bash
+corepack enable
+corepack prepare pnpm@9.15.4 --activate
+```
+
+### 安装依赖
+
+```bash
+git clone https://github.com/LegspCpd/openlist-next.git
+cd openlist-next
+pnpm install
+```
+
+> 依赖里有 2 个 GitHub 源依赖（`@hope-ui/solid`、`mpegts.js`），首次安装较慢属正常现象。
+
+### 本地开发
+
+```bash
+cp .dev.vars.example .dev.vars
+openssl rand -hex 32        # 生成 JWT_SECRET，填入上一步的文件
+pnpm run dev:worker         # 等价于 wrangler dev
+```
+
+`.dev.vars` 最小配置：
+
+```ini
+JWT_SECRET=<随机 32 字节十六进制>
+ADMIN_PASS=<管理员初始密码，可选；不设则走安装向导>
+DB_DRIVER=auto
+DB_FORMAT=map
+```
+
+### 构建
+
+```bash
+pnpm run build
+```
+
+构建分两步：先拉取官方前端 `OpenList-Frontend` 编译出 `dist/`，再编译后端到 `dist-server/`。
+本地已有前端产物时用 `FRONTEND_DIST=/path/to/dist pnpm run build` 可跳过克隆。
+
+### 部署
+
+```bash
+npx wrangler login
+npx wrangler secret put JWT_SECRET     # 生产密钥，务必与开发环境不同
+pnpm run deploy:worker                 # 等价于 wrangler deploy --yes
+```
+
+部署后在 Worker 后台确认变量：
+
+| 变量 | 说明 |
+| --- | --- |
+| `JWT_SECRET` | 必填，用于签名会话与加密挂载凭据 |
+| `ADMIN_PASS` | 可选，设置后跳过安装向导 |
+| `DB_DRIVER` | `auto` / `kv` / `d1` / `cfkv` / `blob` / `neon` / `turso` / `pgrest` / `pghttp` / `mysqlhttp` / `upstash` / `r2` / `s3` |
+| `DB_FORMAT` | `map`（默认）/ `key` / `sql` |
+| `DATABASE_URL` | 可选，一条连接串自动识别外部数据库 |
+
+> [!CAUTION]
+> **不要配 `DB_DRIVER=mysql`** —— Cloudflare Workers 没有裸 TCP，MySQL 驱动不会可用。
+> 外部 MySQL/MariaDB 请走 `mysqlhttp`（HTTP 网关），或改用 `neon` / `turso`，
+> 见 [外部存储配置指南](./docs/EXTERNAL_STORAGE.md)。
+
+### 常用检查命令
+
+```bash
+pnpm run lint           # 全量 tsc 类型检查
+pnpm run test:all       # 全量单元测试
+pnpm run test:dialect   # SQL 方言
+pnpm run test:dsn       # 连接串解析
+pnpm run test:http-sql  # HTTP SQL 驱动
+pnpm run format         # prettier 格式化
+```
 
 ---
 
 ## 一键部署
 
-点击下方按钮，即可将本项目一键部署到对应平台：
 <div align="center">
 
-
-| EdgeOne Makers · 国际站 | EdgeOne Makers · 中国站 | Cloudflare Workers · 全球站 |
-| :---: | :---: | :---: |
-| [![使用 EdgeOne 部署](https://cdnstatic.tencentcs.com/edgeone/pages/deploy.svg)](https://edgeone.ai/pages/new?project-name=openlist-tsworker&repository-url=https://github.com/OpenListTeam/OpenList-Worker&install-command=pnpm%20install%20--no-frozen-lockfile&build-command=pnpm%20run%20build&output-directory=dist&env=JWT_SECRET) | [![使用 EdgeOne 部署](https://cdnstatic.tencentcs.com/edgeone/pages/deploy.svg)](https://console.cloud.tencent.com/edgeone/pages/new?project-name=openlist-tsworker&repository-url=https://github.com/OpenListTeam/OpenList-Worker&install-command=pnpm%20install%20--no-frozen-lockfile&build-command=pnpm%20run%20build&output-directory=dist&env=JWT_SECRET) | [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/OpenListTeam/OpenList-Worker) |
+| Cloudflare Workers |
+| :---: |
+| [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/LegspCpd/openlist-next) |
 
 </div>
 
 > [!IMPORTANT]
-> - 若Cloudflare提示`无法获取存储库内容`，则您需要先[Fork](https://github.com/OpenListTeam/OpenList-Worker/fork)本项目，再通过连接到Github仓库功能部署
-> - 部署完成后配置环境变量： **EdgeOne**：[国际站](https://console.edgeone.ai/makers) · [中国站](https://console.cloud.tencent.com/edgeone/makers)；**Cloudflare**：[Worker 后台](https://dash.cloudflare.com/)，环境变量：
->   - `DB_FORMAT`: 数据存储格式：`map` (默认，整对象JSON) / `key` (分key存储) / `sql` (关系表，与Go后端一致)
->   - `DB_DRIVER`: 数据库驱动：`auto` (默认，自动检测) / `blob` (EdgeOne Blob) / `cfkv` (CF KV API) / `kv` (KV binding) / `d1` (Cloudflare D1) / `mysql`
->   - 其余可选变量参考**详细部署指南**：[Cloudflare](https://doc.oplist.org/guide/installation/worker#deploy-to-cloudflare-workers) · [EdgeOne](https://doc.oplist.org/guide/installation/worker#deploy-to-edgeone) · [ESA](https://doc.oplist.org/guide/installation/worker#deploy-to-alibaba-cloud-esa)
+> - 若 Cloudflare 提示「无法获取存储库内容」，先 Fork 本仓库，再用「连接到 GitHub 仓库」方式部署。
+> - 部署完成后务必设置 `JWT_SECRET`，否则每次冷启动会话都会失效。
+> - EdgeOne Makers / 阿里云 ESA / Vercel / Netlify 见 [多平台部署指南](./docs/DEPLOYMENT.md)。
+
+> [!NOTE]
+> 下方「功能简介」描述的是上游 OpenList 的整体能力。本分支未对全部功能做回归验证，请以实测为准。
 
 
 ## 功能简介
@@ -57,7 +152,7 @@ OpenList-Worker 是官方 [OpenListTeam/OpenList](https://github.com/OpenListTea
 
 ### 存储聚合
 
-内置 **78 个存储驱动**，开箱即用地挂载各类存储后端：
+内置 **81 个存储驱动**，开箱即用地挂载各类存储后端：
 
 - **国内网盘**：阿里云盘（开放平台/分享）、夸克网盘（开放平台/UC TV 版）、百度网盘（相册）、115 网盘（开放平台/分享）、123 云盘（开放平台/分享）、天翼云盘（189/PC/TV）、中国移动云盘（139/和彩云）、沃家云盘、迅雷云盘、腾讯微云、蓝奏云、PikPak（分享）、豆包网盘、光亚盘、超星小组网盘、联想 NAS 分享、Teambition 网盘、WPS 网盘、阿里文档、HalalCloud、MediaTrack 等
 - **国际网盘**：Google Drive（相册）、OneDrive（应用/分享链接）、Dropbox、MEGA、MediaFire、Proton Drive、Yandex Disk、Degoo、Bunny Storage、TeraBox 等
@@ -218,7 +313,9 @@ CF_API_KEY=your_api_token
 
 #### 其他配置
 
-详细配置说明请参考 [官方文档](https://doc.oplist.org/guide/configuration)
+更多配置项见本仓库的 [外部存储配置指南](./docs/EXTERNAL_STORAGE.md) 与 [多平台部署指南](./docs/DEPLOYMENT.md)。
+
+通用配置的权威说明在上游官方文档：<https://doc.oplist.org/guide/configuration>（非本项目文档，仅供参考）。
 
 ---
 

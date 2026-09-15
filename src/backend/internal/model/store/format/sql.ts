@@ -3,9 +3,18 @@
  *
  * 每个字段对应一列，表结构由 schema.ts 的 TABLES 定义。字段名对齐 Go 的
  * json tag，表名通过 TABLE_SQL_NAMES 映射为 Go 的复数名并加上固定前缀 "x_"
- * 前缀（默认 x_），因此 D1 / MySQL 中的表结构与 Go 的 GORM 建表结果一致。
+ * 前缀（默认 x_），因此 D1 / MySQL / Postgres 中的表结构与 Go 的 GORM 建表
+ * 结果一致。
+ *
+ * 方言：标识符引号与 UPSERT 语法由 `driver.dialect` 决定（见 dialect.ts），
+ * 因此同一套代码可同时服务 SQLite（D1/DO/libSQL）、MySQL/MariaDB 与
+ * PostgreSQL（Neon / Supabase / Hyperdrive）。
+ *
+ * 参数占位符**统一书写 `?`**：Postgres 需要的 `$1 $2 ...` 由驱动在执行前
+ * 转换（dialect.toDialectPlaceholders），上层保持方言无关。
  */
 import type { FormatAdapter, Driver } from "../types"
+import { dialectOps } from "../dialect"
 import {
   TABLE_NAMES,
   TABLE_KEY,
@@ -18,55 +27,38 @@ import {
 
 const INIT_MARK = "openlist_config"
 
-function quote(name: string): string {
-  return "`" + name + "`"
+/** 按驱动方言包裹标识符。 */
+function quote(name: string, driver?: Driver): string {
+  return dialectOps(driver?.dialect).quote(name)
 }
 
 /**
  * 生成 UPSERT 语句。
  *
- * SQLite（D1 / DO）与 MySQL 语法不同，必须按方言分支：
- *   - SQLite: INSERT OR REPLACE INTO ...
- *   - MySQL:  INSERT INTO ... ON DUPLICATE KEY UPDATE ...
- *
- * 驱动名即方言标识：d1 / do 为 SQLite，mysql 为 MySQL。
+ * 三种方言语法不同，统一交给 `dialect.ts` 生成：
+ *   - SQLite:   INSERT OR REPLACE INTO ...
+ *   - MySQL:    INSERT ... ON DUPLICATE KEY UPDATE ...
+ *   - Postgres: INSERT ... ON CONFLICT (pk) DO UPDATE SET ...
  */
 function upsertSql(
   table: string,
   columns: string[],
   params: any[],
+  pkColumn: string,
   driver: Driver,
 ): { sql: string; params: any[] } {
-  const cols = columns.map((c) => quote(c)).join(", ")
-  const placeholders = columns.map(() => "?").join(", ")
-
-  if (driver.name === "mysql") {
-    // MySQL 无 INSERT OR REPLACE；用 ON DUPLICATE KEY UPDATE 覆盖全部非主键列。
-    // 主键列不参与 UPDATE（写回自身无意义），其余列以 VALUES(col) 覆盖。
-    const updates = columns
-      .slice(1)
-      .map((c) => `${quote(c)} = VALUES(${quote(c)})`)
-      .join(", ")
-    const sql = updates
-      ? `INSERT INTO ${table} (${cols}) VALUES (${placeholders}) ON DUPLICATE KEY UPDATE ${updates}`
-      : `INSERT INTO ${table} (${cols}) VALUES (${placeholders})`
-    return { sql, params }
-  }
-
-  return {
-    sql: `INSERT OR REPLACE INTO ${table} (${cols}) VALUES (${placeholders})`,
-    params,
-  }
+  const sql = dialectOps(driver.dialect).upsert(table, columns, pkColumn)
+  return { sql, params }
 }
 
-/** 带前缀+复数的完整表名（含反引号）。 */
-function qn(table: TableName, env?: any): string {
-  return quote(tableSqlName(table, env))
+/** 带前缀+复数的完整表名（按方言加引号）。 */
+function qn(table: TableName, env: any, driver?: Driver): string {
+  return quote(tableSqlName(table, env), driver)
 }
 
-/** 列名列表（含反引号）。 */
-function cols(table: TableName): string {
-  return TABLES[table].columns.map((c) => quote(c.name)).join(", ")
+/** 列名列表（按方言加引号）。 */
+function cols(table: TableName, driver?: Driver): string {
+  return TABLES[table].columns.map((c) => quote(c.name, driver)).join(", ")
 }
 
 export const sqlFormat: FormatAdapter = {
@@ -79,7 +71,7 @@ export const sqlFormat: FormatAdapter = {
 
     // 检查是否已初始化（schema_info 为 TS 内部标记表，不加前缀）
     const marks = await driver.query(
-      "SELECT v FROM schema_info WHERE k = ?",
+      `SELECT ${quote("v", driver)} FROM ${quote("schema_info", driver)} WHERE ${quote("k", driver)} = ?`,
       [INIT_MARK],
       env,
     )
@@ -88,7 +80,11 @@ export const sqlFormat: FormatAdapter = {
     const out: Record<string, any> = {}
 
     for (const table of TABLE_NAMES) {
-      const rows = await driver.query(`SELECT * FROM ${qn(table, env)}`, [], env)
+      const rows = await driver.query(
+        `SELECT * FROM ${qn(table, env, driver)}`,
+        [],
+        env,
+      )
       out[table] = rows.map((r: any) => rowToEntity(table, r))
     }
 
@@ -118,7 +114,13 @@ export const sqlFormat: FormatAdapter = {
 
       for (const entity of entities) {
         const { columns, values } = entityToRow(table, entity)
-        const upsert = upsertSql(qn(table, env), columns, values, driver)
+        const upsert = upsertSql(
+          qn(table, env, driver),
+          columns,
+          values,
+          keyCol,
+          driver,
+        )
         statements.push({ sql: upsert.sql, params: upsert.params })
 
         const pk = entity?.[keyCol]
@@ -128,19 +130,20 @@ export const sqlFormat: FormatAdapter = {
       // 删除本端已移除的行（keys 为空则整表清空，与原语义一致）
       const delSql =
         keepKeys.length > 0
-          ? `DELETE FROM ${qn(table, env)} WHERE ${quote(keyCol)} NOT IN (${keepKeys
+          ? `DELETE FROM ${qn(table, env, driver)} WHERE ${quote(keyCol, driver)} NOT IN (${keepKeys
               .map(() => "?")
               .join(", ")})`
-          : `DELETE FROM ${qn(table, env)}`
+          : `DELETE FROM ${qn(table, env, driver)}`
       statements.push({ sql: delSql, params: keepKeys })
     }
 
     // 标记已初始化（方言兼容的 UPSERT）
     statements.push(
       upsertSql(
-        quote("schema_info"),
+        quote("schema_info", driver),
         ["k", "v"],
         [INIT_MARK, String(Date.now())],
+        "k",
         driver,
       ),
     )
@@ -154,7 +157,11 @@ export const sqlFormat: FormatAdapter = {
       throw new Error(`Driver ${driver.name} does not support SQL queries`)
     }
     const t = table as TableName
-    const rows = await driver.query(`SELECT * FROM ${qn(t, env)}`, [], env)
+    const rows = await driver.query(
+      `SELECT * FROM ${qn(t, env, driver)}`,
+      [],
+      env,
+    )
     return rows.map((r: any) => rowToEntity(t, r))
   },
 
@@ -170,15 +177,16 @@ export const sqlFormat: FormatAdapter = {
     const t = table as TableName
 
     const statements: Array<{ sql: string; params: any[] }> = [
-      { sql: `DELETE FROM ${qn(t, env)}`, params: [] },
+      { sql: `DELETE FROM ${qn(t, env, driver)}`, params: [] },
     ]
 
     for (const entity of records) {
       const { columns, values } = entityToRow(t, entity)
       const placeholders = columns.map(() => "?").join(", ")
-      const sql = `INSERT INTO ${qn(t, env)} (${columns
-        .map((c) => quote(c))
-        .join(", ")}) VALUES (${placeholders})`
+      const sql = `INSERT INTO ${qn(t, env, driver)} (${cols(
+        t,
+        driver,
+      )}) VALUES (${placeholders})`
       statements.push({ sql, params: values })
     }
 
@@ -197,7 +205,7 @@ export const sqlFormat: FormatAdapter = {
     const t = table as TableName
     const keyCol = TABLE_KEY[t]
     const rows = await driver.query(
-      `SELECT * FROM ${qn(t, env)} WHERE ${quote(keyCol)} = ?`,
+      `SELECT * FROM ${qn(t, env, driver)} WHERE ${quote(keyCol, driver)} = ?`,
       [key],
       env,
     )
@@ -218,8 +226,8 @@ export const sqlFormat: FormatAdapter = {
     void key
 
     const { columns, values } = entityToRow(t, record)
-    // 方言兼容的 UPSERT（SQLite: INSERT OR REPLACE / MySQL: ON DUPLICATE KEY UPDATE）
-    const { sql } = upsertSql(qn(t, env), columns, values, driver)
+    // 方言兼容的 UPSERT（SQLite/MySQL/Postgres 各自语法）
+    const { sql } = upsertSql(qn(t, env, driver), columns, values, TABLE_KEY[t], driver)
 
     await driver.execute(sql, values, env)
   },
@@ -236,7 +244,7 @@ export const sqlFormat: FormatAdapter = {
     const t = table as TableName
     const keyCol = TABLE_KEY[t]
     await driver.execute(
-      `DELETE FROM ${qn(t, env)} WHERE ${quote(keyCol)} = ?`,
+      `DELETE FROM ${qn(t, env, driver)} WHERE ${quote(keyCol, driver)} = ?`,
       [key],
       env,
     )

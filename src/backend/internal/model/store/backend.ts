@@ -22,9 +22,18 @@ import { d1Driver } from "./driver/d1"
 import { doDriver } from "./driver/do"
 import { mysqlDriver } from "./driver/mysql"
 import { memoryDriver } from "./driver/memory"
+import { neonDriver } from "./driver/neon"
+import { tursoDriver } from "./driver/turso"
+import { pgrestDriver } from "./driver/pgrest"
+import { pghttpDriver } from "./driver/pghttp"
+import { mysqlhttpDriver } from "./driver/mysqlhttp"
+import { upstashDriver } from "./driver/upstash"
+import { r2Driver } from "./driver/r2"
+import { s3Driver } from "./driver/s3"
 import { mapFormat } from "./format/map"
 import { keyFormat } from "./format/key"
 import { sqlFormat } from "./format/sql"
+import { inferDriverFromEnv } from "./dsn"
 
 /**
  * 读取环境变量（支持 process.env 和 env 对象）。
@@ -145,16 +154,36 @@ export function isServerlessRuntime(env?: any): boolean {
  *    避免「操作成功但数据丢失」的假象
  */
 async function autoDetectDriver(env?: any): Promise<Driver> {
-  // 检测顺序：mysql → d1 → kv → cfkv → blob → do
+  // 检测顺序（越靠前越代表「用户明确表达过的意图」）：
+  //   1. 由 DATABASE_URL / 厂商专属变量推断出的外部数据库
+  //   2. Node 容器下的 MySQL / MariaDB 直连（有 TCP 时最快，无需网关）
+  //   3. 其余已配置的外部存储（Neon / Turso / Supabase / HTTP 网关 / Redis / S3）
+  //   4. 平台原生绑定：D1 → KV → R2 → CF KV(REST) → Blob → DO
   //
-  // - mysql 需要网络连接，只有显式配置了连接信息才尝试，否则每次 auto 探测
-  //   都会先尝试建 TCP 连接（失败后继续），在 CF/EO 等边缘环境上纯属浪费。
-  // - kv 与 cfkv 同为 KV 语义：优先本地 binding（更直接、更快），
-  //   其次才走 Cloudflare REST API。
+  // 为什么外部数据库优先于平台绑定：平台模板常会默认创建空的 KV/D1 绑定，
+  // 若绑定优先，用户填了 DATABASE_URL 却发现数据仍落在本地 KV 上，
+  // 会表现为「配了外部库却没生效」，非常难排查。
+  //
+  // 说明：这些外部驱动的 isAvailable() 都是**零网络**的配置探测，
+  // 仅在真正读写时才发起请求，因此把它们放进探测链不会产生额外往返。
   const candidates: Driver[] = []
 
-  if (hasMysqlConfig(env)) candidates.push(mysqlDriver)
-  candidates.push(d1Driver, kvDriver, cfkvDriver, blobDriver, doDriver)
+  const inferred = inferDriverFromEnv(env)
+  const inferredDriver = inferred ? DRIVER_MAP[inferred] : undefined
+  if (inferredDriver) candidates.push(inferredDriver)
+
+  // mysql 需要建 TCP 连接，只有显式配置了连接信息才尝试，
+  // 否则每次 auto 探测都会先尝试建连（失败后继续），在边缘环境纯属浪费。
+  if (hasMysqlConfig(env) && !candidates.includes(mysqlDriver)) {
+    candidates.push(mysqlDriver)
+  }
+
+  for (const name of EXTERNAL_DRIVER_ORDER) {
+    const d = DRIVER_MAP[name]
+    if (d && !candidates.includes(d)) candidates.push(d)
+  }
+
+  candidates.push(d1Driver, kvDriver, r2Driver, cfkvDriver, blobDriver, doDriver)
 
   for (const driver of candidates) {
     if (await driver.isAvailable(env)) {
@@ -184,10 +213,9 @@ function hasMysqlConfig(env?: any): boolean {
   const e = env || {}
   const p = typeof process !== "undefined" ? process.env || {} : {}
   return Boolean(
-    e.MYSQL_URLS ||
-      p.MYSQL_URLS ||
-      e.MYSQL_HOST ||
-      p.MYSQL_HOST,
+    e.MYSQL_URLS || p.MYSQL_URLS ||
+      e.MYSQL_URL || p.MYSQL_URL ||
+      e.MYSQL_HOST || p.MYSQL_HOST,
   )
 }
 
@@ -200,23 +228,55 @@ export const NO_STORAGE_MESSAGE =
   "No storage backend is available. Data cannot be persisted in this " +
   "runtime (serverless environments cannot use in-memory storage).\n" +
   "Configure one of the following:\n" +
-  "  1. EdgeOne Blob (recommended, zero config if the project provides it)\n" +
-  "  2. EdgeOne KV: bind a KV namespace to Edge Functions, then set " +
+  "  1. An external database via DATABASE_URL (works on every platform):\n" +
+  "       postgres://user:pass@ep-xxx.neon.tech/neondb   -> Neon (HTTP)\n" +
+  "       libsql://db.turso.io + TURSO_AUTH_TOKEN        -> Turso\n" +
+  "       https://xxx.supabase.co + SUPABASE_KEY         -> Supabase\n" +
+  "       mysql://... + MYSQL_HTTP_URL                   -> MySQL over gateway\n" +
+  "  2. EdgeOne Blob (recommended, zero config if the project provides it)\n" +
+  "  3. EdgeOne KV: bind a KV namespace to Edge Functions, then set " +
   "DB_DRIVER=kv (DB_FORMAT=map or key) and JWT_SECRET\n" +
-  "  3. Cloudflare KV / D1: bind the namespace and set DB_DRIVER accordingly\n" +
+  "  4. Cloudflare KV / D1 / R2: bind the resource and set DB_DRIVER\n" +
   "Environment variables to set in the project settings:\n" +
-  "  DB_DRIVER=blob | kv | cfkv | d1 | do | mysql\n" +
+  "  DB_DRIVER=auto | blob | kv | cfkv | d1 | do | r2 | mysql | neon | turso |\n" +
+  "            pgrest | pghttp | mysqlhttp | upstash | s3\n" +
   "  DB_FORMAT=map | key | sql"
 
 /** 驱动名 → 实现 */
 const DRIVER_MAP: Record<string, Driver> = {
+  // 平台原生绑定
   blob: blobDriver,
   cfkv: cfkvDriver,
   kv: kvDriver,
   d1: d1Driver,
   do: doDriver,
-  mysql: mysqlDriver,
+  r2: r2Driver,
+  // 外部数据库 / 存储（Edge 可用）
+  mysql: mysqlDriver,      // 仅 Node 容器（TCP 直连）
+  neon: neonDriver,
+  turso: tursoDriver,
+  pgrest: pgrestDriver,
+  pghttp: pghttpDriver,
+  mysqlhttp: mysqlhttpDriver,
+  upstash: upstashDriver,
+  s3: s3Driver,
 }
+
+/**
+ * 外部数据库驱动的探测顺序。
+ *
+ * 排在平台绑定之前：一旦用户配置了外部数据库连接串，就说明**有意**要用它
+ * （平台自带的 KV/D1 绑定往往是模板默认创建的空库，优先级应更低）。
+ */
+const EXTERNAL_DRIVER_ORDER = [
+  "neon",
+  "turso",
+  "pgrest",
+  "pghttp",
+  "mysqlhttp",
+  "upstash",
+  "s3",
+] as const
 
 /**
  * 解析驱动。

@@ -20,18 +20,57 @@ export type StorageFormat = "map" | "key" | "sql"
  */
 export type EnvContext = Record<string, any>
 
-/** 存储驱动类型 */
-export type StorageDriver = "auto" | "blob" | "cfkv" | "kv" | "d1" | "do" | "mysql"
+/**
+ * 存储驱动类型。
+ *
+ * 除官方的 blob/cfkv/kv/d1/do/mysql 外，openlist-next 额外提供一组
+ * **可在边缘运行时直连外部数据库**的驱动（全部基于 fetch，不依赖裸 TCP）：
+ *
+ *  - `neon`      Neon Serverless Postgres（HTTP / SQL）
+ *  - `turso`     Turso / libSQL（HTTP / SQL，SQLite 方言）
+ *  - `pgrest`    Supabase 或任意 PostgREST（REST 语义，仅 KV）
+ *  - `pghttp`    自建 Postgres HTTP 网关（HTTP / SQL）
+ *  - `mysqlhttp` 自建 MySQL / MariaDB HTTP 网关（HTTP / SQL，MySQL 方言）
+ *  - `upstash`   Upstash Redis REST（仅 KV）
+ *  - `r2`        Cloudflare R2 对象存储（仅 KV）
+ *  - `s3`        S3 兼容对象存储（仅 KV）
+ *  - `hyperdrive` Cloudflare Hyperdrive（Postgres / MySQL，需 nodejs_compat）
+ */
+export type StorageDriver =
+  | "auto"
+  | "blob"
+  | "cfkv"
+  | "kv"
+  | "d1"
+  | "do"
+  | "mysql"
+  | "neon"
+  | "turso"
+  | "pgrest"
+  | "pghttp"
+  | "mysqlhttp"
+  | "upstash"
+  | "r2"
+  | "s3"
+  | "hyperdrive"
 
 /**
  * 驱动接口（底层 I/O）
  * 
- * 驱动负责与具体存储系统交互（KV、Blob、D1、MySQL 等），
+ * 驱动负责与具体存储系统交互（KV、Blob、D1、MySQL、Neon 等），
  * 提供统一的键值读写接口和可选的 SQL 执行接口。
  */
 export interface Driver {
   /** 驱动名称 */
   name: string
+
+  /**
+   * SQL 方言（仅执行 SQL 的驱动需要声明）。
+   *
+   * 决定标识符引号、UPSERT 语法与参数占位符，详见 `dialect.ts`。
+   * 不声明时按 SQLite 处理（保持与既有驱动一致）。
+   */
+  dialect?: "sqlite" | "mysql" | "postgres"
 
   /**
    * 检查驱动是否可用（是否配置了必要的环境变量/绑定）

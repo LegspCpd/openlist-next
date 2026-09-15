@@ -61,6 +61,7 @@ async function ensureSchema(pool: any, env?: any): Promise<void> {
 
 export const mysqlDriver: Driver = {
   name: "mysql",
+  dialect: "mysql",
 
   async isAvailable(env?: any): Promise<boolean> {
     if (!isNode()) return false
