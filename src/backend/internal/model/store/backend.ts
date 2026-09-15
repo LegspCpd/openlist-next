@@ -31,6 +31,8 @@ import { mysqlhttpDriver } from "./driver/mysqlhttp"
 import { upstashDriver } from "./driver/upstash"
 import { r2Driver } from "./driver/r2"
 import { s3Driver } from "./driver/s3"
+import { hyperdriveDriver } from "./driver/hyperdrive"
+import { netlifyBlobsDriver } from "./driver/netlifyblobs"
 import { mapFormat } from "./format/map"
 import { keyFormat } from "./format/key"
 import { sqlFormat } from "./format/sql"
@@ -262,6 +264,8 @@ const DRIVER_MAP: Record<string, Driver> = {
   mysqlhttp: mysqlhttpDriver,
   upstash: upstashDriver,
   s3: s3Driver,
+  hyperdrive: hyperdriveDriver,
+  netlifyblobs: netlifyBlobsDriver,
 }
 
 /**
@@ -278,6 +282,8 @@ const EXTERNAL_DRIVER_ORDER = [
   "mysqlhttp",
   "upstash",
   "s3",
+  "hyperdrive",
+  "netlifyblobs",
 ] as const
 
 /**
