@@ -20,7 +20,7 @@ import {
   TaskStatusConflict,
   createDefaultDeviceInfo,
 } from "./consts"
-import { createHash } from "crypto"
+import CryptoJS from "crypto-js"
 
 function parseMoPanDate(dateStr: string): string {
   if (!dateStr) return new Date().toISOString()
@@ -381,7 +381,7 @@ export class MoPanDriver implements StorageDriver {
     const parentId = await this.resolveFolderId(parentPath)
 
     const fileBuffer = content
-    const fileMd5 = createHash("md5").update(fileBuffer).digest("hex")
+    const fileMd5 = CryptoJS.MD5(CryptoJS.lib.WordArray.create(fileBuffer as any)).toString()
     const totalSize = content.length
 
     // Init multi-part upload

@@ -138,7 +138,7 @@ export class Cloud189PCDriver implements StorageDriver {
       appId: "600002434",
       accountType: this.addition.login_type || "1",
       userName: this.addition.username,
-      password: encryptPassword(this.addition.password, await this.getRSAPublicKey()),
+      password: await encryptPassword(this.addition.password, await this.getRSAPublicKey()),
       clientType: "10020",
       returnUrl: "https://m.cloud.189.cn/zhuanti/2020/loginSuccess/index.html",
       mailSuffix: "@189.cn",
