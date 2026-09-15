@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         感谢您为 OpenList-Worker 提出新想法，这会帮助 OpenList-Worker 变得更好。
-        提交前请先到[讨论区](https://github.com/OpenListTeam/OpenList-Worker/discussions)看看是否已有类似提议，避免重复。
+        提交前请先到[讨论区](https://github.com/LegspCpd/openlist-next/discussions)看看是否已有类似提议，避免重复。
 
   - type: checkboxes
     attributes:

@@ -6,7 +6,7 @@
 
 </div>
 
-> **这是什么**：本分支基于官方 [OpenList-Worker](https://github.com/OpenListTeam/OpenList-Worker)，并吸收了社区项目 [openlistnext](https://github.com/Polonium-salts/openlistnext) 的成果。它保留了官方的全部存储驱动与 API 契约，重点补齐了上游最卡脖子的一环 —— **在任何边缘运行时上直连外部数据库**。
+> **这是什么**：本仓库是 **LegspCpd 独立开发维护的项目**，以官方 [OpenList-Worker](https://github.com/OpenListTeam/OpenList-Worker) 为技术基线，并借鉴了社区项目 [openlistnext](https://github.com/Polonium-salts/openlistnext) 的部分思路与实现。它保留了官方的全部存储驱动与 API 契约，重点补齐了上游最卡脖子的一环 —— **在任何边缘运行时上直连外部数据库**。
 >
 > **为什么要这么做**：官方版本中 `mysql` 驱动只能跑在 Node 容器里，一旦部署到 Cloudflare Workers（没有裸 TCP）就只能用平台自带的 KV。本分支新增了 8 个纯 `fetch` 实现的存储驱动，**一条 `DATABASE_URL` 就能接上 Neon、Supabase、Turso、外部 MySQL/MariaDB、Redis、S3**，彻底摆脱平台绑定。
 >
@@ -353,8 +353,8 @@ CF_API_KEY=your_api_token
 
 在使用过程中遇到问题，可通过以下渠道获取帮助：
 
-- 🐛 **提交 Bug 或功能请求**：请前往 [_Issues_](https://github.com/OpenListTeam/OpenList-Worker/issues)
-- 💬 **一般性问题与交流**：请前往 [_Discussions_](https://github.com/OpenListTeam/OpenList/discussions) 讨论区
+- 🐛 **提交 Bug 或功能请求**：请前往本仓库 [_Issues_](https://github.com/LegspCpd/openlist-next/issues)
+- 💬 **一般性问题与交流**：请前往本仓库 [_Discussions_](https://github.com/LegspCpd/openlist-next/discussions) 讨论区
 
 ## 开源许可
 
@@ -363,14 +363,28 @@ CF_API_KEY=your_api_token
 
 ## 联系我们
 
-🌐 [@GitHub](https://github.com/OpenListTeam) · ✈️ [Telegram 交流群](https://t.me/OpenListTeam) · ✈️ [Telegram 频道](https://t.me/OpenListOfficial)
+🌐 [@LegspCpd](https://github.com/LegspCpd) · 📦 [openlist-next](https://github.com/LegspCpd/openlist-next) · 🐛 [Issues](https://github.com/LegspCpd/openlist-next/issues)
 
-## 贡献列表
+## 贡献者
 
-感谢以下项目及其贡献者：
+本项目由 **LegspCpd** 独立开发与维护。
 
-- [Alist](https://github.com/AlistGo/alist) 项目作者及全体贡献者
-- [OpenList](https://github.com/OpenListTeam/OpenList)（Go 版）项目作者及全体贡献者
-- 本项目全体贡献者：
+[![Contributors](https://contrib.rocks/image?repo=LegspCpd/openlist-next)](https://github.com/LegspCpd/openlist-next/graphs/contributors)
 
-[![Contributors](https://contrib.rocks/image?repo=OpenListTeam/OpenList-Worker)](https://github.com/OpenListTeam/OpenList-Worker/graphs/contributors)
+---
+
+## 致谢
+
+本项目的设计与实现**借鉴、参考**了下列开源项目，谨向下述项目及其开发者的工作致以诚挚感谢：
+
+- [Alist](https://github.com/AlistGo/alist) 项目作者及全体开发者
+- [OpenList](https://github.com/OpenListTeam/OpenList)（Go 版）项目作者及全体开发者
+- [OpenList-Worker](https://github.com/OpenListTeam/OpenList-Worker)（官方 TypeScript / Workers 移植版）项目作者及全体开发者
+- [openlistnext](https://github.com/Polonium-salts/openlistnext) 社区项目作者及全体开发者
+
+> [!NOTE]
+> 上述项目的开发者**不是本仓库的贡献者**。本仓库由 **LegspCpd** 独立开发维护，
+> 与上述项目及 OpenListTeam **均无隶属、授权或背书关系**，仅在开源许可允许的范围内借鉴其成果。
+> 代码来源、边界与许可证说明见 [NOTICE.md](./NOTICE.md)。
+>
+> 前端在构建时直接拉取官方 [OpenList-Frontend](https://github.com/OpenListTeam/OpenList-Frontend) 产物，**本仓库不含前端源码**，前端版权归其原始开发者所有。

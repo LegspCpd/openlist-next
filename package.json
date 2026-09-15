@@ -23,11 +23,11 @@
     }
   },
   "author": {
-    "name": "LegspCpd"
+    "name": "LegspCpd",
+    "url": "https://github.com/LegspCpd"
   },
   "contributors": [
-    "The OpenListTeam Contributors (upstream OpenList / OpenList-Worker)",
-    "The OpenList-Frontend Contributors (frontend artifacts, fetched at build time)"
+    "LegspCpd (https://github.com/LegspCpd)"
   ],
   "description": "Fork of OpenList / OpenList-Worker: a file list program for edge runtimes, extended with external database storage drivers (Neon, Turso, Postgres/MySQL over HTTP, Supabase, Upstash, R2, S3).",
   "repository": {
