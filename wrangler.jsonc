@@ -2,13 +2,21 @@
 // OpenList-TSWorker · Cloudflare Workers 配置
 // 文档：https://developers.cloudflare.com/workers/wrangler/configuration/
 //
-// ⚠️ 本文件只声明 KV 一个存储绑定（见文件末 kv_namespaces），D1 / DO 等
-//    其它存储请按需在控制台添加。
+// ⚠️ 本文件默认启用 KV 一个存储绑定（见文件末 kv_namespaces）。
+//    若一个存储绑定都不配，auto 探测会全部落空，运行时直接抛
+//    NO_STORAGE_MESSAGE —— Cloudflare 侧表现为 **Error 1101**。
+//    这是「部署成功但打不开」最常见的原因。
 //
-// 为什么声明 KV 且【省略 id 字段】（不能写 "id": ""）：
+// 为什么 KV 声明【省略 id 字段】（不可写 "id": ""）：
 //   wrangler 会自动预配（automatic provisioning）：首次部署创建
-//   "项目名-绑定名" 的命名空间（此处即 openlist-tsworkers-kv）并绑定；
+//   "项目名-绑定名" 的命名空间（本项目即 openlist-next-kv）并绑定；
 //   二次部署通过服务端 inherit 复用已有绑定，不会重复创建。
+//
+// ⚠️ 部署前必须先 `pnpm run build`：本文件 assets.directory 指向 ./dist，
+//    该目录默认不存在（已被 .gitignore 忽略），缺失时 wrangler 会直接报错中止：
+//      The directory specified by the "assets.directory" field ... does not exist
+//    Cloudflare Workers Build（一建部署按钮）会自动跑 build，故不受影响；
+//    本地 `wrangler deploy` / `wrangler dev` 则必须先构建。
 //
 // 注意：CI / 一键部署属非交互环境，wrangler 不会把生成的 id 回写进本文件。
 // 这是预期行为 —— 复用靠的是服务端 inherit 绑定，而非本地 id。
@@ -157,11 +165,12 @@
   // ▶ 方案 A：KV（默认启用，免费额度大、最通用）
   //   ⚠️ 必须【完全省略 id 字段】，不能写成 "id": ""：
   //      wrangler 配置校验会拒绝空字符串 id（"should have a string id field"）。
-  //   省略 id 后：首次部署由 wrangler 自动创建 openlist-tsworkers-kv 并绑定；
+  //   省略 id 后：首次部署由 wrangler 自动创建 openlist-next-kv 并绑定；
   //   二次部署通过 inherit 复用已有绑定，不会重复创建。
   //   若想改用账户里已有的 KV，把该命名空间的 id 填进来即可。
   //
-  //  "kv_namespaces": [{ "binding": "KV" }],
+  "kv_namespaces": [{ "binding": "KV" }],
+
   //
   // ▶ 方案 B：D1（关系型，可与 Go 后端共享库；DB_FORMAT 建议改为 "sql"）
   //   控制台：Workers & Pages → D1 → 创建数据库 → 绑定到 Worker，变量名填 DB
