@@ -1,0 +1,50 @@
+# =============================================================================
+# OpenList Next · Netlify 配置
+#
+# 部署方式：
+#   1. 连接 Git 仓库（推荐）：Netlify 会自动读取本文件
+#   2. CLI：netlify deploy --build --prod
+#
+# ⚠️ 平台限制（务必先读）：
+#   - Netlify Functions 单次执行上限 10s（Pro 26s）。网盘列表/代理下载在
+#     冷启动或大目录时容易超时，**生产环境建议优先用 Cloudflare Workers**。
+#   - Functions 运行在 AWS Lambda 上，无持久化文件系统，必须配置外部存储。
+#
+# 存储配置（Site configuration → Environment variables）：
+#   DATABASE_URL=postgres://user:pass@ep-xxx.neon.tech/neondb   （推荐 Neon，
+#     纯 HTTP，无需网关，冷启动快）
+#   或 SUPABASE_URL + SUPABASE_KEY
+#   或 UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN
+#   JWT_SECRET=<随机 32 位以上字符串>
+#   DB_FORMAT=map
+# =============================================================================
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "22"
+  NODE_BUNDLER = "esbuild"
+
+[functions]
+  node_bundler = "esbuild"
+  # 上传/代理下载可能较大，适当放宽内存
+  # memory = 1024
+
+# API / WebDAV 路由由 Function 自己声明（见 netlify/functions/api.ts 的
+# config.path），不用 redirect —— rewrite 会把 req.url 改成
+# /.netlify/functions/... 从而破坏后端路由，因此这里只保留 SPA 回退。
+
+# SPA 回退：静态资源不存在时返回 index.html
+# （Netlify 会优先匹配 publish 目录中的真实文件，无需额外排除规则）
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
