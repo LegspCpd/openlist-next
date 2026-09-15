@@ -92,10 +92,17 @@ pnpm run build
 ### 部署
 
 ```bash
+pnpm run build                     # 必须先构建：assets 依赖 ./dist，缺失时 wrangler 会报目录不存在
 npx wrangler login
-npx wrangler secret put JWT_SECRET     # 生产密钥，务必与开发环境不同
-pnpm run deploy:worker                 # 等价于 wrangler deploy --yes
+npx wrangler secret put JWT_SECRET # 生产密钥，务必与开发环境不同
+pnpm run deploy:worker             # 等价于 wrangler deploy --yes
 ```
+
+> [!CAUTION]
+> **`wrangler deploy` / `wrangler dev` 之前必须先 `pnpm run build`**。
+> `wrangler.jsonc` 的 `assets.directory` 指向 `./dist`，而 `dist` 默认不存在（已被 `.gitignore` 忽略）。
+> 直接跑会报 `The directory specified by the "assets.directory" field ... does not exist` 并中止。
+> 用 Cloudflare 一键部署按钮时平台会自动执行 build，不受此限制。
 
 部署后在 Worker 后台确认变量：
 
@@ -111,6 +118,28 @@ pnpm run deploy:worker                 # 等价于 wrangler deploy --yes
 > **不要配 `DB_DRIVER=mysql`** —— Cloudflare Workers 没有裸 TCP，MySQL 驱动不会可用。
 > 外部 MySQL/MariaDB 请走 `mysqlhttp`（HTTP 网关），或改用 `neon` / `turso`，
 > 见 [外部存储配置指南](./docs/EXTERNAL_STORAGE.md)。
+
+### 排障：部署成功但打不开（Error 1101）
+
+Cloudflare 的 **Error 1101** 表示 Worker 运行时抛了未捕获异常，不是网络问题。
+按下面顺序排查：
+
+```bash
+curl https://<你的域名>/healthz       # 看 persistence.checks 的报错说明
+```
+
+| 症状 | 原因 | 处理 |
+| --- | --- | --- |
+| 提示 `No storage backend is available` | 一个存储绑定都没配 | `wrangler.jsonc` 已默认绑定 KV（`openlist-next-kv`，首次部署自动创建）；若你删掉了该绑定，请加回，或配置 `DATABASE_URL` |
+| 能登录但重启后掉线、或提示凭据无法解密 | `JWT_SECRET` 未设或前后不一致 | `npx wrangler secret put JWT_SECRET`，部署环境务必各用各的值 |
+| 配了外部数据库却仍读写平台 KV | `DB_DRIVER` 被显式写成了平台驱动 | 改回 `auto`；外部数据库探测优先于平台绑定 |
+| 用 `MYSQL_URLS` 连外部 MySQL，控制台提示进 | Workers 无裸 TCP，`mysql` 驱动不可用 | 改用 `mysqlhttp` / `neon` / `turso`，见 [外部存储配置指南](./docs/EXTERNAL_STORAGE.md) |
+
+调试 realtime 日志：
+
+```bash
+npx wrangler tail
+```
 
 ### 常用检查命令
 
