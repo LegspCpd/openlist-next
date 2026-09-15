@@ -46,6 +46,7 @@ import {
 } from "../../drivers/thunder/driver"
 import { LanzouDriver } from "../../drivers/lanzou/driver"
 import { Cloud189Driver } from "../../drivers/189/driver"
+import { Cloud189PCDriver } from "../../drivers/189pc/driver"
 import { Driver189TV } from "../../drivers/189_tv/driver"
 import { WebdavDriver } from "../../drivers/webdav/driver"
 import { WoPanDriver, normalizeWoPanAddition } from "../../drivers/wopan/driver"
@@ -278,7 +279,6 @@ async function createDriver(
   } else if (
     normDriver === "115" ||
     normDriver === "115cloud" ||
-    normDriver === "115open" ||
     normDriver === "115netdisk"
   ) {
     driver = new Driver115(parseAddition(storageConfig))
@@ -569,10 +569,9 @@ async function createDriver(
     await driver.init?.()
   } else if (
     normDriver === "115open" ||
-    normDriver === "115" ||
     normDriver === "115pan" ||
-    normDriver === "115cloud" ||
-    normDriver.startsWith("115")
+    normDriver === "115openplatform" ||
+    normDriver.startsWith("115open")
   ) {
     const addition = parseAddition(storageConfig)
     driver = new Pan115Driver(addition, async (tokens) => {
@@ -750,6 +749,32 @@ async function createDriver(
         await saveDb(db)
       } catch (e) {
         console.warn("[189TV] failed to persist access_token:", e)
+      }
+    })
+    await driver.init?.()
+  } else if (
+    normDriver === "189pc" ||
+    normDriver.startsWith("189pc")
+  ) {
+    const addition = parseAddition(storageConfig)
+    driver = new Cloud189PCDriver(addition, async (tokens) => {
+      try {
+        const db = await getDb()
+        const st = (db.storages || []).find(
+          (s: any) => s.id === storageConfig?.id,
+        )
+        if (!st) return
+        const stAddition =
+          typeof st.addition === "string"
+            ? JSON.parse(st.addition || "{}")
+            : st.addition || {}
+        stAddition.session_key = tokens.session_key
+        stAddition.session_secret = tokens.session_secret
+        stAddition.device_id = tokens.device_id
+        st.addition = JSON.stringify(stAddition)
+        await saveDb(db)
+      } catch (e) {
+        console.warn("[189PC] failed to persist session:", e)
       }
     })
     await driver.init?.()
