@@ -149,6 +149,43 @@ test("Nile integration variable maps to pghttp", () => {
   )
 })
 
+test("Prisma Postgres scheme is normalized to postgres", () => {
+  // Prisma Postgres / Accelerate 注入的连接串形如
+  //   prisma+postgres://accelerate.prisma-data.net/?api_key=xxx
+  // 底层仍是 Postgres，必须归一化，否则会被判定为「未知 scheme」而完全识别不到。
+  const a = parseDsn("prisma+postgres://accelerate.prisma-data.net/?api_key=k")!
+  assert.equal(a.scheme, "postgres")
+  assert.equal(a.host, "accelerate.prisma-data.net")
+
+  const b = parseDsn("prisma://accelerate.prisma-data.net/?api_key=k")!
+  assert.equal(b.scheme, "postgres")
+})
+
+test("Prisma Postgres detected via dedicated and generic variables", () => {
+  const url = "prisma+postgres://accelerate.prisma-data.net/?api_key=k"
+  assert.equal(inferDriverFromEnv({ PRISMA_DATABASE_URL: url }), "pghttp")
+  assert.equal(inferDriverFromEnv({ DATABASE_URL: url }), "pghttp")
+})
+
+test("Vercel-injected DATABASE_URL_UNPOOLED is recognized", () => {
+  assert.equal(
+    inferDriverFromEnv({
+      DATABASE_URL_UNPOOLED: "postgres://u:p@ep-1.aws.neon.tech/db",
+    }),
+    "neon",
+  )
+})
+
+test("Supabase pooler variable maps to pgrest", () => {
+  assert.equal(
+    inferDriverFromEnv({
+      SUPABASE_POOLER_URL:
+        "postgres://u:p@aws-0-us-east-1.pooler.supabase.com:6543/postgres",
+    }),
+    "pgrest",
+  )
+})
+
 // ── 环境变量读取 ──────────────────────────────────────────────────────────
 
 test("envValue respects key priority order", () => {
