@@ -162,6 +162,7 @@ async function build() {
       "cpu-features",
       "iconv-lite",
       "mysql2",
+      "smb2",
       "node:*",
       ...NODE_BUILTINS,
     ],
@@ -177,7 +178,7 @@ async function build() {
     outfile: "cloud-functions/[[default]].js",
     minify: true,
     format: "esm",
-    external: ["ssh2", "cpu-features", "iconv-lite", "mysql2"],
+    external: ["ssh2", "cpu-features", "iconv-lite", "mysql2", "smb2"],
     // 内联 dist/index.html 作为 SPA 兜底壳（需在 vite build 之后运行）
     loader: { ".html": "text", ".node": "empty" },
     plugins: [emptyNodeDriverPlugin, normalizeHtmlEolPlugin],

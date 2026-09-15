@@ -2,7 +2,8 @@
  * 持久化后端工厂：按 DB_DRIVER 和 DB_FORMAT 环境变量选择驱动和格式。
  *
  * 新架构（驱动层 + 格式层分离）：
- * - DB_DRIVER: 底层存储驱动（auto/blob/cfkv/kv/d1/do/mysql）
+ * - DB_DRIVER: 底层存储驱动（auto/blob/cfkv/kv/d1/do/mysql + 外部库：neon/turso/
+ *   pgrest/pghttp/mysqlhttp/upstash/r2/s3/hyperdrive/netlifyblobs）
  * - DB_FORMAT: 数据存储格式（map/key/sql）
  *
  * 向后兼容（旧配置自动映射）：
@@ -239,7 +240,8 @@ export const NO_STORAGE_MESSAGE =
   "  4. Cloudflare KV / D1 / R2: bind the resource and set DB_DRIVER\n" +
   "Environment variables to set in the project settings:\n" +
   "  DB_DRIVER=auto | blob | kv | cfkv | d1 | do | r2 | mysql | neon | turso |\n" +
-  "            pgrest | pghttp | mysqlhttp | upstash | s3\n" +
+  "            pgrest | pghttp | mysqlhttp | upstash | s3 | hyperdrive |\n" +
+  "            netlifyblobs\n" +
   "  DB_FORMAT=map | key | sql"
 
 /** 驱动名 → 实现 */

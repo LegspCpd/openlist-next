@@ -34,7 +34,8 @@ export type EnvContext = Record<string, any>
  *  - `upstash`   Upstash Redis REST（仅 KV）
  *  - `r2`        Cloudflare R2 对象存储（仅 KV）
  *  - `s3`        S3 兼容对象存储（仅 KV）
- *  - `hyperdrive` Cloudflare Hyperdrive（Postgres / MySQL，需 nodejs_compat）
+ *  - `hyperdrive` Cloudflare Hyperdrive（MySQL，需 nodejs_compat，裸 TCP）
+ *  - `netlifyblobs` Netlify Blobs 对象存储（仅 KV，fetch 直连）
  */
 export type StorageDriver =
   | "auto"
@@ -53,6 +54,7 @@ export type StorageDriver =
   | "r2"
   | "s3"
   | "hyperdrive"
+  | "netlifyblobs"
 
 /**
  * 驱动接口（底层 I/O）
