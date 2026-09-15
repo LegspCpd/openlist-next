@@ -59,7 +59,7 @@ If not tested, explain why.
 
 ## Checklist / 检查清单
 
-- [ ] I have read [CONTRIBUTING](https://github.com/OpenListTeam/OpenList/blob/main/CONTRIBUTING.md).
+- [ ] I have read [CONTRIBUTING](https://github.com/LegspCpd/openlist-next/blob/main/CONTRIBUTING.md).
       / 我已阅读 [CONTRIBUTING](https://github.com/OpenListTeam/OpenList/blob/main/CONTRIBUTING.md)。
 - [ ] I confirm this contribution follows the repository license, contribution policy, and code of conduct.
       / 我确认此贡献符合仓库许可证、贡献规范和行为准则。

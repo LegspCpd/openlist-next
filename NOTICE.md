@@ -17,6 +17,12 @@
 本仓库在 `OpenListTeam/OpenList-Worker`（官方 TypeScript / Cloudflare Workers 移植版）
 的基础上修改演化而来，该代码库本身派生自 Go 版 `OpenListTeam/OpenList`。
 
+开发过程中也**借鉴**了社区项目
+[`Polonium-salts/openlistnext`](https://github.com/Polonium-salts/openlistnext) 的部分思路与实现。
+
+> 上述项目及其开发者是**本项目的致敬对象，不是本仓库的贡献者**。
+> 本仓库由 **LegspCpd** 独立开发与维护，贡献者名单见 README「贡献者」，致谢名单见 README「致谢」。
+
 | 组成部分 | 来源 | 说明 |
 | --- | --- | --- |
 | `src/backend/**` | OpenListTeam/OpenList-Worker | 后端主体，包含大量改动与新增 |
@@ -33,7 +39,7 @@
 本仓库整体继承上游许可证：**GNU AGPL-3.0**，完整条款见 [`LICENSE`](./LICENSE)。
 
 依据 AGPL-3.0 第 5 条，修改处已在相关源文件的注释中标注；
-本项目对上游的修改以 Git 提交历史完整保留。
+本项目与上游的派生关系及改动范围以本声明（`NOTICE.md`）为准。
 
 ## 商标与品牌
 

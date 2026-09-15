@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Thank you for taking the time to report an issue — it helps make OpenList-Worker better.
-        Before submitting, please check the [discussions](https://github.com/OpenListTeam/OpenList-Worker/discussions) for an existing report to avoid duplicates.
+        Before submitting, please check the [discussions](https://github.com/LegspCpd/openlist-next/discussions) for an existing report to avoid duplicates.
 
   - type: checkboxes
     attributes:
