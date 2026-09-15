@@ -23,20 +23,63 @@ const ADMIN_ROLE = 2
 /* ─────────────────────────── KV 绑定解析 ─────────────────────────── */
 
 /**
- * 解析 KV 绑定。
+ * KV 绑定的候选变量名。
  *
- * 绑定名固定为 `KV`。官方示例中绑定名是直接可用的全局标识符，
- * 这里兼容 env 挂载与全局两种形态。
+ * EdgeOne Pages 的 KV 命名空间在控制台绑定时由用户指定「变量名」，
+ * 该变量名会作为**全局变量**注入边缘函数（不是 context.env）。
+ * 本项目文档统一要求绑定为 `KV`（首个候选），但用户可能沿用别的名字，
+ * 因此这里按常见别名逐个探测，避免「绑了 KV 却检测不到」。
+ */
+const KV_NAMES = [
+  "KV",
+  "kv",
+  "OPENLIST_KV",
+  "openlist_kv",
+  "EO_KV",
+  "eo_kv",
+  "OPENLIST_KV_STORE",
+]
+
+/** 安全取值：env 可能是 Proxy / frozen 对象，属性访问可能抛异常 */
+function safeGet(obj, key) {
+  if (!obj) return undefined
+  try {
+    return obj[key]
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * 解析 KV 绑定（返回原始 binding）。
+ *
+ * 绑定名优先取 `KV`，其次扫描 KV_NAMES 中的别名；
+ * env 与 globalThis 两处都检查（EdgeOne 注入全局标识符，
+ * 部分平台则挂在 env 上）。
  */
 export function resolveKv(env) {
-  const v = env?.KV
-  if (isKvLike(v)) return v
-  const gv = globalThis?.KV
-  if (isKvLike(gv)) return gv
+  const g = globalThis
+  for (const name of KV_NAMES) {
+    const fromEnv = safeGet(env, name)
+    if (isKvLike(fromEnv)) return fromEnv
+    const fromGlobal = safeGet(g, name)
+    if (isKvLike(fromGlobal)) return fromGlobal
+  }
   return null
 }
 
-function isKvLike(v) {
+/** 解析 KV 绑定，并返回命中的变量名（用于诊断输出） */
+export function resolveKvWithName(env) {
+  const g = globalThis
+  for (const name of KV_NAMES) {
+    if (isKvLike(safeGet(env, name)) || isKvLike(safeGet(g, name))) {
+      return { kv: resolveKv(env), name }
+    }
+  }
+  return { kv: null, name: null }
+}
+
+export function isKvLike(v) {
   return !!v && typeof v.get === "function" && typeof v.put === "function"
 }
 
