@@ -164,6 +164,7 @@
     "solid-motionone": "^1.0.4",
     "solid-transition-group": "^0.3.0",
     "ssh2": "^1.17.0",
+    "smb2": "^0.31.5",
     "streamsaver": "^2.0.6",
     "typescript-natural-sort": "^0.7.2",
     "xpath": "^0.0.34",
