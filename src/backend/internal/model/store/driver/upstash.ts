@@ -6,11 +6,13 @@
  *
  * 仅支持 KV 语义（map / key 格式），Redis 不支持 SQL。
  *
- * 环境变量（Vercel / Netlify 的 Upstash 集成会自动注入）：
- *   - UPSTASH_REDIS_REST_URL
- *   - UPSTASH_REDIS_REST_TOKEN
+ * 环境变量（按优先级，Vercel / Netlify 集成会自动注入）：
+ *   - KV_REST_API_URL + KV_REST_API_TOKEN
+ *         （Vercel KV / Vercel Marketplace 的 Upstash 集成）
+ *   - UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN
+ *         （Upstash 原生变量）
  *
- * 也接受 `redis://` 形态的 DATABASE_URL/REDIS_URL（会转成 https 端点）。
+ * 也接受 `redis://` 形态的 DATABASE_URL/REDIS_URL/KV_URL（会转成 https 端点）。
  */
 import type { Driver } from "../types"
 import { envValue, parseDsn } from "../dsn"
@@ -23,16 +25,25 @@ interface UpstashConfig {
 }
 
 function resolve(env?: any): UpstashConfig | null {
-  let url = envValue(env, "UPSTASH_REDIS_REST_URL", "UPSTASH_URL", "REDIS_HTTP_URL")
+  // Vercel KV / Vercel Marketplace 的 Upstash 集成注入 KV_REST_API_URL/TOKEN，
+  // 原生 Upstash 注入 UPSTASH_REDIS_REST_URL/TOKEN —— 两套都要认。
+  let url = envValue(
+    env,
+    "KV_REST_API_URL",
+    "UPSTASH_REDIS_REST_URL",
+    "UPSTASH_URL",
+    "REDIS_HTTP_URL",
+  )
   let token = envValue(
     env,
+    "KV_REST_API_TOKEN",
     "UPSTASH_REDIS_REST_TOKEN",
     "UPSTASH_TOKEN",
     "REDIS_HTTP_TOKEN",
   )
 
   if (!url) {
-    const raw = envValue(env, "DATABASE_URL", "REDIS_URL")
+    const raw = envValue(env, "DATABASE_URL", "REDIS_URL", "KV_URL")
     if (!raw) return null
     const d = parseDsn(raw)
     if (!d || (d.scheme !== "redis" && d.scheme !== "https" && d.scheme !== "http")) {

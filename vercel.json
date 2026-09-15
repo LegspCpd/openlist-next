@@ -1,5 +1,15 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "pnpm install --no-frozen-lockfile",
+  "buildCommand": "pnpm run build",
+  "outputDirectory": "dist",
   "cleanUrls": true,
+  "functions": {
+    "api/[...route].ts": {
+      "maxDuration": 60,
+      "memory": 1024
+    }
+  },
   "rewrites": [
     {
       "source": "/d/(.*)",

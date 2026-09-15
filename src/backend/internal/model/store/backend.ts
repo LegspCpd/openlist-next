@@ -147,7 +147,40 @@ export function isServerlessRuntime(env?: any): boolean {
 }
 
 /**
+ * 是否运行在腾讯云 EdgeOne（Edge Functions / Makers Node 云函数）。
+ *
+ * 用途：EdgeOne 上常见的可用持久化存储只有两种——
+ *   1. KV：绑定到 Edge Functions，经 `functions/kv-*` 代理给 Node 云函数
+ *      （需同时配置 EO_KV_URLS 与 JWT_SECRET）；
+ *   2. Blob：`@edgeone/pages-blob` SDK，首次写入即自动建库（零配置）。
+ * 用户期望「优先 KV，其次 Blob」，因此这里单独识别 EdgeOne 并收敛探测顺序。
+ */
+export function isEdgeOneRuntime(env?: any): boolean {
+  const g = globalThis as any
+  try {
+    // EdgeOne Blob 绑定 / EdgeOne 全局对象
+    if (env?.EDGEONE_BLOB || g?.EDGEONE_BLOB) return true
+    if (typeof g?.EdgeOne !== "undefined") return true
+    // EdgeOne Makers 注入的请求上下文标记
+    if (env?.__makersContext) return true
+    // EdgeOne Node 云函数会注入腾讯云 SCF 环境变量（平台固定注入）
+    if (env?.TENCENTCLOUD_SCF_FUNCTIONNAME) return true
+    if (
+      typeof process !== "undefined" &&
+      process.env?.TENCENTCLOUD_SCF_FUNCTIONNAME
+    ) {
+      return true
+    }
+  } catch {
+    /* 检测异常不影响判定 */
+  }
+  return false
+}
+
+/**
  * 自动检测可用的驱动（优先级：mysql → d1 → kv → cfkv → blob → do）。
+ *
+ * EdgeOne 上收敛为「KV → Blob」（KV 优先）。
  *
  * mysql 仅在显式配置连接信息时参与探测（详见 hasMysqlConfig）。
  *
@@ -186,11 +219,20 @@ async function autoDetectDriver(env?: any): Promise<Driver> {
     if (d && !candidates.includes(d)) candidates.push(d)
   }
 
-  candidates.push(d1Driver, kvDriver, r2Driver, cfkvDriver, blobDriver, doDriver)
+  const edgeone = isEdgeOneRuntime(env)
+  if (edgeone) {
+    // EdgeOne：只有 KV / Blob 常见可用，按用户期望「KV 优先，其次 Blob」。
+    // Blob 经 @edgeone/pages-blob SDK 首次写入即自动建库，无需手工创建。
+    candidates.push(kvDriver, blobDriver)
+  } else {
+    candidates.push(d1Driver, kvDriver, r2Driver, cfkvDriver, blobDriver, doDriver)
+  }
 
   for (const driver of candidates) {
     if (await driver.isAvailable(env)) {
-      console.log(`[DB] Auto-detected driver: ${driver.name}`)
+      console.log(
+        `[DB] Auto-detected driver: ${driver.name}${edgeone ? " (EdgeOne)" : ""}`,
+      )
       return driver
     }
   }
@@ -236,10 +278,14 @@ export const NO_STORAGE_MESSAGE =
   "       libsql://db.turso.io + TURSO_AUTH_TOKEN        -> Turso\n" +
   "       https://xxx.supabase.co + SUPABASE_KEY         -> Supabase\n" +
   "       mysql://... + MYSQL_HTTP_URL                   -> MySQL over gateway\n" +
-  "  2. EdgeOne Blob (recommended, zero config if the project provides it)\n" +
-  "  3. EdgeOne KV: bind a KV namespace to Edge Functions, then set " +
-  "DB_DRIVER=kv (DB_FORMAT=map or key) and JWT_SECRET\n" +
+  "  2. EdgeOne KV（优先）: bind a KV namespace to Edge Functions, then set " +
+  "EO_KV_URLS + JWT_SECRET and DB_DRIVER=kv (DB_FORMAT=map or key)\n" +
+  "  3. EdgeOne Blob (zero config): the @edgeone/pages-blob store is created " +
+  "on first write; set DB_DRIVER=blob\n" +
   "  4. Cloudflare KV / D1 / R2: bind the resource and set DB_DRIVER\n" +
+  "  5. Vercel Marketplace: click-to-connect a database (Neon / Upstash / " +
+  "Supabase / Turso / …); its env vars are auto-detected " +
+  "(see docs/ONE_CLICK_DATABASE.md)\n" +
   "Environment variables to set in the project settings:\n" +
   "  DB_DRIVER=auto | blob | kv | cfkv | d1 | do | r2 | mysql | neon | turso |\n" +
   "            pgrest | pghttp | mysqlhttp | upstash | s3 | hyperdrive |\n" +

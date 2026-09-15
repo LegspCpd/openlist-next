@@ -88,3 +88,34 @@ await probe("kv binding / 有 JWT_SECRET（健康）", {
   JWT_SECRET: "0123456789abcdef0123456789abcdef",
   KV: webKv,
 })
+
+// ── Vercel Marketplace「一键连接数据库」自动识别（DB_DRIVER=auto）──────────────
+// 这些变量由 Vercel 在各数据库集成被点击连接后自动注入；这里手工模拟，
+// 验证 inferDriverFromEnv 能否推断出正确驱动。详见 docs/ONE_CLICK_DATABASE.md。
+
+await probe("Vercel / Neon（DATABASE_URL 指向 *.neon.tech）", {
+  DB_FORMAT: "map",
+  DB_DRIVER: "auto",
+  DATABASE_URL: "postgres://u:p@ep-xxx-pooler.us-east-1.aws.neon.tech/neondb",
+})
+
+await probe("Vercel / Vercel KV & Upstash（KV_REST_API_URL）", {
+  DB_FORMAT: "map",
+  DB_DRIVER: "auto",
+  KV_REST_API_URL: "https://xxx.upstash.io",
+  KV_REST_API_TOKEN: "token",
+})
+
+await probe("Vercel / Supabase（*.pooler.supabase.com）", {
+  DB_FORMAT: "map",
+  DB_DRIVER: "auto",
+  POSTGRES_URL:
+    "postgres://u:p@aws-0-us-east-1.pooler.supabase.com:6543/postgres",
+})
+
+await probe("Vercel / Turso（TURSO_DATABASE_URL）", {
+  DB_FORMAT: "map",
+  DB_DRIVER: "auto",
+  TURSO_DATABASE_URL: "libsql://my-db.turso.io",
+  TURSO_AUTH_TOKEN: "token",
+})
