@@ -3,13 +3,7 @@
   "installCommand": "pnpm install --no-frozen-lockfile",
   "buildCommand": "pnpm run build",
   "outputDirectory": "dist",
-  "nodeVersion": "22.21.1",
-  "rewrites": [
-    {
-      "source": "/*",
-      "destination": "/index.html"
-    }
-  ],
+  "nodeVersion": "22.11.0",
   "headers": [
     {
       "source": "/assets/*",
@@ -31,7 +25,9 @@
     }
   ],
   "cloudFunctions": {
-    "maxDuration": 120
+    "nodejs": {
+      "maxDuration": 120
+    }
   },
   "schedules": [
     {

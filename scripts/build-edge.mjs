@@ -185,12 +185,16 @@ async function build() {
   })
 
   // 阿里云 ESA（边缘安全加速）边缘函数入口（仅在源文件存在时构建）
+  //
+  // 产物写入 dist-server/ 而不是 dist/：dist/ 是 esa.jsonc 声明的静态资源目录
+  // （assets.directory），把服务端 bundle 放进去会被当作静态文件公开下载，
+  // 既浪费带宽也暴露实现细节。esa.jsonc 的 entry 与此处保持一致。
   if (fs.existsSync("esa-entry.ts")) {
     await esbuild.build({
       entryPoints: ["esa-entry.ts"],
       bundle: true,
       platform: "browser", // ESA 边缘运行时不支持 Node 内置模块，需要浏览器构建
-      outfile: "dist/esa-entry.js",
+      outfile: "dist-server/esa-entry.js",
       minify: true,
       format: "esm",
       mainFields: ["browser", "module", "main"], // 优先选择浏览器版本依赖
@@ -200,6 +204,7 @@ async function build() {
         "cpu-features",
         "iconv-lite",
         "mysql2",
+        "smb2",
       ],
       loader: { ".html": "text", ".node": "empty" },
       plugins: [emptyNodeDriverPlugin, normalizeHtmlEolPlugin, nodeShimPlugin],
@@ -207,7 +212,8 @@ async function build() {
   }
 
   console.log(
-    "✓ Edge build complete -> dist-server/api/[...route].js & cloud-functions/[[default]].js",
+    "✓ Edge build complete -> dist-server/api/[...route].js, " +
+      "dist-server/esa-entry.js & cloud-functions/[[default]].js",
   )
 }
 
