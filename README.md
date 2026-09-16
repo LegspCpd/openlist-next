@@ -448,7 +448,7 @@ pnpm run format         # prettier 格式化
 
 ## 贡献者
 
-本项目由 **LegspCpd** 独立开发与维护。
+本项目由 **LegspCpd** 开发与维护。
 
 [![Contributors](https://contrib.rocks/image?repo=LegspCpd/openlist-next)](https://github.com/LegspCpd/openlist-next/graphs/contributors)
 
