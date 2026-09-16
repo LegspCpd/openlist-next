@@ -309,9 +309,10 @@ curl https://your-domain/api/public/env_check
 
 In the response, pay attention to these fields:
 
-- `storage.driver`: the driver actually in effect. If it is `memory`, data is not persisted and must be addressed
-- `jwt.ready`: whether `JWT_SECRET` is configured. If not, encrypted fields such as mount credentials cannot be decrypted
-- `ready`: whether everything is ready overall
+- `data.storage.memory`: `true` means the store fell back to memory and data is lost on restart — this must be fixed (in that case `data.config.resolved_driver` is `memory`)
+- `data.jwt.ready`: whether `JWT_SECRET` is configured. If not, encrypted fields such as mount credentials cannot be decrypted
+- `data.ready`: whether everything is ready overall
+- `data.issues`: the problem list, where each entry carries a `code` (such as `STORAGE_MEMORY_ONLY` or `JWT_SECRET_MISSING`) — the fastest place to start troubleshooting
 
 You can also let the unified script check for you (check only, no redeploy):
 
@@ -455,12 +456,14 @@ Every variable is listed with comments in the [variable template](../.dev.vars.e
 
 | Symptom | Cause and Solution |
 |---|---|
-| Shows `No storage backend is available` | No storage binding was configured. Fill in `DATABASE_URL`, or bind KV / D1 on the platform. |
-| Re-initialization required after every restart | Data is not persisted. Check whether the `storage.driver` returned by `/api/public/env_check` is `memory`. |
-| Page returns 404 but the API works | Static assets were not uploaded. Confirm that the build produced `dist/`, and that the platform's static asset directory points to it. |
-| Deployed to two platforms but data doesn't match | The `JWT_SECRET` differs between them, so encrypted fields cannot be decrypted. Keep them consistent. |
-| Reports `mysql2 is not available` | `DB_DRIVER=mysql` was used on an edge runtime; this driver is only available in Node containers. Switch to `mysqlhttp`. |
-| Supabase returns 404 | The `kv` table does not exist; first run `CREATE TABLE kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);`. |
+| Shows `No storage backend is available` | No storage is configured at all. Fill in `DATABASE_URL`, or bind KV / D1 / Blob on the platform. Check `data.issues` in the `/api/public/env_check` response to see which one is missing. |
+| Re-initialization required after every restart | Data is not persisted and fell back to in-memory storage. Check `/api/public/env_check`: `data.storage.memory` is `true` (or `data.issues` contains `STORAGE_MEMORY_ONLY`). |
+| Page returns 404 but the API works | Static assets were not uploaded. Confirm that the build produced `dist/` and that the platform's static asset directory points to it. |
+| Cannot log in, or netdisk mounts fail, after changing `JWT_SECRET` | Passwords, netdisk credentials and OTP secrets are encrypted with `JWT_SECRET` before being written to the store, so a new key cannot decrypt them (the log shows `Failed to decrypt a sealed secret (wrong JWT_SECRET?)`). Restore the old value, or re-enter the password and netdisk credentials. |
+| Data becomes inconsistent when two platforms share one store | Their `JWT_SECRET` values differ, so the encrypted fields cannot be decrypted. Platforms sharing one store must use the same value; platforms with separate stores do not. |
+| KV returns 401 on EdgeOne | `JWT_SECRET` differs between the Node cloud function and the Edge Function (or it was rotated). Use the same value on both, or point `EO_KV_URLS` at the correct deployment origin. |
+| Reports `Storage driver "mysql" is not available in this runtime` | `DB_DRIVER=mysql` is set on an edge runtime, but this driver only works in a Node container. Switch to `mysqlhttp`. |
+| Supabase returns 404 | The `kv` table does not exist; create it first: `CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);`. Note that Supabase uses PostgREST, which only supports KV — `DB_FORMAT=sql` is not supported. |
 
 ---
 

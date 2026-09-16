@@ -309,9 +309,10 @@ curl https://你的域名/api/public/env_check
 
 返回内容里重点看这几个字段：
 
-- `storage.driver`：实际生效的驱动。如果是 `memory`，说明数据不会持久化，必须处理
-- `jwt.ready`：`JWT_SECRET` 是否配好了。没配的话，挂载凭据之类的加密字段解不开
-- `ready`：整体是否就绪
+- `data.storage.memory`：`true` 表示落到了内存兜底，数据重启就没了，必须处理（此时 `data.config.resolved_driver` 是 `memory`）
+- `data.jwt.ready`：`JWT_SECRET` 是否配好了。没配的话，网盘挂载凭据这类加密字段解不开
+- `data.ready`：整体是否就绪
+- `data.issues`：问题清单，每项带一个 `code`（如 `STORAGE_MEMORY_ONLY`、`JWT_SECRET_MISSING`），排查从这儿看最快
 
 也可以让统一脚本帮你检查（只检查，不重新部署）：
 
@@ -455,12 +456,14 @@ DATABASE_URL=postgres://user:pass@ep-xxx.neon.tech/neondb
 
 | 现象 | 原因和处理办法 |
 |---|---|
-| 提示 `No storage backend is available` | 一个存储绑定都没配。填 `DATABASE_URL`，或者在平台上绑定 KV / D1 |
-| 每次重启都要重新初始化 | 数据没有持久化。看 `/api/public/env_check` 返回的 `storage.driver` 是不是 `memory` |
+| 提示 `No storage backend is available` | 一个存储都没配。填 `DATABASE_URL`，或者在平台上绑定 KV / D1 / Blob。具体缺哪一项看 `/api/public/env_check` 返回的 `data.issues` |
+| 每次重启都要重新初始化 | 数据没有持久化，落到了内存兜底。看 `/api/public/env_check` 的 `data.storage.memory` 是不是 `true`（或 `data.issues` 里有没有 `STORAGE_MEMORY_ONLY`） |
 | 页面 404 但 API 正常 | 静态资源没上传。确认构建产出了 `dist/`，并且平台的静态资源目录指向它 |
-| 部署到两个平台，数据对不上 | 两边的 `JWT_SECRET` 不一样，加密字段解不开。两边保持一致 |
-| 报 `mysql2 is not available` | 在边缘运行时用了 `DB_DRIVER=mysql`，这个驱动只在 Node 容器里可用。改用 `mysqlhttp` |
-| Supabase 报 404 | `kv` 表不存在，先执行 `CREATE TABLE kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);` |
+| 换了 `JWT_SECRET` 之后登录不上、网盘挂载失败 | 密码、网盘凭据、OTP 密钥都是用 `JWT_SECRET` 加密后才落库的，密钥换了就解不开（日志里是 `Failed to decrypt a sealed secret (wrong JWT_SECRET?)`）。改回原来的值，或者把密码和网盘凭据重新填一遍 |
+| 两个平台共用一个库时数据错乱 | 两边的 `JWT_SECRET` 不一致，加密字段解不开。共用一个库就必须填同一个值；各用各的库则不需要一致 |
+| EdgeOne 上 KV 报 401 | Node 云函数和 Edge Function 的 `JWT_SECRET` 不一致（或轮换过）。两边填同一个，或者把 `EO_KV_URLS` 指向正确的部署域名 |
+| 报 `Storage driver "mysql" is not available in this runtime` | 边缘运行时用了 `DB_DRIVER=mysql`，这个驱动只在 Node 容器里可用。改用 `mysqlhttp` |
+| Supabase 报 404 | `kv` 表不存在，先建表：`CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);`。另外 Supabase 走 PostgREST，只支持 KV，不能配 `DB_FORMAT=sql` |
 
 ---
 

@@ -309,9 +309,10 @@ curl https://votre-domaine/api/public/env_check
 
 Dans la réponse, portez une attention particulière aux champs suivants :
 
-- `storage.driver` : le pilote réellement actif. S'il vaut `memory`, les données ne sont pas persistées et vous devez y remédier
-- `jwt.ready` : indique si `JWT_SECRET` est configuré. S'il ne l'est pas, les champs chiffrés comme les identifiants de montage ne peuvent pas être déchiffrés
-- `ready` : indique si l'ensemble est prêt
+- `data.storage.memory` : `true` signifie que le stockage en mémoire a pris le relais et que les données sont perdues au redémarrage — à corriger impérativement (dans ce cas `data.config.resolved_driver` vaut `memory`)
+- `data.jwt.ready` : indique si `JWT_SECRET` est configuré. S'il ne l'est pas, les champs chiffrés comme les identifiants de montage ne peuvent pas être déchiffrés
+- `data.ready` : indique si l'ensemble est prêt
+- `data.issues` : la liste des problèmes, chaque entrée portant un `code` (tel que `STORAGE_MEMORY_ONLY` ou `JWT_SECRET_MISSING`) — l'endroit le plus rapide pour commencer le diagnostic
 
 Vous pouvez également demander au script unifié de vérifier pour vous (vérification uniquement, sans redéploiement) :
 
@@ -455,12 +456,14 @@ Chaque variable est listée avec un commentaire dans [le modèle de variables](.
 
 | Symptôme | Cause et solution |
 |---|---|
-| Affichage de `No storage backend is available` | Aucun binding de stockage n'est configuré. Renseignez `DATABASE_URL`, ou associez KV / D1 sur la plateforme |
-| Réinitialisation nécessaire à chaque redémarrage | Les données ne sont pas persistées. Vérifiez si `storage.driver` renvoyé par `/api/public/env_check` vaut `memory` |
+| Affichage de `No storage backend is available` | Aucun stockage n'est configuré. Renseignez `DATABASE_URL`, ou associez KV / D1 / Blob sur la plateforme. Le champ `data.issues` de `/api/public/env_check` indique lequel manque |
+| Réinitialisation nécessaire à chaque redémarrage | Les données ne sont pas persistées et le stockage en mémoire a pris le relais. Vérifiez `/api/public/env_check` : `data.storage.memory` vaut `true` (ou `data.issues` contient `STORAGE_MEMORY_ONLY`) |
 | Page 404 mais API fonctionnelle | Les ressources statiques n'ont pas été téléversées. Vérifiez que le build a produit `dist/` et que le répertoire de ressources statiques de la plateforme pointe dessus |
-| Déploiement sur deux plateformes, données incohérentes | Les `JWT_SECRET` des deux côtés diffèrent, empêchant le déchiffrement des champs chiffrés. Gardez-les identiques des deux côtés |
-| Erreur `mysql2 is not available` | Utilisation de `DB_DRIVER=mysql` en environnement edge ; ce pilote n'est disponible que dans un conteneur Node. Basculez sur `mysqlhttp` |
-| Supabase renvoie 404 | La table `kv` n'existe pas ; exécutez d'abord `CREATE TABLE kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);` |
+| Connexion impossible ou montages disque en échec après un changement de `JWT_SECRET` | Les mots de passe, les identifiants de disque réseau et les secrets OTP sont chiffrés avec `JWT_SECRET` avant d'être enregistrés ; une nouvelle clé ne peut donc pas les déchiffrer (le journal affiche `Failed to decrypt a sealed secret (wrong JWT_SECRET?)`). Rétablissez l'ancienne valeur, ou saisissez à nouveau le mot de passe et les identifiants |
+| Données incohérentes lorsque deux plateformes partagent un même stockage | Les `JWT_SECRET` des deux côtés diffèrent, empêchant le déchiffrement des champs chiffrés. Deux plateformes partageant un même stockage doivent utiliser la même valeur ; ce n'est pas nécessaire si les stockages sont distincts |
+| KV renvoie 401 sur EdgeOne | Le `JWT_SECRET` diffère entre la fonction cloud Node et l'Edge Function (ou a été renouvelé). Utilisez la même valeur des deux côtés, ou pointez `EO_KV_URLS` vers l'origine de déploiement correcte |
+| Erreur `Storage driver "mysql" is not available in this runtime` | `DB_DRIVER=mysql` est défini en environnement edge, or ce pilote ne fonctionne que dans un conteneur Node. Basculez sur `mysqlhttp` |
+| Supabase renvoie 404 | La table `kv` n'existe pas ; créez-la d'abord : `CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);`. À noter : Supabase passe par PostgREST, qui ne prend en charge que le KV — `DB_FORMAT=sql` n'est pas disponible |
 
 ---
 
