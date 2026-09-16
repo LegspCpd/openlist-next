@@ -6,6 +6,7 @@ import { getDb } from "../internal/model/db"
  */
 
 export * from "./xml"
+export * from "./mime"
 export * from "./errs"
 export * from "./generic"
 export * from "./http"
@@ -20,6 +21,34 @@ export function formatBytes(bytes: number, decimals = 2): string {
   const sizes = ["Bytes", "KB", "MB", "GB", "TB", "PB"]
   const i = Math.floor(Math.log(bytes) / Math.log(k))
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i]
+}
+
+/**
+ * 解析真实客户端 IP。
+ *
+ * 边缘运行时里 socket 地址没有意义，必须读平台注入的头。顺序：
+ * CF-Connecting-IP（Cloudflare）→ EO-Connecting-IP（EdgeOne）→ X-Real-IP
+ * （阿里云 ESA / nginx）→ X-Forwarded-For 第一段。
+ *
+ * 注意：这些头都可以被客户端伪造，只适用于「区分访问者 / 限流去重」
+ * 这类尽力而为的场景，不能当作可信身份。
+ */
+export function clientIpOf(c: any): string {
+  const h = (name: string) => {
+    try {
+      return c?.req?.header?.(name) || ""
+    } catch {
+      return ""
+    }
+  }
+  return (
+    h("CF-Connecting-IP") ||
+    h("EO-Connecting-IP") ||
+    h("X-Real-IP") ||
+    h("x-forwarded-for")?.split(",")[0]?.trim() ||
+    h("X-Forwarded-For")?.split(",")[0]?.trim() ||
+    "unknown"
+  )
 }
 
 // Check administrator authorization from context

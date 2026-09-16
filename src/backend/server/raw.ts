@@ -2,9 +2,10 @@ import { Hono } from "hono"
 import { resolvePath } from "../internal/model/db"
 import { parseRangeHeader } from "../internal/stream/stream"
 import { flushPendingDriverState, getDriver } from "../internal/op/storage"
-import { resolveShare } from "../internal/op/share"
+import { resolveShare, markShareContext, isShareContext, SHARE_PATH_ERROR } from "../internal/op/share"
 import { needDownloadSign, verifyDownloadSign } from "../pkg/sign"
 import { safeErrorMessage } from "../pkg/errs"
+import { clientIpOf } from "../pkg/utils"
 import { assertSafeUrl, getTrustedHosts } from "../pkg/http"
 
 let fsPromises: any = null
@@ -133,7 +134,14 @@ rawRouter.get("/*", async (c) => {
         cookiePwd = cookiePwdRaw
       }
       const sharePwd = c.req.query("pwd") || cookiePwd
-      const shareRes = await resolveShare(reqPath, sharePwd, c.env)
+      const shareRes = await resolveShare(
+        reqPath,
+        sharePwd,
+        clientIpOf(c),
+        c.env,
+      )
+      // 分享上下文：后续任何失败都不得回显驱动层异常（上游 issue #2153）
+      markShareContext(c)
       if (!shareRes.ok) {
         return c.text(shareRes.error || "Share not found", 404)
       }
@@ -369,6 +377,8 @@ rawRouter.get("/*", async (c) => {
             `[rawRouter] Driver get failed for '${reqPath}':`,
             e.message,
           )
+          // 分享上下文只回泛化文案，避免泄露真实物理路径（上游 issue #2153）
+          if (isShareContext(c)) return c.text(SHARE_PATH_ERROR, 404)
           return c.text(`Download failed: ${safeErrorMessage(e)}`, 500)
         }
       }
@@ -403,6 +413,8 @@ rawRouter.get("/*", async (c) => {
     }
   } catch (err: any) {
     console.error(`[rawRouter] Download 404 for '${reqPath0}':`, err.message)
+    // 分享上下文只回泛化文案，避免泄露真实物理路径（上游 issue #2153）
+    if (isShareContext(c)) return c.text(SHARE_PATH_ERROR, 404)
     return c.text(`Not found: ${safeErrorMessage(err, "file not found")}`, 404)
   }
 })

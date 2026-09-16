@@ -11,7 +11,7 @@ import {
   putItem,
   getDriver,
 } from "../internal/op/storage"
-import { resolveShare } from "../internal/op/share"
+import { resolveShare, markShareContext, safeShareAwareMessage } from "../internal/op/share"
 import { resolvePath } from "../internal/model/db"
 import { getUserFromContext } from "./middlewares"
 import { canWrite, getActualPath, isAdmin } from "../pkg/permission"
@@ -32,6 +32,7 @@ import {
   getSignExpiresIn,
 } from "../pkg/sign"
 import { safeErrorMessage } from "../pkg/errs"
+import { clientIpOf } from "../pkg/utils"
 import { search } from "../internal/op/search"
 import { parseZip, extractZipEntry, ZipArchive } from "../internal/archive/zip"
 import { assertSafeUrl, getTrustedHosts } from "../pkg/http"
@@ -72,6 +73,16 @@ const getStorageRequestContext = (c: any) => {
 // 的安全漏洞，同时让 /fs/list 的 write 字段如实反映请求者身份。
 const permissionDenied = (c: any) =>
   c.json({ code: 403, message: "Permission denied", data: null }, 403)
+
+// ---- 分享上下文的错误脱敏（上游 issue #2153）----
+// 详见 internal/op/share.ts：分享请求一旦进入分享分支就打标记，
+// catch 里据此把驱动异常泛化，避免回显真实物理路径。
+const jsonErrorSafely = (c: any, err: any) =>
+  c.json({
+    code: 500,
+    message: safeShareAwareMessage(c, err),
+    data: null,
+  })
 
 // ---- 上传大小限制（M-5：防止超大请求体被整体读入内存导致 Worker OOM）----
 // 单次整体上传（/put /form）与分片单片（/upload/part）分开设限，
@@ -132,7 +143,13 @@ fsRouter.post("/dirs", async (c) => {
   try {
     // Share path support for completeness
     if (reqPath.startsWith("/@s")) {
-      const shareRes = await resolveShare(reqPath, body.password || "", c.env)
+      markShareContext(c)
+      const shareRes = await resolveShare(
+        reqPath,
+        body.password || "",
+        clientIpOf(c),
+        c.env,
+      )
       if (!shareRes.ok) {
         return shareErrorResponse(c, shareRes.error)
       }
@@ -173,7 +190,7 @@ fsRouter.post("/dirs", async (c) => {
       }))
     return c.json({ code: 200, message: "success", data: dirs })
   } catch (err: any) {
-    return c.json({ code: 500, message: safeErrorMessage(err), data: null })
+    return jsonErrorSafely(c, err)
   }
 })
 
@@ -206,7 +223,13 @@ fsRouter.post("/list", async (c) => {
   try {
     // Share path: /@s/{shareId}/...
     if (reqPath.startsWith("/@s")) {
-      const shareRes = await resolveShare(reqPath, body.password || "", c.env)
+      markShareContext(c)
+      const shareRes = await resolveShare(
+        reqPath,
+        body.password || "",
+        clientIpOf(c),
+        c.env,
+      )
       if (!shareRes.ok) {
         return shareErrorResponse(c, shareRes.error)
       }
@@ -424,7 +447,7 @@ fsRouter.post("/list", async (c) => {
       },
     })
   } catch (err: any) {
-    return c.json({ code: 500, message: safeErrorMessage(err), data: null })
+    return jsonErrorSafely(c, err)
   }
 })
 
@@ -440,7 +463,13 @@ fsRouter.post("/get", async (c) => {
   try {
     // Share path: /@s/{shareId}/...
     if (reqPath.startsWith("/@s")) {
-      const shareRes = await resolveShare(reqPath, body.password || "", c.env)
+      markShareContext(c)
+      const shareRes = await resolveShare(
+        reqPath,
+        body.password || "",
+        clientIpOf(c),
+        c.env,
+      )
       if (!shareRes.ok) {
         return shareErrorResponse(c, shareRes.error)
       }
@@ -584,7 +613,7 @@ fsRouter.post("/get", async (c) => {
       },
     })
   } catch (err: any) {
-    return c.json({ code: 500, message: safeErrorMessage(err), data: null })
+    return jsonErrorSafely(c, err)
   }
 })
 
