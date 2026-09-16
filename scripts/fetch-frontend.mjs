@@ -38,6 +38,9 @@ const I18N_TAR_URL =
   process.env.I18N_URL ||
   "https://github.com/OpenListTeam/OpenList-Frontend/releases/download/edge/i18n.tar.gz"
 
+// 仓库自带的翻译补丁脚本（补齐官方翻译包的缺口，说明见该文件顶部）
+const I18N_PATCH_SCRIPT = path.join(__dirname, "i18n-patch.mjs").replace(/\\/g, "/")
+
 function run(cmd, opts = {}) {
   console.log(`  > ${cmd}`)
   execSync(cmd, { stdio: "inherit", shell: true, ...opts })
@@ -156,6 +159,9 @@ function fetchI18n(repo) {
   }
   // 无论翻译是否下载成功，都补齐 entry.ts 与缺失翻译（与前端 build.sh 一致）
   run(`node ./scripts/i18n.mjs`, { cwd: repo })
+  // 官方翻译包（Crowdin）落后于英文源，缺键会被前端 i18n.ts 回落成英文，
+  // 于是中文界面里会混着英文。用仓库自带的补丁补齐（详见 scripts/i18n-patch.mjs）。
+  run(`node "${I18N_PATCH_SCRIPT}" "${repo.replace(/\\/g, "/")}"`)
 }
 
 /** 在本地前端仓库中 install + build，并取 dist 产物 */
