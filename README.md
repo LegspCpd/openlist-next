@@ -206,7 +206,7 @@ pnpm run deploy:worker
 
 有几个坑要注意（本项目已经处理好了，你自己改配置时留意）：
 
-- `edgeone.json` 里的 `nodeVersion` 必须是平台预装的那几个版本（14.21.3 / 16.20.2 / 18.20.4 / 20.18.0 / 22.11.0），填别的会构建失败
+- `edgeone.json` 里的 `nodeVersion` 必须是平台预装的版本之一（14.21.3 / 16.20.2 / 18.20.4 / 20.18.0 / 22.11.0 / 22.17.1 / 22.21.1 / 24.5.0 / 24.11.0 / 24.18.0），填别的会构建失败。本项目用的是 `22.21.1`。这个字段会覆盖控制台里的项目设置
 - `maxDuration` 要写在 `cloudFunctions.nodejs` 里面，写成 `cloudFunctions.maxDuration` 不生效
 - 前端路由回退由根目录的 `middleware.js` 负责。`edgeone.json` 的 `rewrites` 只对静态资源生效，官方文档明确说不支持前端路由，加 `/*` 反而会命中静态文件
 - 不要用 `*.edgeone.cool` 这种临时域名验证存储，这个域名带全站鉴权参数，会拦截边缘函数和云函数之间的 KV 代理请求。请先绑定自定义域名再验证
@@ -346,67 +346,108 @@ pnpm run deploy:vercel  -- --no-deploy --url https://你的域名
 
 ## 配置
 
-### 数据存储
+### 变量填在哪里
 
-有两个变量决定数据存在哪里、怎么组织。
+同一个变量名，填在下面任何一处效果都一样。
 
-**`DB_DRIVER`** —— 数据存在哪里
+| 部署方式 | 填在哪 |
+|---|---|
+| Cloudflare Workers | 控制台项目的 Settings → Variables and Secrets；或在终端执行 `wrangler secret put JWT_SECRET` |
+| 腾讯云 EdgeOne | 控制台项目的「环境变量」；点一键部署按钮时，部署页会直接问你要 |
+| Vercel / Netlify | 项目设置的 Environment Variables |
+| Node / Docker | 根目录的 `.env` 文件 |
 
-- `auto`（默认）：自动识别。配了外部数据库就用外部数据库，否则用平台自带的存储
-- 平台存储：`kv`、`d1`、`r2`、`blob`、`cfkv`、`do`
-- 外部数据库：`neon`、`turso`、`pgrest`、`pghttp`、`mysqlhttp`、`upstash`、`s3`
-- `mysql`：只在 Node 容器里可用
+下面按「变量名 —— 它是干什么的 —— 要不要填」逐条写清楚。
 
-**`DB_FORMAT`** —— 数据怎么组织
+### 必填的
 
-- `map`（默认）：整个数据库存成一个 JSON，读写各一次，适合 KV 和对象存储
-- `key`：每个实体一条记录，比如 `users_1`，实体多的时候比 `map` 省
-- `sql`：用关系表存储，表结构和 Go 版 OpenList 一致，可以和 Go 版共用同一个数据库
+| 变量名 | 它是干什么的 | 要不要填 | 怎么填 |
+|---|---|---|---|
+| `JWT_SECRET` | 整个程序的密钥。三件事都靠它：登录会话的签名、网盘凭据这类字段的加密存储、定时任务的鉴权 | **必填**。不填的话装完之后挂载网盘会失败 | 随机字符串，至少 16 位。用 `openssl rand -hex 32` 生成一串填进去 |
 
-常用的几种组合：
+> [!IMPORTANT]
+> `JWT_SECRET` 换了或者填错了，之前存进去的网盘凭据就解不开了，表现为「挂载突然要求重新填写」。同一份数据部署在多个平台时，各平台的 `JWT_SECRET` 必须保持一致。
+
+### 数据存在哪里
+
+这两个变量决定数据落在哪种存储、按什么结构存。
+
+| 变量名 | 它是干什么的 | 要不要填 | 可选值 |
+|---|---|---|---|
+| `DB_DRIVER` | 数据存到哪种存储里 | 选填，默认 `auto` | `auto`、`kv`、`d1`、`r2`、`blob`、`cfkv`、`do`、`neon`、`turso`、`pgrest`、`pghttp`、`mysqlhttp`、`upstash`、`s3`、`hyperdrive`、`netlifyblobs`、`mysql` |
+| `DB_FORMAT` | 数据按什么结构组织 | 选填，默认 `map` | `map`、`key`、`sql` |
+
+- `auto` 会按这个顺序挑：你配的外部数据库 → 平台自带的存储（KV、D1、Blob 之类）。拿不准就用 `auto`。
+- `map`：整个库存成一个 JSON，读一次写一次，最省请求次数，适合 KV 和对象存储。
+- `key`：每个实体存一条记录，比如 `users_1`。实体多的时候比 `map` 省流量。
+- `sql`：用关系表存，表结构和 Go 版 OpenList 一样，可以和 Go 版共用同一个数据库。
+- `mysql` 只能在 Node / Docker 里用。边缘平台没有裸 TCP，连不上。
+
+常用组合：
 
 ```bash
 # Cloudflare Workers + D1
 DB_FORMAT=sql
 DB_DRIVER=d1
 
-# EdgeOne + Blob（零配置）
+# EdgeOne + Blob（不用建库，第一次写入自动创建）
 DB_FORMAT=map
 DB_DRIVER=blob
 
-# 外部数据库，比如 Neon
+# 外部数据库，以 Neon 为例
 DB_FORMAT=map
 DB_DRIVER=auto
 DATABASE_URL=postgres://user:pass@ep-xxx.neon.tech/neondb
 ```
 
-### 安全
+### 外部数据库（不想用平台自带存储时填）
 
-- `JWT_SECRET`：必填。用于会话签名、挂载凭据加密，也用于定时任务鉴权
-- `ADMIN_PASS`：可选。设置后跳过安装向导，直接用这个密码初始化管理员账号
+最省事的做法是**只填一条 `DATABASE_URL`，`DB_DRIVER` 保持 `auto`**，程序自己看协议和主机名就能认出是哪家。
 
-### 外部数据库
+| 变量名 | 它是干什么的 | 要不要填 |
+|---|---|---|
+| `DATABASE_URL` | 通用的数据库连接串，认出哪家就用哪家的驱动 | 用外部数据库时填这一条通常就够 |
+| `SUPABASE_KEY` | Supabase 的读写 key，只有一条连接串不够 | 用 Supabase 时必填 |
+| `TURSO_AUTH_TOKEN` | Turso 的访问令牌 | 用 Turso 时必填 |
+| `MYSQL_HTTP_URL` | MySQL / MariaDB 的 HTTP 转发网关地址。边缘平台连 MySQL 只能走它 | 在边缘用 MySQL 时必填 |
+| `PG_HTTP_URL` | 自己搭的 Postgres HTTP 网关地址 | 用自建网关时必填 |
+| `MYSQL_URLS` | MySQL 直连连接串，仅 Node / Docker 可用 | 在 Node 里直连 MySQL 时填 |
 
-只填一条连接串，保持 `DB_DRIVER=auto`，程序会根据协议和主机名自动选择驱动：
+各家连接串怎么写、还支持哪些变量别名，见[外部存储配置指南](./docs/EXTERNAL_STORAGE.md)。
 
-| 连接串 | 使用的驱动 |
+### 平台绑定（不用手填，绑定好就行）
+
+这些由平台在部署时自动注入到环境里，你只需要在控制台建好资源、绑定时把名字写成下面这样。
+
+| 变量名 | 它是干什么的 | 要不要管 |
+|---|---|---|
+| `DB` | Cloudflare D1 数据库绑定，`DB_DRIVER=d1` 用它 | 想用 D1 就绑，名字填 `DB` |
+| `KV` | Cloudflare KV / EdgeOne KV 的命名空间绑定，`DB_DRIVER=kv` 用它 | 想用 KV 就绑，名字填 `KV` |
+| `HYPERDRIVE` | Cloudflare Hyperdrive 连接串，让边缘能访问 MySQL，`DB_DRIVER=hyperdrive` 用它 | 想用 Hyperdrive 就绑 |
+| `S3_BUCKET`、`S3_REGION`、`S3_ENDPOINT`、`S3_ACCESS_KEY_ID`、`S3_SECRET_ACCESS_KEY` | S3 兼容对象存储（R2 / MinIO / B2 等）的桶名与访问凭据，`DB_DRIVER=s3` 用它们 | 用 S3 存储就五项都填 |
+| `CF_ACCOUNT`、`CF_KV_UUID`、`CF_API_KEY` | 走 Cloudflare REST API 读写 KV，`DB_DRIVER=cfkv` 用它们。分别是账户 ID、KV 命名空间 ID、有 KV 读写权限的 API Token | 用 `cfkv` 就三项都填 |
+
+### 其他变量（大多可以不管）
+
+| 变量名 | 它是干什么的 | 要不要填 |
+|---|---|---|
+| `EO_KV_URLS` | EdgeOne 专用。EdgeOne 的 KV 绑定只给边缘函数，Node 云函数拿不到，必须经同部署的边缘函数代理，这里填那个代理地址 | 一般不用填，留空会自动用当前域名；跨域或本地调试才需要 |
+| `ADMIN_PASS` | 设了它就不用走安装向导，直接用这个密码创建管理员账号 | 选填，不填就在浏览器向导里设置 |
+| `ALLOW_URLS` | 跨域白名单，逗号分隔。不填只允许同源请求 | 前端和后端不在同一个域名时填 |
+| `ASSET_URLS` | 让前端静态资源从 CDN 加载，支持用 `$version` 占位当前前端版本号 | 用 CDN 时填 |
+| `MAX_UPLOAD` | 单次整体上传的大小上限，单位字节 | 选填，默认 26214400（25MB） |
+| `MAX_UPPART` | 分片上传时单片的大小上限，单位字节 | 选填，默认 16777216（16MB） |
+| `ALLOW_SEED` | 允许当作种子数据来源的站点白名单 | 用种子功能时填 |
+
+### 只在命令行里用（不用填进环境变量）
+
+| 变量名 | 它是干什么的 |
 |---|---|
-| `postgres://…@ep-xxx.neon.tech/…` | `neon` |
-| `postgresql://…@db.xxx.supabase.co/…` | `pgrest`，需要再填 `SUPABASE_KEY` |
-| `libsql://xxx.turso.io` | `turso`，需要再填 `TURSO_AUTH_TOKEN` |
-| `redis://xxx.upstash.io` | `upstash` |
-| `mysql://…` | `mysqlhttp`，需要再填 `MYSQL_HTTP_URL` |
+| `EO_PAGES_PROJECT` | EdgeOne Makers CLI 要部署到哪个项目 |
+| `EO_PAGES_API_TOKEN` | EdgeOne Makers 控制台里的 API Token，给 CLI 用 |
+| `EO_PAGES_URL` | 部署后的域名，`pnpm run deploy:edgeone` 用它做部署后的检查 |
 
-厂商专属变量（`NEON_DATABASE_URL`、`TURSO_DATABASE_URL` 等）的优先级比 `DATABASE_URL` 高。
-
-完整的驱动列表和各数据库的配置示例见 [外部存储配置指南](./docs/EXTERNAL_STORAGE.md)，变量模板见 [`.dev.vars.example`](./.dev.vars.example)。
-
-### 其他变量
-
-- `ALLOW_URLS`：跨域白名单，逗号分隔。不填则只允许同源请求
-- `MAX_UPLOAD`：单次上传大小上限，默认 26214400 字节（25MB）
-- `MAX_UPPART`：分片上传的单片大小上限，默认 16777216 字节（16MB）
-- `ALLOW_SEED`：允许作为种子数据来源的主机白名单
+每个变量都在[变量模板](./.dev.vars.example)里带注释列了一遍。
 
 ---
 
