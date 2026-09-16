@@ -60,6 +60,12 @@ pnpm wrangler secret put ADMIN_PASS
 
 ## 2. 腾讯云 EdgeOne Makers
 
+[![使用 EdgeOne Makers 部署](https://cdnstatic.tencentcs.com/edgeone/pages/deploy.svg)](https://edgeone.ai/pages/new?repository-url=https%3A%2F%2Fgithub.com%2FLegspCpd%2Fopenlist-next&project-name=openlist-next&install-command=pnpm%20install%20--no-frozen-lockfile&build-command=pnpm%20run%20build&output-directory=dist&env=JWT_SECRET)
+[![使用 EdgeOne Makers 部署（国内站）](https://cdnstatic.tencentcs.com/edgeone/pages/deploy.svg)](https://console.cloud.tencent.com/edgeone/makers/new?repository-url=https%3A%2F%2Fgithub.com%2FLegspCpd%2Fopenlist-next&project-name=openlist-next&install-command=pnpm%20install%20--no-frozen-lockfile&build-command=pnpm%20run%20build&output-directory=dist&env=JWT_SECRET)
+
+> 一键部署按钮会预填仓库、项目名、安装/构建命令、输出目录与 `JWT_SECRET` 输入项。
+> 左侧为国际站（<https://edgeone.ai/>），右侧为国内站（<https://console.cloud.tencent.com/edgeone>）。
+
 EdgeOne 的 Edge Functions 只注入 KV/Blob 给边缘函数，Node 云函数拿不到。
 因此这里有**两个入口**，缺一不可：
 
