@@ -206,7 +206,7 @@ When `DB_DRIVER` is left at the default `auto`, the program automatically select
 
 There are a few pitfalls to watch out for (this project already handles them, but keep them in mind if you change the configuration yourself):
 
-- The `nodeVersion` in `edgeone.json` must be one of the versions preinstalled on the platform (14.21.3 / 16.20.2 / 18.20.4 / 20.18.0 / 22.11.0); any other value will cause the build to fail
+- The `nodeVersion` in `edgeone.json` must be one of the versions preinstalled on the platform (14.21.3 / 16.20.2 / 18.20.4 / 20.18.0 / 22.11.0 / 22.17.1 / 22.21.1 / 24.5.0 / 24.11.0 / 24.18.0); any other value will cause the build to fail. This project uses `22.21.1`. This field overrides the project settings in the console
 - `maxDuration` must be written inside `cloudFunctions.nodejs`; writing it as `cloudFunctions.maxDuration` has no effect
 - Frontend route fallback is handled by `middleware.js` at the root. The `rewrites` in `edgeone.json` only apply to static assets. The official documentation explicitly states that frontend routing is not supported, and adding `/*` would instead match static files
 - Do not use temporary domains like `*.edgeone.cool` to verify storage—this domain carries site-wide authentication parameters that will intercept the KV proxy requests between edge functions and cloud functions. Bind a custom domain first, then verify
@@ -346,22 +346,42 @@ An exit code of `0` means the storage is ready, and `2` means it is not yet read
 
 ## Configuration
 
-### Data Storage
+### Where to put the variables
 
-Two variables determine where data is stored and how it is organized.
+The same variable name works exactly the same no matter where you put it.
 
-**`DB_DRIVER`** —— where data is stored
+| Deployment | Where to put it |
+|---|---|
+| Cloudflare Workers | Project Settings → Variables and Secrets in the dashboard; or run `wrangler secret put JWT_SECRET` in the terminal |
+| Tencent Cloud EdgeOne | The "Environment Variables" of the project in the console; the deploy page asks for them directly when you click the one-click deploy button |
+| Vercel / Netlify | Environment Variables in project settings |
+| Node / Docker | The `.env` file in the root directory |
 
-- `auto` (default): auto-detect. Uses the external database if configured, otherwise uses the platform-native storage
-- Platform storage: `kv`, `d1`, `r2`, `blob`, `cfkv`, `do`
-- External databases: `neon`, `turso`, `pgrest`, `pghttp`, `mysqlhttp`, `upstash`, `s3`
-- `mysql`: only available in Node containers
+Below, each variable is explained as: variable name — what it does — whether you need to fill it in.
 
-**`DB_FORMAT`** —— how data is organized
+### Required
 
-- `map` (default): the entire database is stored as a single JSON, one read and one write, suitable for KV and object storage
-- `key`: one record per entity, e.g. `users_1`; saves space compared to `map` when there are many entities
-- `sql`: stored using relational tables, with a schema identical to the Go version of OpenList, so it can share the same database with the Go version
+| Variable | What it does | Required? | How to fill |
+|---|---|---|---|
+| `JWT_SECRET` | The secret key for the whole program. It handles three things: signing login sessions, encrypting stored drive credentials, and authenticating scheduled tasks | **Required**. If left empty, mounting drives will fail after installation | A random string, at least 16 characters. Generate one with `openssl rand -hex 32` and paste it in |
+
+> [!IMPORTANT]
+> If `JWT_SECRET` is changed or filled in wrong, the drive credentials stored earlier can no longer be decrypted, which shows up as "mounting suddenly asks you to re-enter". When the same data is deployed on multiple platforms, the `JWT_SECRET` on each platform must stay identical.
+
+### Where data is stored
+
+Two variables decide which storage the data lands in and how it is structured.
+
+| Variable | What it does | Required? | Accepted values |
+|---|---|---|---|
+| `DB_DRIVER` | Which storage the data is stored in | Optional, defaults to `auto` | `auto`, `kv`, `d1`, `r2`, `blob`, `cfkv`, `do`, `neon`, `turso`, `pgrest`, `pghttp`, `mysqlhttp`, `upstash`, `s3`, `hyperdrive`, `netlifyblobs`, `mysql` |
+| `DB_FORMAT` | How the data is organized | Optional, defaults to `map` | `map`, `key`, `sql` |
+
+- `auto` picks in this order: the external database you configured → the platform-native storage (KV, D1, Blob, etc.). When unsure, use `auto`.
+- `map`: the entire database is stored as one JSON, one read and one write, saves the most requests, good for KV and object storage.
+- `key`: one record per entity, e.g. `users_1`. Saves more traffic than `map` when there are many entities.
+- `sql`: stored with relational tables, same schema as the Go version of OpenList, can share the same database with the Go version.
+- `mysql` only works in Node / Docker. Edge platforms have no raw TCP, so it can't connect.
 
 Common combinations:
 
@@ -370,7 +390,7 @@ Common combinations:
 DB_FORMAT=sql
 DB_DRIVER=d1
 
-# EdgeOne + Blob (zero config)
+# EdgeOne + Blob (no setup needed, created on first write)
 DB_FORMAT=map
 DB_DRIVER=blob
 
@@ -380,33 +400,54 @@ DB_DRIVER=auto
 DATABASE_URL=postgres://user:pass@ep-xxx.neon.tech/neondb
 ```
 
-### Security
+### External databases (fill in when you don't want to use platform-native storage)
 
-- `JWT_SECRET`: required. Used for session signing, mount credential encryption, and scheduled-task authentication.
-- `ADMIN_PASS`: optional. Once set, skips the setup wizard and initializes the admin account directly with this password.
+The easiest way is to **fill in only a single `DATABASE_URL` and keep `DB_DRIVER` as `auto`**, the program recognizes the vendor from the protocol and hostname.
 
-### External Databases
+| Variable | What it does | Required? |
+|---|---|---|
+| `DATABASE_URL` | A general database connection string; the recognized vendor's driver is used | Enough in most cases when using an external database |
+| `SUPABASE_KEY` | Supabase read/write key, needed when a single connection string is not enough | Required when using Supabase |
+| `TURSO_AUTH_TOKEN` | Turso access token | Required when using Turso |
+| `MYSQL_HTTP_URL` | MySQL / MariaDB HTTP forwarding gateway address. Edge platforms can only reach MySQL through it | Required when using MySQL on the edge |
+| `PG_HTTP_URL` | Your own Postgres HTTP gateway address | Required when using a self-hosted gateway |
+| `MYSQL_URLS` | MySQL direct connection string, only available in Node / Docker | Fill in when connecting to MySQL directly in Node |
 
-Just fill in a single connection string and keep `DB_DRIVER=auto`; the program will automatically select the driver based on the protocol and hostname:
+For how to write each vendor's connection string and which variable aliases are supported, see [External Storage Configuration Guide](../docs/EXTERNAL_STORAGE.md).
 
-| Connection string | Driver used |
+### Platform bindings (no need to fill in by hand, just bind them)
+
+These are injected into the environment by the platform at deploy time; you only need to create the resource in the console and name the binding as shown below.
+
+| Variable | What it does | Do you need to manage it? |
+|---|---|---|
+| `DB` | Cloudflare D1 database binding, used when `DB_DRIVER=d1` | Bind it if you want D1, name it `DB` |
+| `KV` | Cloudflare KV / EdgeOne KV namespace binding, used when `DB_DRIVER=kv` | Bind it if you want KV, name it `KV` |
+| `HYPERDRIVE` | Cloudflare Hyperdrive connection string, lets the edge reach MySQL, used when `DB_DRIVER=hyperdrive` | Bind it if you want Hyperdrive |
+| `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Bucket name and access credentials for S3-compatible object storage (R2 / MinIO / B2, etc.), used when `DB_DRIVER=s3` | Fill in all five when using S3 storage |
+| `CF_ACCOUNT`, `CF_KV_UUID`, `CF_API_KEY` | Read/write KV over the Cloudflare REST API, used when `DB_DRIVER=cfkv`. They are the account ID, KV namespace ID, and an API Token with KV read/write permission, respectively | Fill in all three when using `cfkv` |
+
+### Other variables (most can be left alone)
+
+| Variable | What it does | Required? |
+|---|---|---|
+| `EO_KV_URLS` | EdgeOne only. EdgeOne's KV binding is only given to edge functions; Node cloud functions can't get it, so it must go through an edge function proxy in the same deployment. Put that proxy address here | Usually left empty; if empty, the current domain is used automatically; only needed for cross-origin or local debugging |
+| `ADMIN_PASS` | If set, skips the setup wizard and creates the admin account directly with this password | Optional, set it in the browser wizard if not filled |
+| `ALLOW_URLS` | Cross-origin allowlist, comma-separated. If not set, only same-origin requests are allowed | Fill in when the frontend and backend are on different domains |
+| `ASSET_URLS` | Load frontend static assets from a CDN, supports `$version` as a placeholder for the current frontend version | Fill in when using a CDN |
+| `MAX_UPLOAD` | Overall size limit for a single upload, in bytes | Optional, defaults to 26214400 (25MB) |
+| `MAX_UPPART` | Size limit per chunk in chunked uploads, in bytes | Optional, defaults to 16777216 (16MB) |
+| `ALLOW_SEED` | Allowlist of sites permitted as seed-data sources | Fill in when using the seed feature |
+
+### Command-line only (not filled into environment variables)
+
+| Variable | What it does |
 |---|---|
-| `postgres://…@ep-xxx.neon.tech/…` | `neon` |
-| `postgresql://…@db.xxx.supabase.co/…` | `pgrest`, requires additionally filling in `SUPABASE_KEY` |
-| `libsql://xxx.turso.io` | `turso`, requires additionally filling in `TURSO_AUTH_TOKEN` |
-| `redis://xxx.upstash.io` | `upstash` |
-| `mysql://…` | `mysqlhttp`, requires additionally filling in `MYSQL_HTTP_URL` |
+| `EO_PAGES_PROJECT` | Which project the EdgeOne Makers CLI deploys to |
+| `EO_PAGES_API_TOKEN` | API Token from the EdgeOne Makers console, for the CLI |
+| `EO_PAGES_URL` | The domain after deployment, used by `pnpm run deploy:edgeone` for post-deploy checks |
 
-Vendor-specific variables (`NEON_DATABASE_URL`, `TURSO_DATABASE_URL`, etc.) take precedence over `DATABASE_URL`.
-
-For the complete driver list and configuration examples for each database, see the [External Storage Configuration Guide](../docs/EXTERNAL_STORAGE.md); for the variable template, see [`.dev.vars.example`](../.dev.vars.example).
-
-### Other Variables
-
-- `ALLOW_URLS`: cross-origin allowlist, comma-separated. If not set, only same-origin requests are allowed.
-- `MAX_UPLOAD`: maximum single upload size, default 26214400 bytes (25MB).
-- `MAX_UPPART`: maximum size per chunk in chunked uploads, default 16777216 bytes (16MB).
-- `ALLOW_SEED`: allowlist of hosts permitted as seed-data sources.
+Every variable is listed with comments in the [variable template](../.dev.vars.example).
 
 ---
 

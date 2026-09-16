@@ -206,7 +206,7 @@ Cloudflare 백엔드에서 Git 저장소를 연결할 수도 있습니다: 빌�
 
 주의할 점몇 가지(본 프로젝트는 이미 처리해 두었으나, 직접 설정을 고칠 때 유의하세요):
 
-- `edgeone.json`의 `nodeVersion`은 플랫폼에 미리 설치된 버전(14.21.3 / 16.20.2 / 18.20.4 / 20.18.0 / 22.11.0) 중 하나여야 하며, 다른 값을 넣으면 빌드에 실패합니다
+- `edgeone.json`의 `nodeVersion`은 플랫폼에 미리 설치된 버전(14.21.3 / 16.20.2 / 18.20.4 / 20.18.0 / 22.11.0 / 22.17.1 / 22.21.1 / 24.5.0 / 24.11.0 / 24.18.0) 중 하나여야 하며, 다른 값을 넣으면 빌드에 실패합니다. 이 프로젝트는 `22.21.1`을 사용합니다. 이 필드는 콘솔의 프로젝트 설정을 덮어씁니다
 - `maxDuration`은 `cloudFunctions.nodejs` 안에 작성해야 하고, `cloudFunctions.maxDuration`으로 쓰면 적용되지 않습니다
 - 프론트엔드 라우팅 폴백은 루트 디렉터리의 `middleware.js`가 담당합니다. `edgeone.json`의 `rewrites`는 정적 자원에만 적용되며, 공식 문서에서 명시적으로 프론트엔드 라우팅을 지원하지 않는다고 했으므로 `/*`를 추가하면 오히려 정적 파일과 매칭됩니다
 - `*.edgeone.cool` 같은 임시 도메인으로 스토리지를 검증하지 마세요. 이 도메인은 사이트 전역 인증 매개변수가 붙어 엣지 함수와 클라우드 함수 사이의 KV 프록시 요청을 차단합니다. 먼저 커스텀 도메인을 바인딩한 뒤 검증하세요
@@ -346,22 +346,42 @@ pnpm run deploy:vercel  -- --no-deploy --url https://your-domain
 
 ## 설정
 
-### 데이터 저장
+### 변수를 어디에 채우는가
 
-데이터를 어디에, 어떻게 구성할지는 두 변수가 결정합니다.
+변수 이름이 같으면 아래 어디에 채우든 효과는 같습니다.
 
-**`DB_DRIVER`** —— 데이터를 어디에 저장할지
+| 배포 방식 | 채우는 위치 |
+|---|---|
+| Cloudflare Workers | 콘솔 프로젝트의 Settings → Variables and Secrets, 또는 터미널에서 `wrangler secret put JWT_SECRET` 실행 |
+| 텐센트 클라우드 EdgeOne | 콘솔 프로젝트의 「환경 변수」, 또는 원클릭 배포 버튼을 누르면 배포 페이지에서 직접 입력받음 |
+| Vercel / Netlify | 프로젝트 설정의 Environment Variables |
+| Node / Docker | 루트 디렉터리의 `.env` 파일 |
 
-- `auto`(기본값): 자동 인식. 외부 데이터베이스를 설정하면 외부 데이터베이스를, 아니면 플랫폼 기본 스토리지를 사용합니다
-- 플랫폼 스토리지: `kv`, `d1`, `r2`, `blob`, `cfkv`, `do`
-- 외부 데이터베이스: `neon`, `turso`, `pgrest`, `pghttp`, `mysqlhttp`, `upstash`, `s3`
-- `mysql`: Node 컨테이너에서만 사용 가능
+아래에서는 「변수 이름 —— 무슨 일을 하는지 —— 채워야 하는지」 순으로 하나씩 적어둡니다.
 
-**`DB_FORMAT`** —— 데이터를 어떻게 구성할지
+### 필수 항목
 
-- `map`(기본값): 전체 데이터베이스를 하나의 JSON으로 저장, 읽기/쓰기 각 1회로 KV와 객체 스토리지에 적합
-- `key`: 엔티티마다 하나의 레코드, 예: `users_1`. 엔티티가 많을 때 `map`보다 절약됩니다
-- `sql`: 관계형 테이블로 저장하며, 테이블 구조는 Go 버전 OpenList와 일치해 Go 버전과 같은 데이터베이스를 공유할 수 있습니다
+| 변수 이름 | 무슨 일을 하는지 | 채워야 하는지 | 채우는 방법 |
+|---|---|---|---|
+| `JWT_SECRET` | 프로그램 전체의 비밀 키. 로그인 세션 서명, 클라우드 드라이브 자격 증명 같은 필드의 암호화 저장, 정기 작업 인증 이 세 가지에 모두 사용됩니다 | **필수**. 비워두면 설치 후 클라우드 드라이브 마운트가 실패합니다 | 16자 이상의 무작위 문자열. `openssl rand -hex 32`로 문자열을 만들어 채웁니다 |
+
+> [!IMPORTANT]
+> `JWT_SECRET`을 바꾸거나 잘못 입력하면 이전에 저장된 클라우드 드라이브 자격 증명을 복호화할 수 없게 되며, 「마운트가 갑자기 다시 입력을 요구함」으로 나타납니다. 같은 데이터를 여러 플랫폼에 배포할 때는 각 플랫폼의 `JWT_SECRET`이 일치해야 합니다.
+
+### 데이터 저장 위치
+
+이 두 변수가 데이터가 어떤 스토리지에, 어떤 구조로 저장되는지 결정합니다.
+
+| 변수 이름 | 무슨 일을 하는지 | 채워야 하는지 | 선택 가능한 값 |
+|---|---|---|---|
+| `DB_DRIVER` | 데이터를 어떤 스토리지에 저장할지 | 선택 사항, 기본값 `auto` | `auto`, `kv`, `d1`, `r2`, `blob`, `cfkv`, `do`, `neon`, `turso`, `pgrest`, `pghttp`, `mysqlhttp`, `upstash`, `s3`, `hyperdrive`, `netlifyblobs`, `mysql` |
+| `DB_FORMAT` | 데이터를 어떤 구조로 구성할지 | 선택 사항, 기본값 `map` | `map`, `key`, `sql` |
+
+- `auto`는 이 순서로 선택합니다. 설정한 외부 데이터베이스 → 플랫폼 기본 스토리지(KV, D1, Blob 등). 확실치 않으면 `auto`를 쓰세요.
+- `map`: 전체 데이터베이스를 하나의 JSON으로 저장, 읽기/쓰기 각 1회로 요청 횟수가 가장 적어 KV와 객체 스토리지에 적합합니다.
+- `key`: 엔티티마다 하나의 레코드, 예: `users_1`. 엔티티가 많을 때 `map`보다 트래픽을 절약합니다.
+- `sql`: 관계형 테이블로 저장하며, 테이블 구조는 Go 버전 OpenList와 같아 Go 버전과 같은 데이터베이스를 공유할 수 있습니다.
+- `mysql`은 Node / Docker에서만 사용할 수 있습니다. 엣지 플랫폼은 raw TCP 연결을 지원하지 않아 접속할 수 없습니다.
 
 자주 쓰는 조합:
 
@@ -370,7 +390,7 @@ pnpm run deploy:vercel  -- --no-deploy --url https://your-domain
 DB_FORMAT=sql
 DB_DRIVER=d1
 
-# EdgeOne + Blob(제로 구성)
+# EdgeOne + Blob(데이터베이스 생성 불필요, 첫 쓰기 시 자동 생성)
 DB_FORMAT=map
 DB_DRIVER=blob
 
@@ -380,33 +400,54 @@ DB_DRIVER=auto
 DATABASE_URL=postgres://user:pass@ep-xxx.neon.tech/neondb
 ```
 
-### 보안
+### 외부 데이터베이스(플랫폼 기본 스토리지를 쓰지 않으려면 채우세요)
 
-- `JWT_SECRET`: 필수. 세션 서명, 마운트 자격 증명 암호화, 정기 작업 인증에 사용됩니다
-- `ADMIN_PASS`: 선택 사항. 설정하면 설치 마법사를 건너뛰고 이 비밀번호로 관리자 계정을 초기화합니다
+가장 간단한 방법은 **`DATABASE_URL` 한 줄만 채우고 `DB_DRIVER`는 `auto`로 두는 것**입니다. 프로그램이 프로토콜과 호스트명만 보고 드라이버를 스스로 알아냅니다.
 
-### 외부 데이터베이스
+| 변수 이름 | 무슨 일을 하는지 | 채워야 하는지 |
+|---|---|---|
+| `DATABASE_URL` | 범용 데이터베이스 연결 문자열, 드라이버는 알아낸 벤더에 맞춰 사용됩니다 | 외부 데이터베이스를 쓸 때 보통 이 한 줄만 채우면 됩니다 |
+| `SUPABASE_KEY` | Supabase의 읽기/쓰기 키, 연결 문자열 한 줄로는 부족합니다 | Supabase를 쓸 때 필수 |
+| `TURSO_AUTH_TOKEN` | Turso의 액세스 토큰 | Turso를 쓸 때 필수 |
+| `MYSQL_HTTP_URL` | MySQL / MariaDB의 HTTP 전달 게이트웨이 주소. 엣지 플랫폼에서 MySQL에 접속하려면 이 경로로만 가능합니다 | 엣지에서 MySQL을 쓸 때 필수 |
+| `PG_HTTP_URL` | 직접 구축한 Postgres HTTP 게이트웨이 주소 | 직접 구축한 게이트웨이를 쓸 때 필수 |
+| `MYSQL_URLS` | MySQL 직접 연결 문자열, Node / Docker에서만 사용 가능 | Node에서 MySQL에 직접 연결할 때 채웁니다 |
 
-연결 문자열 한 줄만 채우고 `DB_DRIVER=auto`를 유지하면, 프로그램이 프로토콜과 호스트명으로 드라이버를 자동 선택합니다:
+각 벤더의 연결 문자열 작성법과 지원하는 변수 별칭은 [외부 스토리지 설정 가이드](../docs/EXTERNAL_STORAGE.md)를 참고하세요.
 
-| 연결 문자열 | 사용되는 드라이버 |
+### 플랫폼 바인딩(직접 채우지 않아도 됨, 바인딩만 하면 됩니다)
+
+이들은 배포 시 플랫폼이 환경에 자동으로 주입합니다. 콘솔에서 리소스를 만들고, 바인딩할 때 이름을 아래와 같이 지정하기만 하면 됩니다.
+
+| 변수 이름 | 무슨 일을 하는지 | 신경 쓸 필요가 있나요 |
+|---|---|---|
+| `DB` | Cloudflare D1 데이터베이스 바인딩, `DB_DRIVER=d1`에서 사용됩니다 | D1을 쓰려면 바인딩하고 이름을 `DB`로 지정하세요 |
+| `KV` | Cloudflare KV / EdgeOne KV의 네임스페이스 바인딩, `DB_DRIVER=kv`에서 사용됩니다 | KV를 쓰려면 바인딩하고 이름을 `KV`로 지정하세요 |
+| `HYPERDRIVE` | Cloudflare Hyperdrive 연결 문자열, 엣지에서 MySQL에 접속할 수 있게 합니다, `DB_DRIVER=hyperdrive`에서 사용됩니다 | Hyperdrive를 쓰려면 바인딩하세요 |
+| `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | S3 호환 객체 스토리지(R2 / MinIO / B2 등)의 버킷 이름과 액세스 자격 증명, `DB_DRIVER=s3`에서 사용됩니다 | S3 스토리지를 쓰려면 다섯 항목을 모두 채우세요 |
+| `CF_ACCOUNT`, `CF_KV_UUID`, `CF_API_KEY` | Cloudflare REST API로 KV를 읽고 씁니다, `DB_DRIVER=cfkv`에서 사용됩니다. 각각 계정 ID, KV 네임스페이스 ID, KV 읽기/쓰기 권한이 있는 API Token입니다 | `cfkv`를 쓰려면 세 항목을 모두 채우세요 |
+
+### 기타 변수(대부분 신경 쓰지 않아도 됩니다)
+
+| 변수 이름 | 무슨 일을 하는지 | 채워야 하는지 |
+|---|---|---|
+| `EO_KV_URLS` | EdgeOne 전용. EdgeOne의 KV 바인딩은 엣지 함수에만 제공되며 Node 클라우드 함수는 가져올 수 없어, 반드시 같은 배포의 엣지 함수 프록시를 거쳐야 합니다. 여기에 그 프록시 주소를 채웁니다 | 보통 채울 필요 없으며, 비워두면 현재 도메인이 자동 사용됩니다. 크로스 도메인이나 로컬 디버깅 시에만 필요합니다 |
+| `ADMIN_PASS` | 설정하면 설치 마법사를 거치지 않고 이 비밀번호로 관리자 계정을 생성합니다 | 선택 사항, 비워두면 브라우저 마법사에서 설정합니다 |
+| `ALLOW_URLS` | CORS 허용 목록, 쉼표로 구분. 비워두면 동일 출처 요청만 허용합니다 | 프론트엔드와 백엔드가 같은 도메인이 아닐 때 채웁니다 |
+| `ASSET_URLS` | 프론트엔드 정적 자원을 CDN에서 로드하며, `$version`으로 현재 프론트엔드 버전 번호 자리를 채울 수 있습니다 | CDN을 쓸 때 채웁니다 |
+| `MAX_UPLOAD` | 한 번의 전체 업로드 크기 상한, 단위는 바이트 | 선택 사항, 기본값 26214400(25MB) |
+| `MAX_UPPART` | 분할 업로드 시 한 조각의 크기 상한, 단위는 바이트 | 선택 사항, 기본값 16777216(16MB) |
+| `ALLOW_SEED` | 시드 데이터 출처로 허용할 사이트 허용 목록 | 시드 기능을 쓸 때 채웁니다 |
+
+### 명령줄에서만 사용(환경 변수에 채우지 않아도 됩니다)
+
+| 변수 이름 | 무슨 일을 하는지 |
 |---|---|
-| `postgres://…@ep-xxx.neon.tech/…` | `neon` |
-| `postgresql://…@db.xxx.supabase.co/…` | `pgrest`, `SUPABASE_KEY` 추가 필요 |
-| `libsql://xxx.turso.io` | `turso`, `TURSO_AUTH_TOKEN` 추가 필요 |
-| `redis://xxx.upstash.io` | `upstash` |
-| `mysql://…` | `mysqlhttp`, `MYSQL_HTTP_URL` 추가 필요 |
+| `EO_PAGES_PROJECT` | EdgeOne Makers CLI가 배포할 프로젝트 |
+| `EO_PAGES_API_TOKEN` | EdgeOne Makers 콘솔의 API Token, CLI에서 사용됩니다 |
+| `EO_PAGES_URL` | 배포 후 도메인, `pnpm run deploy:edgeone`에서 배포 후 확인에 사용됩니다 |
 
-벤더 전용 변수( `NEON_DATABASE_URL`, `TURSO_DATABASE_URL` 등)는 `DATABASE_URL`보다 우선순위가 높습니다.
-
-전체 드라이버 목록과 각 데이터베이스 설정 예시는 [외부 스토리지 설정 가이드](../docs/EXTERNAL_STORAGE.md)를, 변수 템플릿은 [`.dev.vars.example`](../.dev.vars.example)을 참고하세요.
-
-### 기타 변수
-
-- `ALLOW_URLS`: CORS 허용 목록, 쉼표로 구분. 비워두면 동일 출처 요청만 허용합니다
-- `MAX_UPLOAD`: 단일 업로드 크기 상한, 기본값 26214400바이트(25MB)
-- `MAX_UPPART`: 분할 업로드의 한 조각 크기 상한, 기본값 16777216바이트(16MB)
-- `ALLOW_SEED`: 시드 데이터 출처로 허용할 호스트 허용 목록
+모든 변수는 [변수 템플릿](../.dev.vars.example)에 주석과 함께 정리되어 있습니다.
 
 ---
 
