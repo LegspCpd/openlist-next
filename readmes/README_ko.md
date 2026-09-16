@@ -307,11 +307,12 @@ DB_FORMAT=sql
 curl https://your-domain/api/public/env_check
 ```
 
-응답 내용에서重点적으로 볼 필드:
+응답 내용에서 특히 주목해서 볼 필드:
 
-- `storage.driver`: 실제 적용된 드라이버. `memory`면 데이터가 영속화되지 않으므로 반드시 처리해야 합니다
-- `jwt.ready`: `JWT_SECRET`이 설정되었는지. 설정되지 않으면 마운트 자격 증명 같은 암호화 필드를 풀 수 없습니다
-- `ready`: 전체 준비 상태
+- `data.storage.memory`: `true`면 메모리 폴백으로 동작해 재시작 시 데이터가 사라지므로 반드시 처리해야 합니다(이때 `data.config.resolved_driver`는 `memory`입니다)
+- `data.jwt.ready`: `JWT_SECRET`이 설정되었는지. 설정되지 않으면 마운트 자격 증명 같은 암호화 필드를 풀 수 없습니다
+- `data.ready`: 전체 준비 상태
+- `data.issues`: 문제 목록. 각 항목에 `code`(`STORAGE_MEMORY_ONLY`, `JWT_SECRET_MISSING` 등)가 붙어 있어 원인 파악이 가장 빠릅니다
 
 통합 스크립트로 확인(재배포 없이 확인만 함)하게 할 수도 있습니다:
 
@@ -455,12 +456,14 @@ DATABASE_URL=postgres://user:pass@ep-xxx.neon.tech/neondb
 
 | 현상 | 원인과 처리 방법 |
 |---|---|
-| `No storage backend is available` 표시 | 스토리지 바인딩을 하나도 구성하지 않음. `DATABASE_URL`을 채우거나, 플랫폼에서 KV / D1을 바인딩하세요 |
-| 매번 재시작할 때마다 다시 초기화됨 | 데이터가 영속화되지 않음. `/api/public/env_check`가 반환한 `storage.driver`가 `memory`인지 확인하세요 |
+| `No storage backend is available` 표시 | 스토리지가 하나도 구성되지 않음. `DATABASE_URL`을 채우거나, 플랫폼에서 KV / D1 / Blob을 바인딩하세요. 무엇이 빠졌는지는 `/api/public/env_check`의 `data.issues`에서 확인할 수 있습니다 |
+| 매번 재시작할 때마다 다시 초기화됨 | 데이터가 영속화되지 않고 메모리 폴백으로 동작함. `/api/public/env_check`의 `data.storage.memory`가 `true`인지(또는 `data.issues`에 `STORAGE_MEMORY_ONLY`가 있는지) 확인하세요 |
 | 페이지는 404인데 API는 정상 | 정적 자원이 업로드되지 않음. `dist/`가 빌드 산출되었고 플랫폼의 정적 자원 디렉터리가 이를 가리키는지 확인하세요 |
-| 두 플랫폼에 배포했는데 데이터가 안 맞음 | 양쪽 `JWT_SECRET`이 다르면 암호화 필드를 풀 수 없음. 양쪽을 일치시키세요 |
-| `mysql2 is not available` 오류 | 엣지 런타임에서 `DB_DRIVER=mysql`을 사용함. 이 드라이버는 Node 컨테이너에서만 사용 가능하니 `mysqlhttp`로 바꾸세요 |
-| Supabase에서 404 발생 | `kv` 테이블이 없음. 먼저 `CREATE TABLE kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);` 실행하세요 |
+| `JWT_SECRET`을 바꾼 뒤 로그인이 안 되거나 네트워크 드라이브 마운트가 실패함 | 비밀번호, 네트워크 드라이브 자격 증명, OTP 시크릿은 `JWT_SECRET`으로 암호화한 뒤 저장되므로 키를 바꾸면 복호화할 수 없습니다(로그에 `Failed to decrypt a sealed secret (wrong JWT_SECRET?)`가 남습니다). 원래 값으로 되돌리거나 비밀번호와 자격 증명을 다시 입력하세요 |
+| 두 플랫폼이 하나의 스토어를 공유하면 데이터가 어긋남 | 양쪽 `JWT_SECRET`이 달라 암호화 필드를 풀 수 없음. 스토어를 공유하면 같은 값을 써야 하며, 스토어가 따로면 일치시킬 필요가 없습니다 |
+| EdgeOne에서 KV가 401을 반환함 | Node 클라우드 함수와 Edge Function의 `JWT_SECRET`이 다름(또는 교체됨). 양쪽을 같은 값으로 맞추거나 `EO_KV_URLS`를 올바른 배포 오리진으로 지정하세요 |
+| `Storage driver "mysql" is not available in this runtime` 오류 | 엣지 런타임에서 `DB_DRIVER=mysql`을 사용함. 이 드라이버는 Node 컨테이너에서만 사용 가능하니 `mysqlhttp`로 바꾸세요 |
+| Supabase에서 404 발생 | `kv` 테이블이 없음. 먼저 `CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);`를 실행하세요. 또한 Supabase는 PostgREST를 사용하므로 KV만 지원하며 `DB_FORMAT=sql`은 쓸 수 없습니다 |
 
 ---
 

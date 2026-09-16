@@ -309,9 +309,10 @@ curl https://あなたのドメイン/api/public/env_check
 
 返された内容の中で、特に以下のフィールドを確認してください：
 
-- `storage.driver`：実際に有効になっているドライバー。`memory` の場合はデータが永続化されないため、対処が必要です
-- `jwt.ready`：`JWT_SECRET` が設定されているかどうか。設定されていないと、マウント認証情報などの暗号化フィールドを復号できません
-- `ready`：全体として準備完了かどうか
+- `data.storage.memory`：`true` はメモリへのフォールバックを意味し、再起動でデータが失われるため必ず対処が必要です（この場合 `data.config.resolved_driver` は `memory` です）
+- `data.jwt.ready`：`JWT_SECRET` が設定されているかどうか。設定されていないと、マウント認証情報などの暗号化フィールドを復号できません
+- `data.ready`：全体として準備完了かどうか
+- `data.issues`：問題の一覧。各項目に `code`（`STORAGE_MEMORY_ONLY`、`JWT_SECRET_MISSING` など）が付いており、切り分けの取っ掛かりとして最も速い
 
 統合スクリプトにチェックを任せることもできます（チェックのみで、再デプロイはしません）：
 
@@ -455,12 +456,14 @@ DATABASE_URL=postgres://user:pass@ep-xxx.neon.tech/neondb
 
 | 現象 | 原因と対処法 |
 |---|---|
-| `No storage backend is available` と表示される | ストレージバインディングが一つも設定されていない。`DATABASE_URL` を入力するか、プラットフォーム上で KV／D1 をバインドする |
-| 毎回再起動時に再初期化が必要になる | データが永続化されていない。`/api/public/env_check` の戻り値にある `storage.driver` が `memory` になっていないか確認する |
+| `No storage backend is available` と表示される | ストレージが一つも設定されていない。`DATABASE_URL` を入力するか、プラットフォーム上で KV／D1／Blob をバインドする。どれが欠けているかは `/api/public/env_check` の `data.issues` で確認できる |
+| 毎回再起動時に再初期化が必要になる | データが永続化されず、メモリへのフォールバックになっている。`/api/public/env_check` の `data.storage.memory` が `true` か（または `data.issues` に `STORAGE_MEMORY_ONLY` があるか）を確認する |
 | ページが 404 になるが API は正常 | 静的リソースがアップロードされていない。`dist/` がビルドで出力されていること、およびプラットフォームの静的リソースディレクトリがそこを指していることを確認する |
-| 2 つのプラットフォームにデプロイしたらデータが一致しない | 両者の `JWT_SECRET` が異なり、暗号化フィールドを復号できない。両者で一致させる |
-| `mysql2 is not available` と報告される | エッジランタイムで `DB_DRIVER=mysql` を使用している。このドライバーは Node コンテナでのみ利用可能。`mysqlhttp` に変更する |
-| Supabase で 404 になる | `kv` テーブルが存在しない。まず `CREATE TABLE kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);` を実行する |
+| `JWT_SECRET` を変更したらログインできない、またはネットディスクのマウントに失敗する | パスワード、ネットディスクの認証情報、OTP シークレットは `JWT_SECRET` で暗号化してから保存されるため、鍵を変更すると復号できない（ログには `Failed to decrypt a sealed secret (wrong JWT_SECRET?)` と出る）。元の値に戻すか、パスワードとネットディスクの認証情報を入れ直す |
+| 2 つのプラットフォームが 1 つのストアを共有するとデータが壊れる | 両者の `JWT_SECRET` が異なるため、暗号化フィールドを復号できない。1 つのストアを共有する場合は同じ値にする必要がある（ストアが別々なら一致不要） |
+| EdgeOne で KV が 401 を返す | Node クラウド関数と Edge Function の `JWT_SECRET` が一致していない（またはローテートされた）。両者で同じ値にするか、`EO_KV_URLS` を正しいデプロイ先のオリジンに向ける |
+| `Storage driver "mysql" is not available in this runtime` と報告される | エッジランタイムで `DB_DRIVER=mysql` を使用しているが、このドライバーは Node コンテナでのみ利用可能。`mysqlhttp` に変更する |
+| Supabase で 404 になる | `kv` テーブルが存在しない。まず `CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);` を実行する。なお Supabase は PostgREST 経由のため KV のみ対応で、`DB_FORMAT=sql` は使用できない |
 
 ---
 

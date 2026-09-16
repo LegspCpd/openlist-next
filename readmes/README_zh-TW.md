@@ -309,9 +309,10 @@ curl https://你的網域/api/public/env_check
 
 回傳內容裡重點看這幾個欄位：
 
-- `storage.driver`：實際生效的驅動。如果是 `memory`，說明資料不會持久化，必須處理
-- `jwt.ready`：`JWT_SECRET` 是否設定了。沒設定的話，掛載憑據之類的加密欄位解不開
-- `ready`：整體是否就緒
+- `data.storage.memory`：`true` 表示落到了記憶體兜底，資料重啟就沒了，必須處理（此時 `data.config.resolved_driver` 是 `memory`）
+- `data.jwt.ready`：`JWT_SECRET` 是否設定好了。沒設定的話，網盤掛載憑據這類加密欄位解不開
+- `data.ready`：整體是否就緒
+- `data.issues`：問題清單，每項帶一個 `code`（如 `STORAGE_MEMORY_ONLY`、`JWT_SECRET_MISSING`），排查從這裡看最快
 
 也可以讓統一腳本幫你檢查（只檢查，不重新部署）：
 
@@ -455,12 +456,14 @@ DATABASE_URL=postgres://user:pass@ep-xxx.neon.tech/neondb
 
 | 現象 | 原因和處理辦法 |
 |---|---|
-| 提示 `No storage backend is available` | 一個儲存綁定都沒配。填 `DATABASE_URL`，或者在平台上綁定 KV / D1 |
-| 每次重啟都要重新初始化 | 資料沒有持久化。看 `/api/public/env_check` 回傳的 `storage.driver` 是不是 `memory` |
+| 提示 `No storage backend is available` | 一個儲存都沒配。填 `DATABASE_URL`，或者在平台上綁定 KV / D1 / Blob。具體缺哪一項看 `/api/public/env_check` 回傳的 `data.issues` |
+| 每次重啟都要重新初始化 | 資料沒有持久化，落到了記憶體兜底。看 `/api/public/env_check` 的 `data.storage.memory` 是不是 `true`（或 `data.issues` 裡有沒有 `STORAGE_MEMORY_ONLY`） |
 | 頁面 404 但 API 正常 | 靜態資源沒上傳。確認建構產出了 `dist/`，並且平台的靜態資源目錄指向它 |
-| 部署到兩個平台，資料對不上 | 兩邊的 `JWT_SECRET` 不一樣，加密欄位解不開。兩邊保持一致 |
-| 報 `mysql2 is not available` | 在邊緣執行時用了 `DB_DRIVER=mysql`，這個驅動只在 Node 容器裡可用。改用 `mysqlhttp` |
-| Supabase 報 404 | `kv` 表不存在，先執行 `CREATE TABLE kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);` |
+| 換了 `JWT_SECRET` 之後登入不上、網盤掛載失敗 | 密碼、網盤憑證、OTP 金鑰都是用 `JWT_SECRET` 加密後才落庫的，金鑰換了就解不開（日誌裡是 `Failed to decrypt a sealed secret (wrong JWT_SECRET?)`）。改回原來的值，或者把密碼和網盤憑證重新填一遍 |
+| 兩個平台共用一個庫時資料錯亂 | 兩邊的 `JWT_SECRET` 不一致，加密欄位解不開。共用一個庫就必須填同一個值；各用各的庫則不需要一致 |
+| EdgeOne 上 KV 報 401 | Node 雲端函式和 Edge Function 的 `JWT_SECRET` 不一致（或輪換過）。兩邊填同一個，或者把 `EO_KV_URLS` 指向正確的部署網域 |
+| 報 `Storage driver "mysql" is not available in this runtime` | 邊緣執行時用了 `DB_DRIVER=mysql`，這個驅動只在 Node 容器裡可用。改用 `mysqlhttp` |
+| Supabase 報 404 | `kv` 表不存在，先建表：`CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);`。另外 Supabase 走 PostgREST，只支援 KV，不能配 `DB_FORMAT=sql` |
 
 ---
 
