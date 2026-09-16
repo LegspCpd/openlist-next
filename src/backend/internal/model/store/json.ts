@@ -6,9 +6,13 @@
  */
 import type { StoreBackend } from "./types"
 import { sanitizeProxyOrigin } from "./proxy"
+import { probeWebKvBinding } from "./kv-binding"
 
 // 保持既有引用路径不变（scripts/_regress.mjs 通过 jsonMod 访问）
 export { sanitizeProxyOrigin } from "./proxy"
+// 形态判定的唯一实现在 ./kv-binding（必须排除 Redis/RESP 客户端）；
+// 这里按旧名字转出，保持既有引用路径可用。
+export { isWebKvBinding as isWebKv } from "./kv-binding"
 
 // ---- EdgeOne Blob SDK (HTTP API, avoids Redis RESP protocol crashes) ----
 let _blobStore: any = null
@@ -84,28 +88,16 @@ export function setJsonEnvCtx(env: any) {
  *   3. CF REST API (env vars)
  *   4. None (memory fallback)
  */
-/**
- * 判断一个对象是否是「可用的 Web KV binding」。
+/*
+ * 「可用的 Web KV binding」判定已移至 ./kv-binding 的 isWebKvBinding()
+ * （在本文件顶部以旧名字 `isWebKv` 转出）。
  *
- * 这一校验必不可少：EdgeOne Node 云函数也会注入一个名为 `KV` 的绑定，
- * 但它走 RESP/Redis 协议（TCP socket），调用 get/put 会抛出
- * "cannot find the collection by name"，而不是提供 Web KV API。
- * 只有具备 get() 且具备 put()/set() 的对象才算可用。
- *
- * 同时排除字符串等原始值 —— 环境变量 `KV` 可能是绑定名（字符串），
- * 直接当绑定使用会得到 "kv.get is not a function"。
+ * 之所以必须下沉并强化：EdgeOne Node 云函数注入的 `KV` 是一个
+ * Redis/RESP 客户端，它同样暴露 get/set，仅按「有没有 get/set」判断
+ * 会把它当成合法 KV binding —— 于是驱动解析成功、读写却全部失败
+ * （`Not connected`），整站被存储拦截成 503。
+ * 现在的判定会先排除 RESP 客户端，再要求 KV Web API 的写接口。
  */
-export function isWebKv(b: any): boolean {
-  if (!b || typeof b !== "object") return false
-  // 属性访问可能触发异常 getter（代理对象、SDK 惰性初始化等），
-  // 任何异常都视为「不是可用绑定」，避免让探测本身崩溃。
-  try {
-    if (typeof b.get !== "function") return false
-    return typeof b.put === "function" || typeof b.set === "function"
-  } catch {
-    return false
-  }
-}
 
 /**
  * 创建基于 HTTP 代理的 KV 适配器。
@@ -160,21 +152,17 @@ export async function getKvBinding(envCtx?: any): Promise<{
   /**
    * 原生 KV binding 探测。
    *
-   * 两点必须注意：
+   * 三点必须注意：
    *  1. env 与 globalThis 需独立检查 —— env 为真值时不会回退到 globalThis，
    *     而 EdgeOne Edge Functions 把绑定名注入为全局标识符。
-   *  2. 必须做接口形态校验 —— EdgeOne Node 云函数也会注入名为 `KV` 的绑定，
-   *     但它走 RESP/Redis 协议（TCP socket），调用 put/get 会抛
-   *     "cannot find the collection by name"，而非提供 Web KV API。
-   *     只有具备 get/put(或 set) 的对象才算可用的 KV binding。
-   *
-   * 绑定名统一为 `KV`（KV namespace binding 的通用约定名）。
+   *  2. 必须做接口形态校验：EdgeOne Node 云函数也会注入名为 `KV` 的对象，
+   *     但那是 Redis/RESP 客户端（TCP socket），不是 KV Web API。
+   *     它同样有 get/set，所以判定里必须**显式排除 RESP 客户端**
+   *     （见 ./kv-binding）。否则它会以 binding 身份被选中，
+   *     之后每次读写都抛 `Not connected`。
+   *  3. 绑定名统一为 `KV`（KV namespace binding 的通用约定名）。
    */
-  const nativeKv = isWebKv(env?.KV)
-    ? env.KV
-    : isWebKv(g?.KV)
-      ? g.KV
-      : null
+  const nativeKv = probeWebKvBinding([env?.KV, g?.KV])
 
   // 0. EdgeOne Node 云函数：显式 DB_DRIVER=kv 且无原生 binding → 走 HTTP 代理。
   //    放在 Blob 之前，确保用户显式选择的 KV 优先于自动探测出的 Blob。

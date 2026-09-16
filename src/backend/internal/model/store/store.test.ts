@@ -21,6 +21,7 @@ import {
   rowToEntity,
   entityToRow,
 } from "./schema"
+import { isWebKvBinding, isRespClientLike, probeWebKvBinding } from "./kv-binding"
 
 /** 基于局部 Map 的内存 KV 驱动（隔离测试）。 */
 function createMockKvDriver(): Driver {
@@ -272,4 +273,66 @@ test("sql format: MySQL dialect uses ON DUPLICATE KEY UPDATE (no INSERT OR REPLA
   const driver = createMockSqlDriver("mysql")
   assert.equal(await sqlFormat.save(SAMPLE_DB, driver), true)
   assert.deepEqual(await sqlFormat.load(driver), SAMPLE_DB)
+})
+
+// ────────────────────── KV binding 形态判定 ──────────────────────
+//
+// 回归背景（线上真实故障）：EdgeOne 的 KV **只对边缘函数**提供 KV Web API。
+// Node 云函数同样会看到一个名为 `KV` 的对象，但那是 Redis/RESP 客户端，
+// 并且它同样暴露 get/set。历史判定只检查「有 get + (put|set)」，于是把它
+// 当成合法 binding：驱动解析为 kv 且无任何报错，但每次读写都抛
+// `Not connected` —— /api/public/* 被存储拦截成 503，初始化还会因退回
+// 内存态而在重试时误报「系统已初始化」。
+
+test("kv binding: RESP client with get/set/sendCommand is rejected", () => {
+  const redis = {
+    status: "ready",
+    async get() {
+      throw new Error("Not connected")
+    },
+    async set() {
+      throw new Error("Not connected")
+    },
+    sendCommand() {
+      throw new Error("Not connected")
+    },
+  }
+  assert.equal(isRespClientLike(redis), true)
+  assert.equal(isWebKvBinding(redis), false)
+  assert.equal(probeWebKvBinding([redis, undefined]), null)
+})
+
+test("kv binding: ioredis-style client (duplicate + disconnect) is rejected", () => {
+  const ioredis = {
+    async get() {},
+    async set() {},
+    duplicate() {},
+    disconnect() {},
+  }
+  assert.equal(isWebKvBinding(ioredis), false)
+})
+
+test("kv binding: real KV web bindings are accepted", () => {
+  // EdgeOne KV / Cloudflare KV：get + put
+  assert.equal(isWebKvBinding({ async get() {}, async put() {} }), true)
+  // 兼容只提供 set 的适配器（排在 RESP 判定之后，故不会放行 Redis 客户端）
+  assert.equal(isWebKvBinding({ async get() {}, async set() {} }), true)
+  assert.notEqual(probeWebKvBinding([{ async get() {}, async put() {} }]), null)
+})
+
+test("kv binding: primitives and read-only objects are rejected", () => {
+  assert.equal(isWebKvBinding(null), false)
+  assert.equal(isWebKvBinding(undefined), false)
+  // 环境变量 `KV` 可能只是绑定名（字符串）
+  assert.equal(isWebKvBinding("KV"), false)
+  assert.equal(isWebKvBinding({}), false)
+  // 只有读、没有写
+  assert.equal(isWebKvBinding({ async get() {} }), false)
+})
+
+test("kv binding: a valid binding wins over a RESP client in any order", () => {
+  const good = { async get() {}, async put() {} }
+  const redis = { async get() {}, async set() {}, sendCommand() {} }
+  assert.equal(probeWebKvBinding([redis, good]), good)
+  assert.equal(probeWebKvBinding([good, redis]), good)
 })

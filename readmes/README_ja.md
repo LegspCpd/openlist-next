@@ -190,7 +190,7 @@ pnpm run deploy:worker
 > このファイルがないと、EdgeOne は `No server-handler detected` を報告し、プロジェクトは単なる静的サイトへと退化します。
 > リポジトリ内の `EdgeOne Artifact Guard` ワークフローは、成果物の有効期限が切れた際に自動的に再構築してコミットするため、通常は手動でメンテナンスする必要はありません。
 
-ストレージについて、EdgeOne の KV と Blob は**エッジ関数**にのみ注入され、Node クラウド関数からは取得できません。そのため本プロジェクトでは EdgeOne 上で 2 つのエントリーポイントを使用しています：
+ストレージについて、EdgeOne の KV と Blob の Web API は**エッジ関数**でのみ利用でき、Node クラウド関数からは取得できません。なお Node 側にも `KV` という名前のオブジェクトは見えますが、それは Redis/RESP クライアントであり KV Web API ではありません。本アプリはそれを意図的に無視するため、KV として使わないでください。そのため本プロジェクトでは EdgeOne 上で 2 つのエントリーポイントを使用しています：
 
 | ファイル | 役割 |
 |---|---|
@@ -463,6 +463,8 @@ DATABASE_URL=postgres://user:pass@ep-xxx.neon.tech/neondb
 | `JWT_SECRET` を変更したらログインできない、またはネットディスクのマウントに失敗する | パスワード、ネットディスクの認証情報、OTP シークレットは `JWT_SECRET` で暗号化してから保存されるため、鍵を変更すると復号できない（ログには `Failed to decrypt a sealed secret (wrong JWT_SECRET?)` と出る）。元の値に戻すか、パスワードとネットディスクの認証情報を入れ直す |
 | 2 つのプラットフォームが 1 つのストアを共有するとデータが壊れる | 両者の `JWT_SECRET` が異なるため、暗号化フィールドを復号できない。1 つのストアを共有する場合は同じ値にする必要がある（ストアが別々なら一致不要） |
 | EdgeOne で KV が 401 を返す | Node クラウド関数と Edge Function の `JWT_SECRET` が一致していない（またはローテートされた）。両者で同じ値にするか、`EO_KV_URLS` を正しいデプロイ先のオリジンに向ける |
+| ログに `Error reading config from kv: Not connected` が出て、すべての `/api/*` が 503 を返す | Node クラウド関数には KV 名前空間が **Redis/RESP クライアント**として渡されています（KV Web API はエッジ関数のみ）。アプリはそれを無視して Blob にフォールバックします（想定どおりの動作）。Node から KV を実際に使うには、名前空間をエッジ関数にバインドし、`DB_DRIVER=kv` と `JWT_SECRET` を設定してください |
+| 初期化が時々 400 `system has already been initialized` で失敗し、再試行すると成功する | 偽の「初期化済み」です。ストレージに到達できないとアプリはメモリ動作に退避するため、同じインスタンスでは最初の初期化がメモリにしか書かれず、再試行時に既存の管理者を読んで 400 を返します。ストレージを直せば解消します |
 | `Storage driver "mysql" is not available in this runtime` と報告される | エッジランタイムで `DB_DRIVER=mysql` を使用しているが、このドライバーは Node コンテナでのみ利用可能。`mysqlhttp` に変更する |
 | Supabase で 404 になる | `kv` テーブルが存在しない。まず `CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);` を実行する。なお Supabase は PostgREST 経由のため KV のみ対応で、`DB_FORMAT=sql` は使用できない |
 | 「オフラインダウンロード」で `capability unavailable` と表示される | このランタイムには永続化可能なオフラインダウンロードアダプターがなく、`/fs/add_offline_download` は 501 を返します。代わりに `/api/fs/seed/offline_download` を使用してください（先に `ALLOW_SEED` の許可リストを設定）。タスク一覧の再試行 / キャンセルも同様に 501 です |
