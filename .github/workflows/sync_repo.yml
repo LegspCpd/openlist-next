@@ -1,5 +1,13 @@
 name: Sync Repo
 
+# 镜像到 Gitee 是**可选**能力：只有配置了仓库变量 GITEE_REPO_URL（以及 secret
+# GITEE_SSH_PRIVATE_KEY）时才会执行。未配置时整个 job 直接跳过，而不是每次 push
+# 都产生一条红色失败记录 —— 否则真正的构建失败会被这类噪声淹没。
+#
+# 启用方式（Settings → Secrets and variables → Actions）：
+#   Variables: GITEE_REPO_URL       = git@gitee.com:<owner>/<repo>.git
+#   Secrets:   GITEE_SSH_PRIVATE_KEY = 可推送该仓库的私钥
+
 on:
   push:
     branches:
@@ -10,6 +18,7 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     name: Sync Repository
+    if: vars.GITEE_REPO_URL != ''
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -34,5 +43,5 @@ jobs:
           git commit -m "Sync from GitHub: $(date)"
 
           # Add Gitee remote and force push
-          git remote add gitee ${{ vars.GITEE_REPO_URL }}
+          git remote add gitee "${{ vars.GITEE_REPO_URL }}"
           git push --force gitee new-main:main
