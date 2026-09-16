@@ -91,16 +91,16 @@ Outre les stockages réels ci-dessus, des pilotes virtuels/fonctionnels tels que
 - **Téléversement et téléchargement** : téléversement multi-stockage, téléchargement par lots, transmission en flux et redirection vers les liens directs.
 - **Partage de fichiers** : génération de liens de partage avec durée de validité, mot de passe et contrôle des permissions, avec prise en charge de l'accès anonyme et du partage de répertoires.
 - **Recherche en texte intégral** : recherche rapide de fichiers dans les stockages indexés.
-- **Tâches hors ligne** : file d'attente de tâches en arrière-plan, prenant en charge les opérations par lots et le traitement asynchrone.
+- **Téléchargement hors ligne (limité)** : `/api/fs/seed/offline_download` analyse les données seed (torrent, lien direct, CAS) et les écrit de façon synchrone dans le stockage cible ; il faut au préalable la liste blanche `ALLOW_SEED` et la permission `OFFLINE_DOWNLOAD`. Il n'y a pas de file d'attente de tâches en arrière-plan : `/fs/add_offline_download` ainsi que les opérations de relance / annulation des tâches ne sont pas implémentées (elles renvoient 501).
 - **Interfaces externes** : expose le stockage agrégé via les protocoles compatibles WebDAV ou S3, facilitant le montage dans des outils tiers.
 - **Service MCP** : fournit un point de terminaison Model Context Protocol, appelable et intégrable par des clients tels que des assistants IA.
 
 ### Gestion des permissions
 
-- **Gestion des permissions** : contrôle d'accès basé sur les rôles (RBAC), avec prise en charge du regroupement d'utilisateurs, des droits de lecture/écriture au niveau des répertoires et des quotas.
-- **Méthodes d'authentification** : compte/mot de passe intégrés, avec prise en charge de la vérification TOTP, de la connexion WebAuthn/FIDO, de l'authentification unique SSO et de l'authentification d'annuaire LDAP.
-- **Renforcement de la sécurité** : sessions JWT, protection CSRF, protection contre le clickjacking (X-Frame-Options), politique de sécurité du contenu (CSP).
-- **Vérification de l'état de santé** : fournit la sonde de vivacité `/health` et la sonde de préparation `/healthz`, utilisables pour la surveillance et les alertes.
+- **Gestion des permissions** : trois rôles (administrateur / utilisateur standard / invité), avec des droits de lecture/écriture par répertoire (les champs `read_users` / `write_users` des métadonnées, sous-répertoires inclus en option).
+- **Méthodes d'authentification** : compte/mot de passe intégrés, avec prise en charge de la vérification TOTP, de la connexion WebAuthn (clés d'accès — désactivée par défaut, à activer dans les réglages), de l'authentification unique SSO et de l'authentification d'annuaire LDAP.
+- **Renforcement de la sécurité** : sessions JWT, politique CORS de même origine (aucun Origin arbitraire n'est renvoyé sauf s'il figure dans `ALLOW_URLS`), protection contre le clickjacking (`X-Frame-Options: DENY`), politique de sécurité du contenu (CSP) et HSTS.
+- **Vérification de l'état de santé** : `/api/healthz` est la sonde de préparation — elle lit réellement le stockage une fois et renvoie 503 s'il est indisponible, c'est donc elle qu'il faut brancher à la supervision. `/api/health` n'est qu'un marqueur de vivacité et ne reflète pas l'état du stockage.
 
 ### Déploiement sur plateforme
 
@@ -114,12 +114,12 @@ Outre les stockages réels ci-dessus, des pilotes virtuels/fonctionnels tels que
 
 | | OpenList-Worker officiel | Ce projet |
 |---|---|---|
-| Pilote de stockage | 7 | 15, avec l'ajout de neon / turso / pgrest / pghttp / mysqlhttp / upstash / r2 / s3 |
+| Pilote de stockage | 6 | 16, avec 10 ajouts (`neon`, `turso`, `pgrest`, `pghttp`, `mysqlhttp`, `upstash`, `s3`, `r2`, `netlifyblobs`, `hyperdrive`) |
 | Dialecte SQL | SQLite, MySQL | Ajout de PostgreSQL (avec espaces réservés `$n`) |
 | Pilote de disque cloud | 78 | 81, complété avec `123_link`, `ilanzou`, `halalcloud` |
-| Plateforme de déploiement | Cloudflare Workers, EdgeOne, ESA, Serverless | Ajout de Vercel, Netlify, Node/Docker |
+| Plateforme de déploiement | Cloudflare Workers, EdgeOne, ESA, Vercel, Serverless, Node/Docker | ajout de Netlify, et scripts de déploiement en une commande pour EdgeOne / ESA / Vercel |
 
-Le pilote `mysql` de la version officielle ne peut s'exécuter que dans un conteneur Node — Cloudflare Workers n'ayant pas de TCP brut, le déploiement en edge ne peut utiliser que le KV intégré à la plateforme. Les 8 pilotes de stockage ajoutés par ce projet sont tous implémentés à partir de `fetch`, permettant ainsi de se connecter à une base de données externe même au moment de l'exécution en edge ; il suffit de renseigner une `DATABASE_URL`.
+Le pilote `mysql` de la version officielle ne peut s'exécuter que dans un conteneur Node — Cloudflare Workers n'ayant pas de TCP brut, le déploiement en edge ne peut utiliser que le KV intégré à la plateforme. Sur les 10 pilotes ajoutés par ce projet, 8 passent par HTTP (`neon`, `turso`, `pgrest`, `pghttp`, `mysqlhttp`, `upstash`, `s3`, `netlifyblobs`) et peuvent donc joindre une base externe même en edge : il suffit de renseigner une `DATABASE_URL`. Les deux autres diffèrent : `r2` utilise un binding de bucket Cloudflare, et `hyperdrive` se connecte en TCP via `mysql2`, donc uniquement sur Node.
 
 Pour plus de détails, voir [le guide de configuration du stockage externe](../docs/EXTERNAL_STORAGE.md).
 
@@ -206,9 +206,9 @@ Lorsque `DB_DRIVER` garde la valeur par défaut `auto`, le programme sélectionn
 
 Quelques pièges à surveiller (déjà traités par ce projet, à garder à l'esprit si vous modifiez la configuration vous-même) :
 
-- Le `nodeVersion` dans `edgeone.json` doit être l'une des versions préinstallées par la plateforme (14.21.3 / 16.20.2 / 18.20.4 / 20.18.0 / 22.11.0 / 22.17.1 / 22.21.1 / 24.5.0 / 24.11.0 / 24.18.0) ; toute autre valeur provoque un échec de build. Ce projet utilise `22.21.1`. Ce champ écrase les réglages du projet dans la console
+- Le `nodeVersion` de `edgeone.json` doit être l'une des versions préinstallées par la plateforme. La documentation officielle n'en liste que cinq : 14.21.3 / 16.20.2 / 18.20.4 / 20.18.0 / 22.11.0 ; toute autre valeur peut faire échouer le build. Ce projet utilise `22.11.0` : lors de la récupération du front-end, `scripts/fetch-frontend.mjs` constate que le pnpm 11 épinglé en amont exige Node >= 22.13 et bascule automatiquement sur pnpm 10. Ce champ écrase les réglages du projet dans la console
 - `maxDuration` doit être placé dans `cloudFunctions.nodejs` ; écrit comme `cloudFunctions.maxDuration`, il n'a aucun effet
-- Le repli de routage du front-end est géré par `middleware.js` à la racine. Les `rewrites` de `edgeone.json` ne s'appliquent qu'aux ressources statiques ; la documentation officielle indique explicitement ne pas prendre en charge le routage front-end, et ajouter `/*` risquerait de correspondre aux fichiers statiques
+- Le repli de routage du front-end est géré par `middleware.js` à la racine, donc `edgeone.json` ne définit aucun `rewrites`. Makers accepte désormais aussi `{"source": "/*", "destination": "/index.html"}` comme fallback SPA (il est reconnu comme tel, et non comme une réécriture ordinaire), mais avoir le même repli à deux endroits invite aux conflits : ce projet ne garde que celui de `middleware.js`
 - N'utilisez pas de domaine temporaire tel que `*.edgeone.cool` pour vérifier le stockage ; ce domaine inclut des paramètres d'authentification à l'échelle du site qui bloquent les requêtes de proxy KV entre les fonctions edge et les fonctions cloud. Liez d'abord un domaine personnalisé avant de vérifier
 
 Si vous ne souhaitez pas utiliser le bouton de déploiement en un clic, vous pouvez également utiliser Makers CLI :
@@ -337,8 +337,8 @@ Le code de sortie `0` signifie que le stockage est prêt, `2` qu'il ne l'est pas
 
 ### Front-end
 
-- **Framework** : React 19 + TypeScript
-- **Bibliothèque UI** : Ant Design / Material-UI
+- **Framework** : SolidJS + TypeScript
+- **Bibliothèque UI** : Hope UI
 - **Outils de build** : Vite
 
 > Le front-end ne se trouve pas dans ce dépôt ; il est récupéré depuis le dépôt officiel par `scripts/fetch-frontend.mjs` au moment du build.
@@ -427,6 +427,7 @@ Ces variables sont injectées automatiquement dans l'environnement par la platef
 | `HYPERDRIVE` | Chaîne de connexion Cloudflare Hyperdrive, permettant au périphérique d'accéder à MySQL, utilisée par `DB_DRIVER=hyperdrive` | À lier si vous voulez Hyperdrive |
 | `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Nom du bucket et identifiants d'accès du stockage d'objets compatible S3 (R2 / MinIO / B2, etc.), utilisés par `DB_DRIVER=s3` | À renseigner tous les cinq si vous utilisez le stockage S3 |
 | `CF_ACCOUNT`, `CF_KV_UUID`, `CF_API_KEY` | Lecture/écriture du KV via l'API REST Cloudflare, utilisés par `DB_DRIVER=cfkv`. Il s'agit respectivement de l'ID de compte, de l'ID d'espace de noms KV et d'un jeton d'API avec droit de lecture/écriture KV | À renseigner tous les trois si vous utilisez `cfkv` |
+| `BUCKET` | Binding de bucket Cloudflare R2, utilisé par `DB_DRIVER=r2` (accepte aussi `R2_BUCKET` / `OPENLIST_BUCKET` / `OPENLIST_R2`) | Associez-le si vous voulez R2, en le nommant `BUCKET` |
 
 ### Autres variables (la plupart peuvent être ignorées)
 
@@ -464,6 +465,7 @@ Chaque variable est listée avec un commentaire dans [le modèle de variables](.
 | KV renvoie 401 sur EdgeOne | Le `JWT_SECRET` diffère entre la fonction cloud Node et l'Edge Function (ou a été renouvelé). Utilisez la même valeur des deux côtés, ou pointez `EO_KV_URLS` vers l'origine de déploiement correcte |
 | Erreur `Storage driver "mysql" is not available in this runtime` | `DB_DRIVER=mysql` est défini en environnement edge, or ce pilote ne fonctionne que dans un conteneur Node. Basculez sur `mysqlhttp` |
 | Supabase renvoie 404 | La table `kv` n'existe pas ; créez-la d'abord : `CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);`. À noter : Supabase passe par PostgREST, qui ne prend en charge que le KV — `DB_FORMAT=sql` n'est pas disponible |
+| Un clic sur « téléchargement hors ligne » renvoie `capability unavailable` | Ce runtime n'a pas d'adaptateur de téléchargement hors ligne persistant : `/fs/add_offline_download` renvoie 501. Utilisez plutôt `/api/fs/seed/offline_download` (configurez d'abord la liste blanche `ALLOW_SEED`) ; les relances / annulations de la liste des tâches renvoient aussi 501 |
 
 ---
 

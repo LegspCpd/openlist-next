@@ -91,16 +91,16 @@ OpenList-Worker 是官方 [OpenListTeam/OpenList](https://github.com/OpenListTea
 - **上傳下載**：跨儲存的上傳、批次下載、串流傳輸與直鏈跳轉。
 - **檔案分享**：生成帶有效期、密碼與權限控制的分享連結，支援匿名存取與目錄分享。
 - **全文搜尋**：在已索引的儲存中快速檢索檔案。
-- **離線任務**：後台任務佇列，支援批次操作與非同步處理。
+- **離線下載（功能受限）**：`/api/fs/seed/offline_download` 能解析 seed 資料（種子、直連、CAS）並同步寫入目標儲存，需先設定 `ALLOW_SEED` 白名單並具備 `OFFLINE_DOWNLOAD` 權限。注意沒有背景任務佇列；`/fs/add_offline_download` 與任務的重試 / 取消都未實作（回傳 501）。
 - **外部介面**：將聚合儲存以 WebDAV 或 S3 相容協定對外暴露，便於掛載到第三方工具。
 - **MCP 服務**：提供 Model Context Protocol 端點，可被 AI 助手等用戶端整合呼叫。
 
 ### 權限管理
 
-- **權限管理**：基於角色的存取控制（RBAC），支援使用者分組、目錄級讀寫權限與配額。
-- **認證方式**：內建帳號密碼，支援 TOTP 驗證、WebAuthn/FIDO 登入、SSO 單點登入與 LDAP 目錄認證。
-- **安全加固**：JWT 會話、CSRF 防護、點擊劫持防護（X-Frame-Options）、內容安全策略（CSP）。
-- **健康檢查**：提供 `/health` 存活探針與 `/healthz` 就緒探針，可用於監控與告警。
+- **權限管理**：三種角色（管理員 / 一般使用者 / 訪客），支援按目錄設定讀寫權限（中繼資料裡的 `read_users` / `write_users`，可含子目錄）。
+- **認證方式**：內建帳號密碼，支援 TOTP 驗證、WebAuthn 登入（Passkey，預設關閉，需在設定中開啟）、SSO 單點登入與 LDAP 目錄認證。
+- **安全加固**：JWT 會話、同源 CORS 策略（預設不放行任意 Origin，可用 `ALLOW_URLS` 加白名單）、點擊劫持防護（`X-Frame-Options: DENY`）、內容安全策略（CSP）、HSTS。
+- **健康檢查**：`/api/healthz` 才是就緒探針——它會真的讀一次儲存，不可用時回傳 503，適合接監控告警；`/api/health` 只是存活標記，不反映儲存狀態。
 
 ### 平台部署
 
@@ -114,12 +114,12 @@ OpenList-Worker 是官方 [OpenListTeam/OpenList](https://github.com/OpenListTea
 
 | | 官方 OpenList-Worker | 本專案 |
 |---|---|---|
-| 儲存驅動 | 7 個 | 15 個，新增 neon / turso / pgrest / pghttp / mysqlhttp / upstash / r2 / s3 |
+| 儲存驅動 | 6 個 | 16 個，新增 10 個（`neon`、`turso`、`pgrest`、`pghttp`、`mysqlhttp`、`upstash`、`s3`、`r2`、`netlifyblobs`、`hyperdrive`）|
 | SQL 方言 | SQLite、MySQL | 增加 PostgreSQL（含 `$n` 佔位符） |
 | 網盤驅動 | 78 個 | 81 個，補齊 `123_link`、`ilanzou`、`halalcloud` |
-| 部署平台 | Cloudflare Workers、EdgeOne、ESA、Serverless | 增加 Vercel、Netlify、Node/Docker |
+| 部署平台 | Cloudflare Workers、EdgeOne、ESA、Vercel、Serverless、Node/Docker | 新增 Netlify，並為 EdgeOne / ESA / Vercel 補了一鍵部署腳本 |
 
-官方版本裡的 `mysql` 驅動只能跑在 Node 容器中——Cloudflare Workers 沒有裸 TCP，部署到邊緣就只能使用平台自帶的 KV。本專案新增的 8 個儲存驅動全部基於 `fetch` 實現，所以在邊緣執行時也能連外部資料庫，填一條 `DATABASE_URL` 就行。
+官方版本裡的 `mysql` 驅動只能跑在 Node 容器中——Cloudflare Workers 沒有裸 TCP，部署到邊緣就只能使用平台自帶的 KV。本專案新增的 10 個驅動裡，`neon`、`turso`、`pgrest`、`pghttp`、`mysqlhttp`、`upstash`、`s3`、`netlifyblobs` 這 8 個走 HTTP，所以在邊緣執行時也能連外部資料庫，填一條 `DATABASE_URL` 就行；另外兩個裡 `r2` 用的是 Cloudflare 的儲存桶綁定，`hyperdrive` 靠 `mysql2` 直連 TCP，只在 Node 環境可用。
 
 詳細說明見 [外部儲存配置指南](../docs/EXTERNAL_STORAGE.md)。
 
@@ -206,9 +206,9 @@ pnpm run deploy:worker
 
 有幾個坑要注意（本專案已經處理好了，你自己改設定時留意）：
 
-- `edgeone.json` 裡的 `nodeVersion` 必須是平台預裝的版本之一（14.21.3 / 16.20.2 / 18.20.4 / 20.18.0 / 22.11.0 / 22.17.1 / 22.21.1 / 24.5.0 / 24.11.0 / 24.18.0），填別的會建構失敗。本專案用的是 `22.21.1`。這個欄位會覆蓋主控台的專案設定
+- `edgeone.json` 裡的 `nodeVersion` 要用平台預裝的版本，官方文件列出的只有 14.21.3 / 16.20.2 / 18.20.4 / 20.18.0 / 22.11.0 這五個，填別的版本可能建構失敗。本專案用 `22.11.0`：拉前端時 `scripts/fetch-frontend.mjs` 會發現上游 pin 的 pnpm 11 要求 Node ≥ 22.13，自動回退到 pnpm 10。這個欄位會覆蓋主控台的專案設定
 - `maxDuration` 要寫在 `cloudFunctions.nodejs` 裡面，寫成 `cloudFunctions.maxDuration` 不生效
-- 前端路由回退由根目錄的 `middleware.js` 負責。`edgeone.json` 的 `rewrites` 只對靜態資源生效，官方文件明確說不支援前端路由，加 `/*` 反而會命中靜態檔案
+- 前端路由回退由根目錄的 `middleware.js` 負責，`edgeone.json` 裡就沒有再配 `rewrites`。Makers 現在也支援用 `{"source": "/*", "destination": "/index.html"}` 宣告 SPA 回退（會被辨識成 fallback 而不是普通重寫），但同一個回退配在兩處容易互相打架，本專案只保留 `middleware.js` 一處
 - 不要用 `*.edgeone.cool` 這種臨時網域驗證儲存，這個網域帶全站鑑權參數，會攔截邊緣函式和雲函式之間的 KV 代理請求。請先綁定自訂網域再驗證
 
 不想用一鍵部署按鈕的話，也可以用 Makers CLI：
@@ -337,8 +337,8 @@ pnpm run deploy:vercel  -- --no-deploy --url https://你的網域
 
 ### 前端
 
-- **框架**：React 19 + TypeScript
-- **UI 庫**：Ant Design / Material-UI
+- **框架**：SolidJS + TypeScript
+- **UI 庫**：Hope UI
 - **建構工具**：Vite
 
 > 前端不在本倉庫裡，建構時由 `scripts/fetch-frontend.mjs` 從官方倉庫拉取。
@@ -427,6 +427,7 @@ DATABASE_URL=postgres://user:pass@ep-xxx.neon.tech/neondb
 | `HYPERDRIVE` | Cloudflare Hyperdrive 連線串，讓邊緣能存取 MySQL，`DB_DRIVER=hyperdrive` 用它 | 想用 Hyperdrive 就綁 |
 | `S3_BUCKET`、`S3_REGION`、`S3_ENDPOINT`、`S3_ACCESS_KEY_ID`、`S3_SECRET_ACCESS_KEY` | S3 相容物件儲存的桶名與存取憑據，`DB_DRIVER=s3` 用它們 | 用 S3 儲存就五項都填 |
 | `CF_ACCOUNT`、`CF_KV_UUID`、`CF_API_KEY` | 走 Cloudflare REST API 讀寫 KV，`DB_DRIVER=cfkv` 用它們。分別是帳戶 ID、KV 命名空間 ID、有 KV 讀寫權限的 API Token | 用 `cfkv` 就三項都填 |
+| `BUCKET` | Cloudflare R2 的儲存桶綁定，`DB_DRIVER=r2` 用它（也接受 `R2_BUCKET` / `OPENLIST_BUCKET` / `OPENLIST_R2`） | 想用 R2 就綁，名字填 `BUCKET` |
 
 ### 其他變數（大多可以不管）
 
@@ -464,6 +465,7 @@ DATABASE_URL=postgres://user:pass@ep-xxx.neon.tech/neondb
 | EdgeOne 上 KV 報 401 | Node 雲端函式和 Edge Function 的 `JWT_SECRET` 不一致（或輪換過）。兩邊填同一個，或者把 `EO_KV_URLS` 指向正確的部署網域 |
 | 報 `Storage driver "mysql" is not available in this runtime` | 邊緣執行時用了 `DB_DRIVER=mysql`，這個驅動只在 Node 容器裡可用。改用 `mysqlhttp` |
 | Supabase 報 404 | `kv` 表不存在，先建表：`CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);`。另外 Supabase 走 PostgREST，只支援 KV，不能配 `DB_FORMAT=sql` |
+| 點「離線下載」提示 `capability unavailable` | 這個執行環境沒有可持久化的離線下載轉接器，`/fs/add_offline_download` 回傳 501。改用 `/api/fs/seed/offline_download`（先設定 `ALLOW_SEED` 白名單）；任務清單裡的重試 / 取消也同樣是 501 |
 
 ---
 

@@ -45,7 +45,7 @@ Turso**（以及任何提供 Postgres-over-HTTP 网关的库）；纯 TCP（Redi
    DB_FORMAT=map      # 整库单键，减少往返（大目录推荐）
    JWT_SECRET=<openssl rand -hex 32>
    ```
-4. Redeploy，然后访问 `GET /api/public/env_check`，`driver` 应显示 `neon`。
+4. Redeploy，然后访问 `GET /api/public/env_check`，`data.config.resolved_driver` 应显示 `neon`。
 
 **Upstash / Vercel KV**：点 Connect 后注入 `KV_REST_API_URL` +
 `KV_REST_API_TOKEN`，`auto` 会识别为 `upstash`（仅 KV 语义，用 `map`/`key`，
@@ -99,9 +99,9 @@ pnpm run deploy:vercel -- --no-deploy --url https://<你的域名>
 
 输出会告诉你：
 
-- `storage.driver` —— 实际生效的驱动（应为 `neon` / `upstash` / `pgrest` / `turso` / …）；
-- 是否 `memory`（**必须处理**）与驱动健康状态；
-- `jwt.ready` —— `JWT_SECRET` 是否配好（不配的话加密字段解不开）。
+- `data.config.resolved_driver` —— 实际生效的驱动（应为 `neon` / `upstash` / `pgrest` / `turso` / …）；
+- `data.storage.memory` 是否为 `true`（为 `true` 就**必须处理**），以及 `data.storage.available`；
+- `data.jwt.ready` —— `JWT_SECRET` 是否配好（不配的话加密字段解不开）。
 
 退出码 `0` = 存储已就绪，`2` = 未就绪。也可以直接访问
 `https://<你的域名>/api/public/env_check` 看同样内容。
@@ -115,7 +115,7 @@ pnpm run deploy:vercel -- --no-deploy --url https://<你的域名>
 ```
 DB_DRIVER=pghttp
 PG_HTTP_URL=https://your-postgres-http-gateway/query
-PG_HTTP_AUTH=Bearer <token>
+PG_HTTP_TOKEN=<token>          # 也接受 POSTGRES_HTTP_TOKEN / PSQL_HTTP_TOKEN
 ```
 或自建 MySQL HTTP 网关：
 ```

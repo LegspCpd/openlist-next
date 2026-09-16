@@ -91,16 +91,16 @@ In addition to the real storages above, it also provides virtual/functional driv
 - **Upload and download**: cross-storage uploads, batch downloads, streaming transfers, and direct-link redirection.
 - **File sharing**: generate share links with expiration, password, and permission controls, supporting anonymous access and directory sharing.
 - **Full-text search**: quickly search files across indexed storages.
-- **Offline tasks**: background task queue supporting batch operations and asynchronous processing.
+- **Offline download (limited)**: `/api/fs/seed/offline_download` parses seed data (torrent, direct link, CAS) and writes it synchronously to the target storage; it requires the `ALLOW_SEED` allowlist and the `OFFLINE_DOWNLOAD` permission. There is no background task queue — `/fs/add_offline_download` and the task retry/cancel endpoints are not implemented (they return 501).
 - **External interfaces**: expose the aggregated storage via WebDAV or S3-compatible protocols for mounting into third-party tools.
 - **MCP service**: provides Model Context Protocol endpoints that can be integrated and called by clients such as AI assistants.
 
 ### Permission Management
 
-- **Permission management**: role-based access control (RBAC), supporting user grouping, directory-level read/write permissions, and quotas.
-- **Authentication methods**: built-in account/password, supporting TOTP verification, WebAuthn/FIDO login, SSO single sign-on, and LDAP directory authentication.
-- **Security hardening**: JWT sessions, CSRF protection, clickjacking protection (X-Frame-Options), and Content Security Policy (CSP).
-- **Health checks**: provides the `/health` liveness probe and the `/healthz` readiness probe, usable for monitoring and alerting.
+- **Permission management**: three roles (admin / general user / guest), plus per-directory read/write permissions (the `read_users` / `write_users` fields in metadata, optionally including subdirectories).
+- **Authentication methods**: built-in account/password, supporting TOTP verification, WebAuthn (passkeys — off by default, enable it in settings), SSO single sign-on, and LDAP directory authentication.
+- **Security hardening**: JWT sessions, a same-origin CORS policy (arbitrary Origins are not echoed unless allowlisted via `ALLOW_URLS`), clickjacking protection (`X-Frame-Options: DENY`), Content Security Policy (CSP), and HSTS.
+- **Health checks**: `/api/healthz` is the readiness probe — it really reads storage once and answers 503 when unavailable, so it is the one to wire to monitoring. `/api/health` is a liveness marker only and says nothing about storage.
 
 ### Platform Deployment
 
@@ -114,12 +114,12 @@ In addition to the real storages above, it also provides virtual/functional driv
 
 | | Official OpenList-Worker | This Project |
 |---|---|---|
-| Storage drivers | 7 | 15, newly added neon / turso / pgrest / pghttp / mysqlhttp / upstash / r2 / s3 |
+| Storage drivers | 6 | 16, with 10 newly added (`neon`, `turso`, `pgrest`, `pghttp`, `mysqlhttp`, `upstash`, `s3`, `r2`, `netlifyblobs`, `hyperdrive`) |
 | SQL dialects | SQLite, MySQL | added PostgreSQL (including `$n` placeholders) |
 | Cloud drive drivers | 78 | 81, with `123_link`, `ilanzou`, `halalcloud` added |
-| Deployment platforms | Cloudflare Workers, EdgeOne, ESA, Serverless | added Vercel, Netlify, Node/Docker |
+| Deployment platforms | Cloudflare Workers, EdgeOne, ESA, Vercel, Serverless, Node/Docker | added Netlify, plus one-command deploy scripts for EdgeOne / ESA / Vercel |
 
-In the official version, the `mysql` driver can only run in a Node container—Cloudflare Workers has no raw TCP, so deploying to the edge means you can only use the platform-native KV. All 8 storage drivers newly added in this project are implemented on top of `fetch`, so they can connect to external databases even on edge runtimes; you just need to fill in a `DATABASE_URL`.
+The official version's `mysql` driver only runs in a Node container — Cloudflare Workers has no raw TCP, so on the edge you can only use the platform-native KV. Of the 10 drivers this project adds, 8 go over HTTP (`neon`, `turso`, `pgrest`, `pghttp`, `mysqlhttp`, `upstash`, `s3`, `netlifyblobs`), so they can reach an external database even on edge runtimes — just fill in one `DATABASE_URL`. The other two work differently: `r2` uses a Cloudflare bucket binding, and `hyperdrive` connects over raw TCP via `mysql2`, so it only works on Node.
 
 For details, see the [External Storage Configuration Guide](../docs/EXTERNAL_STORAGE.md).
 
@@ -206,9 +206,9 @@ When `DB_DRIVER` is left at the default `auto`, the program automatically select
 
 There are a few pitfalls to watch out for (this project already handles them, but keep them in mind if you change the configuration yourself):
 
-- The `nodeVersion` in `edgeone.json` must be one of the versions preinstalled on the platform (14.21.3 / 16.20.2 / 18.20.4 / 20.18.0 / 22.11.0 / 22.17.1 / 22.21.1 / 24.5.0 / 24.11.0 / 24.18.0); any other value will cause the build to fail. This project uses `22.21.1`. This field overrides the project settings in the console
+- The `nodeVersion` in `edgeone.json` must be one of the versions the platform preinstalls. The official documentation lists only 14.21.3 / 16.20.2 / 18.20.4 / 20.18.0 / 22.11.0; any other value may cause the build to fail. This project uses `22.11.0`: while fetching the frontend, `scripts/fetch-frontend.mjs` sees that the pnpm 11 pinned upstream requires Node >= 22.13 and automatically falls back to pnpm 10. This field overrides the project settings in the console
 - `maxDuration` must be written inside `cloudFunctions.nodejs`; writing it as `cloudFunctions.maxDuration` has no effect
-- Frontend route fallback is handled by `middleware.js` at the root. The `rewrites` in `edgeone.json` only apply to static assets. The official documentation explicitly states that frontend routing is not supported, and adding `/*` would instead match static files
+- Frontend route fallback is handled by `middleware.js` at the root, so `edgeone.json` configures no `rewrites`. Makers now also accepts `{"source": "/*", "destination": "/index.html"}` as an SPA fallback (it is recognised as a fallback, not a normal rewrite), but having the same fallback in two places invites conflicts — this project keeps only the `middleware.js` one
 - Do not use temporary domains like `*.edgeone.cool` to verify storage—this domain carries site-wide authentication parameters that will intercept the KV proxy requests between edge functions and cloud functions. Bind a custom domain first, then verify
 
 If you prefer not to use the one-click deploy button, you can also use the Makers CLI:
@@ -337,8 +337,8 @@ An exit code of `0` means the storage is ready, and `2` means it is not yet read
 
 ### Frontend
 
-- **Framework**: React 19 + TypeScript
-- **UI library**: Ant Design / Material-UI
+- **Framework**: SolidJS + TypeScript
+- **UI library**: Hope UI
 - **Build tool**: Vite
 
 > The frontend is not in this repository; it is fetched from the official repository by `scripts/fetch-frontend.mjs` at build time.
@@ -427,6 +427,7 @@ These are injected into the environment by the platform at deploy time; you only
 | `HYPERDRIVE` | Cloudflare Hyperdrive connection string, lets the edge reach MySQL, used when `DB_DRIVER=hyperdrive` | Bind it if you want Hyperdrive |
 | `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Bucket name and access credentials for S3-compatible object storage (R2 / MinIO / B2, etc.), used when `DB_DRIVER=s3` | Fill in all five when using S3 storage |
 | `CF_ACCOUNT`, `CF_KV_UUID`, `CF_API_KEY` | Read/write KV over the Cloudflare REST API, used when `DB_DRIVER=cfkv`. They are the account ID, KV namespace ID, and an API Token with KV read/write permission, respectively | Fill in all three when using `cfkv` |
+| `BUCKET` | Cloudflare R2 bucket binding, used by `DB_DRIVER=r2` (also accepts `R2_BUCKET` / `OPENLIST_BUCKET` / `OPENLIST_R2`) | Bind it if you want R2; name it `BUCKET` |
 
 ### Other variables (most can be left alone)
 
@@ -464,6 +465,7 @@ Every variable is listed with comments in the [variable template](../.dev.vars.e
 | KV returns 401 on EdgeOne | `JWT_SECRET` differs between the Node cloud function and the Edge Function (or it was rotated). Use the same value on both, or point `EO_KV_URLS` at the correct deployment origin. |
 | Reports `Storage driver "mysql" is not available in this runtime` | `DB_DRIVER=mysql` is set on an edge runtime, but this driver only works in a Node container. Switch to `mysqlhttp`. |
 | Supabase returns 404 | The `kv` table does not exist; create it first: `CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);`. Note that Supabase uses PostgREST, which only supports KV — `DB_FORMAT=sql` is not supported. |
+| Clicking "offline download" reports `capability unavailable` | This runtime has no durable offline-download adapter, so `/fs/add_offline_download` returns 501. Use `/api/fs/seed/offline_download` instead (configure the `ALLOW_SEED` allowlist first); retry/cancel in the task list also return 501 |
 
 ---
 

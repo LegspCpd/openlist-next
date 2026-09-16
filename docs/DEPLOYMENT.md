@@ -1,6 +1,6 @@
 # 部署指南
 
-五个目标平台都已配置好，按推荐顺序排列。所有平台共用同一套环境变量，
+六个目标平台都已配置好，按推荐顺序排列。所有平台共用同一套环境变量，
 详见 [EXTERNAL_STORAGE.md](./EXTERNAL_STORAGE.md)。
 
 ## 平台速览
@@ -12,6 +12,7 @@
 | Vercel | `api/[...route].ts` | Neon / Supabase / Upstash / Turso | 无平台 KV，Marketplace 一键连接数据库（见 [ONE_CLICK_DATABASE.md](./ONE_CLICK_DATABASE.md)） |
 | 阿里云 ESA | `esa-entry.ts` | EdgeKV / Neon | 产物在 `dist-server/`；`esa-cli commit` + `esa-cli deploy` |
 | Netlify | `netlify/functions/api.ts` | Neon / Supabase / Upstash | ⚠️ Functions 限 10s，大目录易超时 |
+| Node / Docker 自建 | `dist-server/api/[...route].js` | MySQL / PostgreSQL / Neon / Turso | 唯一能用 `DB_DRIVER=mysql` 直连 TCP 的场景 |
 
 > **第一次构建会拉取前端**：`pnpm build` 会先执行 `scripts/fetch-frontend.mjs`
 > 去拉 OpenList 官方前端仓库并编译。离线或想加速时，可预先准备好前端产物，
@@ -100,15 +101,18 @@ EdgeOne 的 Edge Functions 只注入 KV/Blob 给边缘函数，Node 云函数拿
    `pnpm run build`，输出目录 `dist`）。
 
    > **`edgeone.json` 的三个坑**（已在本项目中修正）：
-   > - `nodeVersion` 必须是平台预装版本之一（14.21.3 / 16.20.2 / 18.20.4 /
-   >   20.18.0 / 22.11.0 / 22.17.1 / **22.21.1** / 24.5.0 / 24.11.0 / 24.18.0），
-   >   填别的版本号会构建失败。这个字段**覆盖控制台的项目设置**，想换版本只能改它。
-   >   本项目取 `22.21.1`：构建时 `scripts/fetch-frontend.mjs` 要按上游前端 pin 的
-   >   pnpm（11.x，要求 Node ≥ 22.13）安装前端，22.11.0 会直接报 EBADENGINE 卡住；
+   > - `nodeVersion` 要用平台预装的版本。官方文档列出的只有 14.21.3 / 16.20.2 /
+   >   18.20.4 / 20.18.0 / 22.11.0 这五个，填别的版本号可能构建失败。这个字段
+   >   **覆盖控制台的项目设置**，想换版本只能改它。本项目取 `22.11.0`：构建时
+   >   `scripts/fetch-frontend.mjs` 发现上游前端 pin 的 pnpm（11.x，要求 Node ≥ 22.13）
+   >   在当前 Node 上跑不动，会自动回退到 `pnpm@10.34.5`（上游 workspace 省略了
+   >   `packages` 字段，pnpm 9 会直接报错，所以不能退到 9）；
    > - `maxDuration` 必须嵌在 `cloudFunctions.nodejs` 下，写成
    >   `cloudFunctions.maxDuration` 不生效；
-   > - SPA 路由回退由根目录 `middleware.js` 承担。`edgeone.json` 的 `rewrites`
-   >   只作用于静态资源、官方明确不支持 SPA 路由，加 `/*` 反而会命中静态文件。
+   > - SPA 路由回退由根目录 `middleware.js` 承担，因此 `edgeone.json` 里没有配
+   >   `rewrites`。Makers 现在也支持用 `{"source": "/*", "destination": "/index.html"}`
+   >   声明 SPA 回退（会被识别为 fallback，而不是普通重写），但同一个回退配在两处
+   >   容易互相打架，本项目只保留 `middleware.js` 一处。
 
 4. 存储自动探测（`DB_DRIVER=auto`，默认）：应用会**自动探测可用存储，优先
    KV，其次 Blob**，无需手工指定：
@@ -291,8 +295,9 @@ DB_FORMAT=sql
 ## 部署后检查
 
 1. 访问根路径，完成初始化向导（或已设 `ADMIN_PASS` 则直接登录）。
-2. 打开 `GET /api/public/env_check` —— `ready` 应为 `true`，`storage.driver`
-   是**实际生效**的驱动。**若显示 `memory`，说明数据不会持久化，必须处理。**
+2. 打开 `GET /api/public/env_check` —— `ready` 应为 `true`；`data.config.resolved_driver`
+   是**实际生效**的驱动，`data.storage.memory` 为 `true`（或 `data.issues` 里出现
+   `STORAGE_MEMORY_ONLY`）说明落到了内存兜底、数据不会持久化，必须处理。
 3. 管理面板的「存储状态」页会显示当前 `DB_DRIVER` / `DB_FORMAT` 与健康检查结果。
 
 也可以让统一脚本一次完成「探测 + 结论 + 下一步」：
@@ -311,6 +316,6 @@ EdgeOne 上还会额外读取 `GET /storage-probe`，输出 KV / Blob 的可用�
 | 现象 | 处理 |
 |---|---|
 | 提示 `No storage backend is available` | serverless 下不落内存。配 `DATABASE_URL` 或绑定平台存储 |
-| 每次重启都要重新初始化 | 说明数据没持久化。检查 `env_check` 返回的 driver 是否为 `memory` |
+| 每次重启都要重新初始化 | 说明数据没持久化。检查 `env_check` 返回的 `data.storage.memory` 是否为 `true` |
 | 前端 404 但 API 正常 | 静态资源未上传。`build` 会产出 `dist/`，确认平台的 assets 目录指向它 |
-| 接了两个 edge 平台结果不一致 | 两边的 `JWT_SECRET` 不同会导致加密字段解不开，务必保持一致 |
+| 两个平台共用一个库时数据错乱，或换了 `JWT_SECRET` 后登录不上 / 网盘挂载失败 | 密码、网盘凭据、OTP 密钥都是用 `JWT_SECRET` 加密后才落库的，密钥不一致就解不开（日志里是 `Failed to decrypt a sealed secret (wrong JWT_SECRET?)`）。共用一个库的两边必须填同一个值；各用各的库则不需要一致 |
