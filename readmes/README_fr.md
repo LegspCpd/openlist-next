@@ -201,7 +201,7 @@ Côté stockage, le KV et le Blob d'EdgeOne ne sont injectés qu'aux **fonctions
 Lorsque `DB_DRIVER` garde la valeur par défaut `auto`, le programme sélectionne automatiquement le stockage dans l'ordre suivant :
 
 1. Base de données externe (si vous avez configuré `DATABASE_URL`)
-2. **KV** : créez un espace de noms dans le « KV Storage » de la console, puis associez-le aux **fonctions edge** (et non aux fonctions cloud Node) ; renseignez `KV` comme nom de variable de binding, puis configurez `EO_KV_URLS` et `JWT_SECRET`
+2. **KV** : créez un espace de noms dans le « KV Storage » de la console, puis associez-le aux **fonctions edge** (et non aux fonctions cloud Node) ; renseignez `KV` comme nom de variable de binding, puis définissez `JWT_SECRET` (`EO_KV_URLS` reste généralement vide — une valeur vide fait utiliser automatiquement le domaine que vous consultez)
 3. **Blob** : aucune configuration requise ; `@edgeone/pages-blob` crée automatiquement la base lors de la première écriture
 
 Quelques pièges à surveiller (déjà traités par ce projet, à garder à l'esprit si vous modifiez la configuration vous-même) :
@@ -433,7 +433,7 @@ Ces variables sont injectées automatiquement dans l'environnement par la platef
 
 | Nom de variable | À quoi ça sert | Obligatoire ? |
 |---|---|---|
-| `EO_KV_URLS` | Propre à EdgeOne. La liaison KV d'EdgeOne n'est fournie qu'aux fonctions en périphérie ; les fonctions cloud Node ne peuvent pas l'obtenir et doivent passer par une fonction en périphérie du même déploiement en proxy, renseignez ici l'adresse de ce proxy | Généralement inutile ; si vide, le domaine courant est utilisé automatiquement ; utile uniquement en cas de cross-origin ou de débogage local |
+| `EO_KV_URLS` | Propre à EdgeOne. La liaison KV n'est injectée que dans les fonctions en périphérie ; les fonctions cloud Node ne peuvent pas l'obtenir et ne peuvent lire/écrire le KV qu'en passant par les fonctions en périphérie `/kv-get` `/kv-put` `/kv-delete` `/kv-list` de **ce déploiement**. Renseignez ici **l'origine de ce déploiement**, par ex. `https://openlist.example.com` (seuls le protocole, l'hôte et le port sont pris ; tout chemin qui suit est ignoré) | Généralement inutile — si vide, le domaine que vous consultez est utilisé automatiquement ; à renseigner uniquement si le domaine consulté diffère du domaine de déploiement (CDN ou domaine personnalisé devant) ou pour un débogage local |
 | `ADMIN_PASS` | Si défini, l'assistant d'installation est ignoré et le compte administrateur est créé directement avec ce mot de passe | Optionnel ; sinon, configurez-le dans l'assistant du navigateur |
 | `ALLOW_URLS` | Liste blanche multi-origines, séparée par des virgules. Si non renseignée, seules les requêtes de même origine sont autorisées | À renseigner si le front-end et le back-end ne sont pas sur le même domaine |
 | `ASSET_URLS` | Charge les ressources statiques du front-end depuis le CDN, prend en charge le placeholder `$version` pour la version courante du front-end | À renseigner si vous utilisez un CDN |

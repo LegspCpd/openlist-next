@@ -201,7 +201,7 @@ pnpm run deploy:worker
 `DB_DRIVER` 保持默认的 `auto` 时，程序会按下面的顺序自动选择存储：
 
 1. 外部数据库（如果你配了 `DATABASE_URL`）
-2. **KV**：在控制台的「KV 存储」里创建命名空间，然后绑定到**边缘函数**（不是 Node 云函数），绑定变量名填 `KV`，再配置 `EO_KV_URLS` 和 `JWT_SECRET`
+2. **KV**：在控制台的「KV 存储」里创建命名空间，然后绑定到**边缘函数**（不是 Node 云函数），绑定变量名填 `KV`，并设置 `JWT_SECRET`（`EO_KV_URLS` 一般留空，留空会自动用你当前访问的域名）
 3. **Blob**：不需要任何配置，第一次写入时 `@edgeone/pages-blob` 会自动建库
 
 有几个坑要注意（本项目已经处理好了，你自己改配置时留意）：
@@ -433,7 +433,7 @@ DATABASE_URL=postgres://user:pass@ep-xxx.neon.tech/neondb
 
 | 变量名 | 它是干什么的 | 要不要填 |
 |---|---|---|
-| `EO_KV_URLS` | EdgeOne 专用。EdgeOne 的 KV 绑定只给边缘函数，Node 云函数拿不到，必须经同部署的边缘函数代理，这里填那个代理地址 | 一般不用填，留空会自动用当前域名；跨域或本地调试才需要 |
+| `EO_KV_URLS` | EdgeOne 专用。KV 绑定只注入边缘函数，Node 云函数拿不到，读写只能经**本部署**的 `/kv-get` `/kv-put` `/kv-delete` `/kv-list` 边缘函数转发；这里填**本部署的 origin**，如 `https://openlist.example.com`（只取协议+域名+端口，后面跟的路径会被忽略） | 一般留空——留空会自动取你当前访问的域名；只有访问域名≠部署域名（前面套了 CDN 或自定义域名）或本地调试才手填 |
 | `ADMIN_PASS` | 设了它就不用走安装向导，直接用这个密码创建管理员账号 | 选填，不填就在浏览器向导里设置 |
 | `ALLOW_URLS` | 跨域白名单，逗号分隔。不填只允许同源请求 | 前端和后端不在同一个域名时填 |
 | `ASSET_URLS` | 让前端静态资源从 CDN 加载，支持用 `$version` 占位当前前端版本号 | 用 CDN 时填 |

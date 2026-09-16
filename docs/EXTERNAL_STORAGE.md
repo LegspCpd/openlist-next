@@ -277,7 +277,7 @@ S3_ACCESS_KEY_ID=       S3_SECRET_ACCESS_KEY=
 
 # ── 平台绑定专属 ────────────────────────────────────
 CF_ACCOUNT=  CF_KV_UUID=  CF_API_KEY=   # cfkv
-EO_KV_URLS=                             # EdgeOne KV 代理
+EO_KV_URLS=                             # EdgeOne 专用：KV 代理地址＝本部署 origin，一般留空
 
 # ── 其他 ────────────────────────────────────────────
 MAX_UPLOAD=26214400     # 整体上传上限（字节）

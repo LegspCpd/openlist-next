@@ -201,7 +201,7 @@ Regarding storage: EdgeOne's KV and Blob are only injected into **edge functions
 When `DB_DRIVER` is left at the default `auto`, the program automatically selects storage in the following order:
 
 1. External database (if you have configured `DATABASE_URL`)
-2. **KV**: create a namespace in the "KV Storage" section of the console, then bind it to the **edge function** (not the Node cloud function), set the binding variable name to `KV`, and then configure `EO_KV_URLS` and `JWT_SECRET`
+2. **KV**: create a namespace in the "KV Storage" section of the console, then bind it to the **edge function** (not the Node cloud function), set the binding variable name to `KV`, and set `JWT_SECRET` (`EO_KV_URLS` is usually left empty — an empty value automatically uses the domain you are visiting)
 3. **Blob**: no configuration needed; `@edgeone/pages-blob` automatically creates the store on first write
 
 There are a few pitfalls to watch out for (this project already handles them, but keep them in mind if you change the configuration yourself):
@@ -433,7 +433,7 @@ These are injected into the environment by the platform at deploy time; you only
 
 | Variable | What it does | Required? |
 |---|---|---|
-| `EO_KV_URLS` | EdgeOne only. EdgeOne's KV binding is only given to edge functions; Node cloud functions can't get it, so it must go through an edge function proxy in the same deployment. Put that proxy address here | Usually left empty; if empty, the current domain is used automatically; only needed for cross-origin or local debugging |
+| `EO_KV_URLS` | EdgeOne only. The KV binding is injected only into edge functions, so the Node cloud function cannot get it and can only read/write KV through **this deployment's** `/kv-get` `/kv-put` `/kv-delete` `/kv-list` edge functions. Put **this deployment's origin** here, e.g. `https://openlist.example.com` (only scheme+host+port are used; any path after it is ignored) | Usually left empty — an empty value automatically uses the domain you are visiting; set it only when the visited domain differs from the deployment domain (a CDN or custom domain in front) or for local debugging |
 | `ADMIN_PASS` | If set, skips the setup wizard and creates the admin account directly with this password | Optional, set it in the browser wizard if not filled |
 | `ALLOW_URLS` | Cross-origin allowlist, comma-separated. If not set, only same-origin requests are allowed | Fill in when the frontend and backend are on different domains |
 | `ASSET_URLS` | Load frontend static assets from a CDN, supports `$version` as a placeholder for the current frontend version | Fill in when using a CDN |

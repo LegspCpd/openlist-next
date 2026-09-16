@@ -117,8 +117,9 @@ EdgeOne 的 Edge Functions 只注入 KV/Blob 给边缘函数，Node 云函数拿
 4. 存储自动探测（`DB_DRIVER=auto`，默认）：应用会**自动探测可用存储，优先
    KV，其次 Blob**，无需手工指定：
    - **KV（优先）**：控制台「KV 存储」创建命名空间 → 绑定到**边缘函数**
-     （不是 Node 云函数），**绑定变量名请填 `KV`**；再设置 `EO_KV_URLS` +
-     `JWT_SECRET`（经 `functions/kv-*` 代理给云函数）；
+     （不是 Node 云函数），**绑定变量名请填 `KV`**，并设置 `JWT_SECRET`。
+     云函数拿不到这个绑定，读写是经 `functions/kv-*` 这几个边缘函数转发的；
+     `EO_KV_URLS` **一般留空**，它到底填什么见下方「KV 代理与 `EO_KV_URLS`」；
    - **Blob（零配置兜底）**：无需任何控制台操作，`@edgeone/pages-blob`
      首次写入即自动建库，命名空间归属当前 Pages 项目；
    - 外部数据库（优先级最高）：`DATABASE_URL=postgres://…@ep-xxx.neon.tech/…`。
@@ -135,11 +136,59 @@ EdgeOne 的 Edge Functions 只注入 KV/Blob 给边缘函数，Node 云函数拿
    `recommended` 为 `kv`，否则为 `blob`。加 `?deep=1`（需 `X-Internal-Call`
    = `JWT_SECRET`）还会做一次 KV 写/读/删往返验证可写性。
 
-5. 若 Node 云函数拿到了 KV 绑定却报 401，检查 `EO_KV_URLS` 是否指向正确 origin，
-   以及它与 Edge Functions 是否使用了**同一个** `JWT_SECRET`。
+5. 若 KV 报 401：先确认云函数与边缘函数用的是**同一个** `JWT_SECRET`（≥16 字符）；
+   若访问域名与部署域名不同，再确认 `EO_KV_URLS` 指到了正确的部署 origin。
 
 6. ⚠️ 不要用 `*.edgeone.cool` 临时域名验证存储：该域名带全站鉴权参数，
    会拦截边缘函数 ↔ 云函数的 KV 代理回调。请先绑定自定义域名再验证。
+
+### KV 代理与 `EO_KV_URLS`
+
+**它是什么**：一个环境变量，填**本次部署自己的 origin**（协议 + 域名 + 端口），
+形如 `https://openlist.example.com`。它不是第三方地址，也不是某个 API 端点。
+
+**为什么需要它**：EdgeOne 的 KV 绑定**只注入边缘函数（V8 运行时）**，Node 云函数
+（SCF）拿不到。所以云函数读写 KV 不走绑定，而是走 HTTP——它调用**同一个部署**里的
+`/kv-get` `/kv-put` `/kv-delete` `/kv-list` 这几个边缘函数代为读写，请求头带
+`X-Internal-Call: <JWT_SECRET>` 供边缘函数鉴权（常量时间比对**完整**密钥）。
+而 Node 的 `fetch` 不接受相对路径（会抛 `ERR_INVALID_URL`），所以云函数必须先知道
+「我自己部署在哪个域名」才能拼出绝对地址。`EO_KV_URLS` 就是把这个域名显式告诉它。
+
+**取值来源**（按优先级）：
+
+| 顺序 | 来源 | 说明 |
+|---|---|---|
+| 1 | `EO_KV_URLS` | 你显式填的地址，视为运维意图，优先采用 |
+| 2 | 当前请求的 origin | 中间件自动注入，等于你访问本站用的域名 |
+
+所以**绝大多数情况留空即可**，留空时自动走第 2 条。只有两种情况需要手填：
+
+- **访问域名 ≠ 部署域名**：例如前面又套了一层 CDN 或独立自定义域名，请求的 origin
+  并不是边缘函数真正所在的域名；
+- **本地调试**：本机起 Node 跑云函数时，请求 origin 是 `localhost`，那里没有边缘函数。
+
+**填法与规则**：
+
+```bash
+# 只到 origin，不要带路径
+EO_KV_URLS=https://openlist.example.com
+```
+
+- 只取 **origin**（协议 + 域名 + 端口），后面跟的路径会被忽略，结尾多余的 `/` 自动去掉；
+- 必须是能解析的绝对地址，协议只接受 `http://` 或 `https://`；
+- 显式填的地址允许 `http://`（方便本地调试）；而自动从请求派生的地址，只要不是
+  `localhost` / `127.0.0.1` / `[::1]` 就必须是 `https://`，否则会被拒绝——因为这条
+  请求携带完整的 `JWT_SECRET`，明文发出去等于泄漏密钥；
+- ⚠️ `EO_KV_URLS` 与 `JWT_SECRET` 是配套的：**两侧必须配同一个 `JWT_SECRET` 且长度
+  ≥ 16**（Node 云函数一份、边缘函数一份）。只填一边、或两边不一致，KV 代理一律 401。
+
+**常见报错对照**：
+
+| 现象 | 原因 |
+|---|---|
+| `cannot determine deployment origin. Set EO_KV_URLS to the deployment origin.` | 既没填 `EO_KV_URLS`，请求 origin 也没被注入 |
+| KV 读写 401 | 两侧 `JWT_SECRET` 不一致或被轮换过；也可能 `EO_KV_URLS` 指错了域名 |
+| 用了 `.edgeone.cool` 临时域名后 KV 不通 | 该域名带全站鉴权参数，拦掉了边缘函数 ↔ 云函数的代理回调，换自定义域名 |
 
 ---
 

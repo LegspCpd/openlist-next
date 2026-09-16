@@ -201,7 +201,7 @@ pnpm run deploy:worker
 `DB_DRIVER` 保持預設的 `auto` 時，程式會按下面的順序自動選擇儲存：
 
 1. 外部資料庫（如果你設定了 `DATABASE_URL`）
-2. **KV**：在控制台的「KV 儲存」裡建立命名空間，然後綁定到**邊緣函式**（不是 Node 雲函式），綁定變數名填 `KV`，再設定 `EO_KV_URLS` 和 `JWT_SECRET`
+2. **KV**：在控制台的「KV 儲存」裡建立命名空間，然後綁定到**邊緣函式**（不是 Node 雲函式），綁定變數名填 `KV`，並設定 `JWT_SECRET`（`EO_KV_URLS` 一般留空，留空會自動用你當前造訪的網域）
 3. **Blob**：不需要任何設定，第一次寫入時 `@edgeone/pages-blob` 會自動建庫
 
 有幾個坑要注意（本專案已經處理好了，你自己改設定時留意）：
@@ -433,7 +433,7 @@ DATABASE_URL=postgres://user:pass@ep-xxx.neon.tech/neondb
 
 | 變數名 | 它是幹什麼的 | 要不要填 |
 |---|---|---|
-| `EO_KV_URLS` | EdgeOne 專用。EdgeOne 的 KV 綁定只給邊緣函數，Node 雲函數拿不到，必須經同部署的邊緣函數代理，這裡填那個代理地址 | 一般不用填，留空會自動用當前域名；跨域或本機除錯才需要 |
+| `EO_KV_URLS` | EdgeOne 專用。KV 綁定只注入邊緣函式，Node 雲函式拿不到，讀寫只能經**本部署**的 `/kv-get` `/kv-put` `/kv-delete` `/kv-list` 邊緣函式轉發；這裡填**本部署的 origin**，如 `https://openlist.example.com`（只取協定+網域+連接埠，後面接的路徑會被忽略） | 一般留空——留空會自動取你當前造訪的網域；只有造訪網域≠部署網域（前面套了 CDN 或自訂網域）或本機除錯才手填 |
 | `ADMIN_PASS` | 設了它就不用走安裝精靈，直接用這個密碼建立管理員帳號 | 選填，不填就在瀏覽器精靈裡設定 |
 | `ALLOW_URLS` | 跨域白名單，逗號分隔。不填只允許同源請求 | 前端和後端不在同一個域名時填 |
 | `ASSET_URLS` | 讓前端靜態資源從 CDN 載入，支援用 `$version` 占位目前的版本號 | 用 CDN 時填 |
