@@ -44,10 +44,45 @@
   "br.json": {
     "backup": "备份"
   },
+  "plugins.json": {
+    "install_modal": {
+      "zip_drop_help": "支持包含 plugin.json / manifest.json 的开源插件归档文件",
+      "high_privilege_label": "授予高级权限（Root / 管理员权限）"
+    },
+    "empty_installed": "未安装插件。点击「安装插件」上传 ZIP 或从 URL 安装。"
+  },
   "drivers.json": {
     "GitHub Releases": {
       "show_source_code": "展示源码",
-      "show_source_code-tips": "展示源码(zip/tar.gz)"
+      "show_source_code-tips": "展示源码 (zip/tar.gz)",
+      "max_page-tips": "要获取的最大页数（0 = 无限制），仅在「显示所有版本」时生效",
+      "per_page-tips": "每页获取的发布版本数量（最大 100），仅在「显示所有版本」时生效"
+    },
+    "139Yun": {
+      "link_id": "分享链接 ID"
+    },
+    "AliDoc": {
+      "root_folder_id": "根文件夹 ID"
+    },
+    "GuangYaPan": {
+      "captcha_token": "验证码令牌",
+      "verify_code": "短信验证码",
+      "device_sign": "设备签名",
+      "device_sign-tips": "可选自定义的 X-Device-Sign 请求头（留空时从 device_id 生成）",
+      "order_by-tips": "文件列表使用的排序字段",
+      "sort_type-tips": "文件列表使用的排序方向",
+      "send_code-tips": "打开开关并保存以发送短信验证码，发送后自动关闭"
+    },
+    "cloudflare_imgbed": {
+      "address-tips": "图床服务的后端 API 地址，例如 https://img.example.com",
+      "smallChannelName-tips": "普通文件的渠道名称（通常 <20MB）",
+      "largeChannelType-tips": "大文件渠道类型：Hugging Face（直接上传）、Telegram/Cloudflare R2/S3/Discord（分片上传）",
+      "uploadThread-tips": "HuggingFace 分片直传的上传线程数"
+    },
+    "config": {
+      "GuangYaPan": {
+        "alert": "教程：(1) 填写 电话号码（如需要，还需填写 验证码令牌），打开 发送验证码 选项 并保存；(2) 填写 短信验证码 并保存，以完成登录，如果成功会自动保存 access_token/refresh_token。"
+      }
     }
   }
 }

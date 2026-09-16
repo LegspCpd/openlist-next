@@ -1,0 +1,305 @@
+{
+  "init.json": {
+    "creating_account": "正在創建管理員賬號...",
+    "waiting_storage": "正在等待存儲同步...",
+    "storage_ready": "存儲已就緒",
+    "waiting_storage_tip": "雲端 KV 存儲有同步延遲，請稍候（通常幾秒鐘）",
+    "waiting_timeout": "存儲同步超時。可以先嘗試登錄；如果失敗，請稍後重試",
+    "env_check": "環境檢查",
+    "env_check_loading": "正在檢查環境...",
+    "env_check_ready": "環境就緒",
+    "env_check_not_ready": "環境未就緒",
+    "env_check_refresh": "重新檢查",
+    "env_runtime": "運行環境",
+    "env_serverless": "無服務器",
+    "env_local": "本地 / 容器",
+    "env_format": "存儲格式",
+    "env_driver": "數據庫驅動",
+    "env_resolved": "解析為",
+    "env_storage": "存儲",
+    "env_jwt": "JWT 密鑰",
+    "env_status_ok": "就緒",
+    "env_status_bad": "未就緒",
+    "env_doc_link": "文檔",
+    "env_blocked_tip": "請先解決上面的問題，再繼續。",
+    "env_deploy_docs": "部署指南：",
+    "step_env": "第 1 步 · 環境檢查",
+    "step_account": "第 2 步 · 管理員賬號",
+    "step_done": "第 3 步 · 完成",
+    "next": "下一步",
+    "back": "上一步",
+    "env_continue": "繼續",
+    "env_next_tip": "環境就緒後，就可以繼續創建管理員賬號了。",
+    "finalizing": "正在完成初始化...",
+    "finalizing_tip": "初始化完成前，請不要關閉本頁面。",
+    "done_title": "初始化完成",
+    "done_subtitle": "你的 OpenList 已經可以用了。",
+    "done_username": "管理員用戶名",
+    "done_site_url": "站點地址",
+    "done_go_login": "去登錄",
+    "done_go_home": "打開首頁",
+    "timeout_title": "仍在同步",
+    "timeout_tip": "賬號已經創建好了，但後端還沒有確認存儲就緒。你可以重新檢查，或者直接嘗試登錄。",
+    "setup_to": "配置",
+    "title": "初始化 OpenList",
+    "username-tips": "管理員用戶名",
+    "password-tips": "設置管理員密碼",
+    "confirm_password-tips": "確認密碼",
+    "site_title-tips": "網站標題",
+    "setup": "初始化",
+    "success": "初始化成功，請登錄",
+    "failed": "初始化失敗",
+    "password_mismatch": "密碼不匹配",
+    "password_too_short": "密碼至少需要 4 個字符"
+  },
+  "global.json": {
+    "undo": "撤銷",
+    "redo": "重做",
+    "increase": "增加",
+    "decrease": "減小",
+    "copy": "複製",
+    "paste": "粘貼",
+    "clipboard_denied": "剪貼板訪問被拒絕。請在您的瀏覽器設置中允許剪貼板權限。",
+    "unsaved_changes_confirm": "您有未保存的更改。是否確定要離開？"
+  },
+  "home.json": {
+    "preview": {
+      "fullscreen": "全屏",
+      "fullscreen_failed": "切換全屏模式失敗",
+      "exit_fullscreen": "退出全屏",
+      "fullview": "網頁全屏",
+      "exit_fullview": "退出網頁全屏",
+      "auto_fit": "自適應",
+      "reset_zoom": "重置縮放"
+    },
+    "toolbar": {
+      "open_with": "打開方式 ..."
+    },
+    "upload": {
+      "retry": "重試"
+    },
+    "local_settings": {
+      "editor_font_size": "編輯器字體大小",
+      "editor_word_wrap": "編輯器自動換行",
+      "editor_word_wrap_options": {
+        "false": "關閉",
+        "true": "打開"
+      },
+      "editor_minimap": "編輯器小地圖",
+      "editor_minimap_options": {
+        "false": "關閉",
+        "true": "打開"
+      }
+    }
+  },
+  "manage.json": {
+    "sidemenu": {
+      "plugins": "插件"
+    }
+  },
+  "plugins.json": {
+    "title": "插件",
+    "name": "插件名稱",
+    "type": "插件類型",
+    "version": "版本",
+    "author": "作者",
+    "status_col": "狀態",
+    "empty_desc": "未提供描述",
+    "subtitle": "管理和配置 ZIP 文件上傳和第三方 URL 安裝的 OpenList 插件",
+    "search_placeholder": "搜索插件名稱、ID、描述或權限……",
+    "filter_type": "按類型篩選",
+    "types": {
+      "all": "所有類型",
+      "ui": "界面 & 組件",
+      "preview": "預覽器",
+      "tool": "工具",
+      "theme": "主題 & 效果",
+      "integration": "集成",
+      "system": "系統核心"
+    },
+    "status": {
+      "enabled": "啟用",
+      "disabled": "禁用",
+      "builtin": "內置",
+      "custom": "自定義",
+      "high_privilege": "高權限"
+    },
+    "actions": {
+      "install": "安裝插件",
+      "reinstall": "重新安裝",
+      "uninstall": "卸載",
+      "config": "設置",
+      "view_details": "詳情",
+      "enable": "啟用",
+      "disable": "禁用",
+      "export": "導出配置",
+      "import": "導入配置",
+      "refresh": "刷新",
+      "save": "保存設置",
+      "cancel": "取消",
+      "install_url": "通過 URL 安裝"
+    },
+    "install_modal": {
+      "install_type": "安裝源",
+      "zip_tab": "上傳 ZIP",
+      "url_tab": "通過 URL 安裝",
+      "zip_file_label": "插件 ZIP",
+      "zip_drop_title": "點擊選擇或拖放插件 ZIP 文件到這裡",
+      "zip_drop_help": "支持包含 plugin.json / manifest.json 的開源插件歸檔文件",
+      "url_label": "插件 Manifest URL",
+      "url_placeholder": "例如：https://raw.githubusercontent.com/.../plugin.json",
+      "url_help": "支持開源插件 JSON Manifest 鏈接 (GitHub Raw, jsDelivr, unpkg 等)",
+      "high_privilege_label": "授予高級權限（Root / 管理員權限）",
+      "high_privilege_help": "允許直接訪問低級別文件系統 API、存儲驅動程序重新加載、全部站點設置讀/寫以及原始 HTTP 請求",
+      "fetch_and_install": "獲取並安裝"
+    },
+    "config_modal": {
+      "title": "插件配置",
+      "no_config": "此插件無配置參數。",
+      "save_success": "插件配置保存成功"
+    },
+    "delete_confirm": "您確定要卸載並刪除此插件嗎？此操作無法撤銷。",
+    "import_modal": {
+      "title": "導入插件備份",
+      "paste_json": "在此粘貼插件 JSON 數據",
+      "import_success": "插件導入成功"
+    },
+    "empty_installed": "未安裝插件。點擊「安裝插件」上傳 ZIP 或從 URL 安裝。"
+  },
+  "settings.json": {
+    "move_task_threads_num": "移動任務線程數",
+    "multipart_chunk_size": "分片上傳分片大小（MB）",
+    "multipart_chunk_size-tips": "多分片上傳時每個分塊的大小（單位：MB，需為正整數）。請將該值控制在 CDN 的請求體大小限制以內；服務器上每個活躍的上傳會話最多會在磁盤上緩衝 8 個分塊。",
+    "multipart_enabled": "啟用分片上傳",
+    "sso_login_platforms": {
+      "Microsoft": "微軟"
+    }
+  },
+  "settings_other.json": {
+    "guangyapan": "光鴨雲盤",
+    "guangyapan_temp_dir": "光鴨雲盤臨時文件夾"
+  },
+  "shares.json": {
+    "share_gone": "此分享已過期或被取消"
+  },
+  "drivers.json": {
+    "139Yun": {
+      "authorization-tips": "授權可以單獨使用。為空則僅憑郵箱 Cookie 快速登錄，或憑郵箱 Cookie+用戶名+密碼作為完整登錄回退。",
+      "link_id": "分享鏈接 ID",
+      "link_id-tips": "多個分享用逗號或新行分隔。對受密碼保護的分享使用 link_id#password。",
+      "password-tips": "僅在配合郵箱 Cookie 使用密碼登錄回退時需要。",
+      "sms_code": "短信驗證碼",
+      "sms_code-tips": "待 OpenList 提示 139 郵箱驗證碼已發送後，再填寫此項，並重新保存配置。",
+      "types": {
+        "share": "分享"
+      },
+      "use_old_stream_upload": "使用舊的流式上傳",
+      "use_old_stream_upload-tips": "啟用以使用舊的流式上傳方法（不支持快傳）",
+      "username-tips": "僅在配合郵箱 Cookie 使用密碼登錄回退時需要。"
+    },
+    "AliDoc": {
+      "cookie-tips": "釘釘文檔網頁 Cookie",
+      "root_folder_id": "根文件夾 ID"
+    },
+    "Bunny Storage": {
+      "access_key": "訪問密鑰",
+      "cdn_base_url": "CDN 基礎 URL",
+      "cdn_token_include_ip": "CDN 令牌包含 IP",
+      "cdn_token_key": "CDN 令牌密鑰",
+      "cdn_token_method": "CDN 令牌方法",
+      "cdn_token_methods": {
+        "hmac_sha256": "HMAC SHA256",
+        "sha256": "SHA256"
+      },
+      "endpoint": "端點",
+      "placeholder": "佔位文件名",
+      "root_folder_path": "根文件夾路徑",
+      "sign_url_expire": "簽名鏈接有效期",
+      "storage_zone_name": "存儲區域名稱"
+    },
+    "Doge": {
+      "user_agent": "用戶代理",
+      "user_agent-tips": "自定義 S3 請求的用戶代理。"
+    },
+    "FTP": {
+      "cwd_list": "使用 Cwd 列出",
+      "cwd_list-tips": "在列出前進入目錄"
+    },
+    "GitHub API": {
+      "accurate_modified_time": "準確修改時間",
+      "accurate_modified_time-tips": "盡量準確的小目錄列表修改時間（默認禁用）。會多一次 GitHub GraphQL 請求，失敗時回退到舊版零時間值。"
+    },
+    "GitHub Releases": {
+      "max_page": "最大分頁數",
+      "max_page-tips": "要獲取的最大頁數（0 = 無限制），僅在「顯示所有版本」時生效",
+      "per_page": "每頁結果數",
+      "per_page-tips": "每頁獲取的發布版本數量（最大 100），僅在「顯示所有版本」時生效",
+      "show_source_code": "展示源碼",
+      "show_source_code-tips": "展示源碼 (zip/tar.gz)"
+    },
+    "GuangYaPan": {
+      "access_token": "訪問令牌",
+      "access_token-tips": "Bearer 訪問令牌（如果提供刷新令牌則可以不填寫）",
+      "captcha_token": "驗證碼令牌",
+      "captcha_token-tips": "通過 /v1/auth/verification 所需的驗證令牌",
+      "client_id": "客戶端 ID",
+      "client_id-tips": "光鴨雲盤 API 的客戶端 ID，必須提供",
+      "device_id": "設備 ID",
+      "device_id-tips": "可選自定義設備 ID（32 個十六進制字符），留空自動生成",
+      "device_sign": "設備簽名",
+      "device_sign-tips": "可選自定義的 X-Device-Sign 請求頭（留空時從 device_id 生成）",
+      "order_by": "排序依據",
+      "order_by-tips": "文件列表使用的排序字段",
+      "page_size": "分頁大小",
+      "phone_number": "電話號碼",
+      "phone_number-tips": "短信登錄的電話號碼，例如 +86 13800000000",
+      "refresh_token": "刷新令牌",
+      "refresh_token-tips": "用於自動登錄/自動刷新的刷新令牌",
+      "root_path": "根文件夾路徑",
+      "root_path-tips": "光鴨雲盤的完整路徑",
+      "send_code": "發送驗證碼",
+      "send_code-tips": "打開開關並保存以發送短信驗證碼，發送後自動關閉",
+      "sort_type": "排序方式",
+      "sort_type-tips": "文件列表使用的排序方向",
+      "verification_id": "驗證 ID",
+      "verification_id-tips": "發送短信驗證碼後自動生成，不要手動編輯",
+      "verify_code": "短信驗證碼",
+      "verify_code-tips": "與電話號碼一起使用的短信驗證碼；填寫後保存以完成登錄"
+    },
+    "S3": {
+      "user_agent": "用戶代理",
+      "user_agent-tips": "自定義 S3 請求的用戶代理。"
+    },
+    "Strm": {
+      "minFileSize": "最小文件大小",
+      "minFileSize-tips": "過濾小於此大小的文件 (單位：MB，0 以禁用)"
+    },
+    "cloudflare_imgbed": {
+      "address": "地址",
+      "address-tips": "圖床服務的後端 API 地址，例如 https://img.example.com",
+      "largeChannelName": "大文件渠道名稱",
+      "largeChannelName-tips": "大文件的渠道名稱",
+      "largeChannelType": "大文件渠道類型",
+      "largeChannelType-tips": "大文件渠道類型：Hugging Face（直接上傳）、Telegram/Cloudflare R2/S3/Discord（分片上傳）",
+      "largeChannelTypes": {
+        "cfr2": "Cloudflare R2",
+        "huggingface": "Hugging Face"
+      },
+      "root_folder_path": "根文件夾路徑",
+      "smallChannelName": "普通文件渠道名稱",
+      "smallChannelName-tips": "普通文件的渠道名稱（通常 <20MB）",
+      "token": "令牌",
+      "token-tips": "認證令牌",
+      "uploadThread": "上傳線程數",
+      "uploadThread-tips": "HuggingFace 分片直傳的上傳線程數"
+    },
+    "config": {
+      "AliDoc": {
+        "alert": "此驅動程序支持通過釘釘文檔訪問釘盤，目前僅支持只讀。"
+      },
+      "GuangYaPan": {
+        "alert": "教程：(1) 填寫 電話號碼（如需要，還需填寫 驗證碼令牌），打開 發送驗證碼 選項 並保存；(2) 填寫 短信驗證碼 並保存，以完成登錄，如果成功會自動保存 access_token/refresh_token。"
+      }
+    }
+  }
+}
