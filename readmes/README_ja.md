@@ -1,0 +1,473 @@
+<div align="center">
+
+# OpenList Next
+
+<p><em>OpenList は多機能なディレクトリ一覧ツールで、さまざまなクラウドストレージ、オブジェクトストレージ、プロトコルサービスに分散したファイルを一つのインターフェースに集約し、閲覧・プレビュー・ダウンロード・共有を行うことができます</em></p>
+<p>本リポジトリは公式の <a href="https://github.com/OpenListTeam/OpenList-Worker">OpenList-Worker</a> のコミュニティ派生版であり、TypeScript で記述されており、Cloudflare Workers、Tencent Cloud EdgeOne、Alibaba Cloud ESA などのエッジプラットフォームにデプロイできます</p>
+<p>公式バージョンをベースに、本プロジェクトでは「あらゆるエッジプラットフォームから外部データベースに直接接続する」という機能を追加しています</p>
+
+<a href="../LICENSE"><img src="https://img.shields.io/github/license/LegspCpd/openlist-next" alt="License" /></a>
+<a href="https://github.com/LegspCpd/openlist-next/actions/workflows/edgeone-artifact-guard.yml"><img src="https://img.shields.io/github/actions/workflow/status/LegspCpd/openlist-next/edgeone-artifact-guard.yml?branch=main" alt="Build status" /></a>
+<a href="https://github.com/LegspCpd/openlist-next/issues"><img src="https://img.shields.io/github/issues/LegspCpd/openlist-next" alt="Issues" /></a>
+<a href="https://github.com/LegspCpd/openlist-next/discussions"><img src="https://img.shields.io/github/discussions/LegspCpd/openlist-next?color=%23ED8936" alt="Discussions" /></a>
+
+📖 [マルチプラットフォームデプロイガイド](../docs/DEPLOYMENT.md) · 🗄️ [外部ストレージ設定](../docs/EXTERNAL_STORAGE.md) · 🔌 [ワンクリックでデータベースに接続](../docs/ONE_CLICK_DATABASE.md)
+
+</div>
+
+<div align="center">
+
+[English](README_en.md) | [简体中文](../README.md) | [繁體中文](README_zh-TW.md) | 日本語 | [한국어](README_ko.md) | [Français](README_fr.md)
+
+[上流プロジェクト](https://github.com/OpenListTeam/OpenList-Worker) · [貢献ガイドライン](../CONTRIBUTING.md) · [ライセンス](../LICENSE) · [出典とライセンスに関する声明](../NOTICE.md)
+
+</div>
+
+> [!WARNING]
+> 本プロジェクトは OpenList の公式リリース**ではなく**、OpenListTeam との間に所属・認可・推奨の関係は一切ありません。
+> 使用中に問題が発生した場合は、本リポジトリに Issue を作成してください。公式リポジトリに報告しないでください。
+> コードの出典、著作権、ライセンスに関する説明は [NOTICE.md](../NOTICE.md) を参照してください。
+
+---
+
+## ワンクリックデプロイ
+
+下のボタンをクリックすると、本プロジェクトを対応するプラットフォームにデプロイできます：
+
+<div align="center">
+
+| EdgeOne · 国際版 | EdgeOne · 中国版 | Cloudflare Workers |
+| :---: | :---: | :---: |
+| [![EdgeOne でデプロイ](https://cdnstatic.tencentcs.com/edgeone/pages/deploy.svg)](https://edgeone.ai/pages/new?project-name=openlist-next&repository-url=https://github.com/LegspCpd/openlist-next&install-command=pnpm%20install%20--no-frozen-lockfile&build-command=pnpm%20run%20build&output-directory=dist&env=JWT_SECRET) | [![EdgeOne でデプロイ](https://cdnstatic.tencentcs.com/edgeone/pages/deploy.svg)](https://console.cloud.tencent.com/edgeone/makers/new?project-name=openlist-next&repository-url=https://github.com/LegspCpd/openlist-next&install-command=pnpm%20install%20--no-frozen-lockfile&build-command=pnpm%20run%20build&output-directory=dist&env=JWT_SECRET) | [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/LegspCpd/openlist-next) |
+
+| Vercel | Netlify |
+| :---: | :---: |
+| [![Vercel でデプロイ](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/LegspCpd/openlist-next) | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/LegspCpd/openlist-next) |
+
+</div>
+
+デプロイ完了後、環境変数の設定が必要です。その中でも `JWT_SECRET` は必須であり、`openssl rand -hex 32` で生成できます。
+
+- EdgeOne：[国際版コンソール](https://console.edgeone.ai/makers) · [中国版コンソール](https://console.cloud.tencent.com/edgeone/makers)
+- Cloudflare：[Worker 管理画面](https://dash.cloudflare.com/)
+- Vercel：プロジェクト設定 → Environment Variables
+- Netlify：Site configuration → Environment variables
+
+よく使う変数は以下のとおりです：
+
+- `JWT_SECRET`：セッション署名およびフィールド暗号化に用いる鍵、**必須**
+- `ADMIN_PASS`：任意。設定するとインストールウィザードをスキップし、このパスワードで管理者アカウントを直接初期化します
+- `DB_FORMAT`：データの構成方法。`map`（デフォルト）/ `key` / `sql`
+- `DB_DRIVER`：データの保存先。`auto`（デフォルト、自動判別）/ `kv` / `d1` / `blob` / `neon` / `turso` / …
+- `DATABASE_URL`：外部データベースの接続文字列。これを入力し `DB_DRIVER=auto` のままにしておくと、プログラムが自動的に接続します
+
+> [!IMPORTANT]
+> Cloudflare から「リポジトリの内容を取得できません」と表示された場合は、まず本リポジトリを [Fork](https://github.com/LegspCpd/openlist-next/fork) し、改めて「GitHub リポジトリに接続」する方法でデプロイしてください。
+
+---
+
+## 機能概要
+
+OpenList はエッジコンピューティングプラットフォーム上で動作するマルチストレージ集約型ファイル一覧・管理システムであり、異なるクラウドストレージ、オブジェクトストレージ、プロトコルサービスに分散したファイルを一つのインターフェースに統合し、閲覧・プレビュー・ダウンロード・管理を行うことができます。
+
+OpenList-Worker は公式の [OpenListTeam/OpenList](https://github.com/OpenListTeam/OpenList) プロジェクトの TypeScript + Serverless 移植版であり、バックエンドを Go から Workers 上で動作する TypeScript サービスに書き直し、フロントエンドは一貫した画面と操作体験を維持しています。
+
+### ストレージ集約
+
+**81 個のストレージドライバー**を内蔵しており、さまざまなストレージバックエンドをそのままマウントできます：
+
+- **国内クラウドストレージ**：Alibaba Cloud Drive（オープンプラットフォーム／共有）、Quark クラウドドライブ（オープンプラットフォーム／UC TV 版）、Baidu クラウドドライブ（アルバム）、115 クラウドドライブ（オープンプラットフォーム／共有）、123 クラウドドライブ（オープンプラットフォーム／共有）、Tianyi クラウドドライブ（189／PC／TV）、China Mobile クラウドドライブ（139／Hecaiyun）、Woja クラウドドライブ、Xunlei クラウドドライブ、Tencent Weiyun、Lanzou、PikPak（共有）、Doubao クラウドドライブ、Guangya ドライブ、Chaoxing グループクラウドドライブ、Lenovo NAS 共有、Teambition クラウドドライブ、WPS クラウドドライブ、Ali ドキュメント、HalalCloud、MediaTrack など
+- **海外クラウドストレージ**：Google Drive（アルバム）、OneDrive（アプリ／共有リンク）、Dropbox、MEGA、MediaFire、Proton Drive、Yandex Disk、Degoo、Bunny Storage、TeraBox など
+- **オブジェクトストレージ**：S3 互換（AWS／OSS／COS／MinIO など）、UPYUN USS、Azure Blob、WebDAV、FTP、SFTP、SMB、IPFS など
+- **コードホスティング**：GitHub、GitHub Releases、CNB Releases
+- **クラウドドライブソフトウェア**：OpenList（共有）、AList V3、Cloudreve V3／V4、Kodbox（可道雲）、Seafile、Teldrive、Febbox など
+- **その他のドライバー**：NetEase Cloud Music、Misskey、Emby、Cloudflare 画像ホスティングなど
+
+上記の実ストレージに加え、`Local`、`Alias`、`UrlTree`、`AutoIndex`、`Strm`、`Crypt`、`Virtual`、`Chunk` といった仮想／機能型ドライバーも用意されており、ローカルマウント、アドレスの別名、URL リスト、暗号化ストレージ、チャンク分割などのシナリオに利用できます。
+
+### コア機能
+
+- **ファイル閲覧**：統合されたディレクトリツリーによる閲覧。画像、動画、音声、文書、コード、圧縮ファイルなどのオンラインプレビューに対応。
+- **アップロード／ダウンロード**：ストレージをまたいだアップロード、一括ダウンロード、ストリーミング転送、および直リンクへのジャンプ。
+- **ファイル共有**：有効期限・パスワード・権限管理付きの共有リンクを生成し、匿名アクセスやディレクトリ共有に対応。
+- **全文検索**：インデックス済みのストレージ内でファイルを高速に検索。
+- **オフラインタスク**：バックグラウンドのタスクキュー。一括操作と非同期処理に対応。
+- **外部インターフェース**：集約したストレージを WebDAV または S3 互換プロトコルとして外部に公開し、サードパーティツールへのマウントが容易。
+- **MCP サービス**：Model Context Protocol のエンドポイントを提供し、AI アシスタントなどのクライアントから統合して呼び出し可能。
+
+### 権限管理
+
+- **権限管理**：ロールベースのアクセス制御（RBAC）。ユーザーグループ、ディレクトリ単位の読み書き権限、クォータに対応。
+- **認証方式**：内蔵のアカウント／パスワードに加え、TOTP 認証、WebAuthn／FIDO ログイン、SSO シングルサインオン、LDAP ディレクトリ認証に対応。
+- **セキュリティ強化**：JWT セッション、CSRF 対策、クリックジャッキング対策（X-Frame-Options）、コンテンツセキュリティポリシー（CSP）。
+- **ヘルスチェック**：`/health` の生存プローブと `/healthz` の準備完了プローブを提供。監視やアラートに利用可能。
+
+### プラットフォームデプロイ
+
+- **実行プラットフォーム**：Cloudflare Workers、Tencent Cloud EdgeOne Makers、Alibaba Cloud ESA、Vercel、Netlify、および Node.js コンテナ環境。
+- **データストレージ**：プラットフォーム標準のストレージ（KV／D1／Blob …）または任意の外部データベース。
+- **ワンクリックデプロイ**：EdgeOne、Cloudflare Workers、Vercel、Netlify のワンクリックデプロイボタンに対応。
+
+---
+
+## 公式バージョンとの違い
+
+| | 公式 OpenList-Worker | 本プロジェクト |
+|---|---|---|
+| ストレージドライバー | 7 個 | 15 個、neon／turso／pgrest／pghttp／mysqlhttp／upstash／r2／s3 を新規追加 |
+| SQL 方言 | SQLite、MySQL | PostgreSQL を追加（$n プレースホルダーを含む） |
+| クラウドドライブドライバー | 78 個 | 81 個、`123_link`、`ilanzou`、`halalcloud` を補完 |
+| デプロイプラットフォーム | Cloudflare Workers、EdgeOne、ESA、Serverless | Vercel、Netlify、Node／Docker を追加 |
+
+公式バージョンの `mysql` ドライバーは Node コンテナでのみ動作します——Cloudflare Workers には生 TCP がないため、エッジにデプロイするとプラットフォーム標準の KV しか使えません。本プロジェクトが新たに追加した 8 つのストレージドライバーはすべて `fetch` ベースで実装されているため、エッジランタイムでも外部データベースに接続でき、`DATABASE_URL` を 1 行入力するだけで済みます。
+
+詳細は [外部ストレージ設定ガイド](../docs/EXTERNAL_STORAGE.md) を参照してください。
+
+---
+
+## 手動デプロイ
+
+### 前提条件
+
+- Node.js **22.x**
+- pnpm **9.15.4**（corepack 経由で有効化）
+- Cloudflare Workers にデプロイする場合は、Cloudflare アカウントが必要
+
+```bash
+corepack enable
+corepack prepare pnpm@9.15.4 --activate
+```
+
+### ローカル開発
+
+```bash
+git clone https://github.com/LegspCpd/openlist-next.git
+cd openlist-next
+pnpm install
+
+cp .dev.vars.example .dev.vars
+openssl rand -hex 32        # JWT_SECRET を生成し、上のファイルに記入する
+
+pnpm run dev:unified        # 公式フロントエンドを取得して Worker を起動する
+pnpm run dev:worker         # Worker のみを起動する
+```
+
+> `pnpm run build` はまず公式フロントエンドリポジトリ OpenList-Frontend をクローンして `dist/` をコンパイルし、その後バックエンドを `dist-server/` にコンパイルします。
+> すでにローカルにフロントエンドの成果物がある場合は、`FRONTEND_DIST=/path/to/dist pnpm run build` とすることでクローンをスキップできます。
+> 依存関係の中に GitHub 由来のパッケージ（`@hope-ui/solid`、`mpegts.js`）が 2 つあり、初回インストールは時間がかかるのが正常です。
+
+### Cloudflare Workers へのデプロイ
+
+コマンドラインを使用する場合：
+
+```bash
+npx wrangler login
+openssl rand -hex 32 | npx wrangler secret put JWT_SECRET
+
+pnpm run build
+pnpm run deploy:worker
+```
+
+また、Cloudflare 管理画面で Git リポジトリを接続することもできます。ビルドコマンドに `pnpm run build` を入力し、出力ディレクトリは空のままにしておけば、wrangler が `wrangler.jsonc` を読み取ります。
+
+ストレージについて：`wrangler.jsonc` にはデフォルトで KV バインディングが宣言されており、初回デプロイ時に wrangler が自動的に `openlist-next-kv` を作成してバインドします。以降のデプロイでは毎回再利用され、手動で作成する必要はありません。D1、R2、Durable Objects に変更したい場合は、`wrangler.jsonc` 内の該当するコメントを有効にするだけです。具体的な書き方はファイル内のコメントに記載されています。
+
+> 注意：ローカルで `wrangler deploy` や `wrangler dev` を実行する前には、必ず先に `pnpm run build` を実行してください。
+> `wrangler.jsonc` 内の `assets.directory` は `./dist` を指していますが、このディレクトリはデフォルトでは存在しません（`.gitignore` によって無視されています）。
+> そのまま実行すると `The directory specified by the "assets.directory" field ... does not exist` と表示されます。
+> ワンクリックデプロイボタンや管理画面で Git リポジトリを接続する場合は、プラットフォームが自動的にビルドするため、影響はありません。
+
+> `DB_DRIVER` を `mysql` に設定してはいけません——Cloudflare Workers には生 TCP がないため、このドライバーはエッジでは動作しません。
+> 外部 MySQL に接続する場合は、`mysqlhttp`（HTTP ゲートウェイを自前で構築する必要あり）を使用するか、`neon`／`turso` に切り替えてください。
+
+### Tencent Cloud EdgeOne へのデプロイ
+
+[国際版](https://edgeone.ai/) と [中国版](https://console.cloud.tencent.com/edgeone) のどちらでも可能です。
+
+上のワンクリックデプロイボタンをクリックするか、コンソールでプロジェクトを作成して Git リポジトリをインポートします。ビルドコマンドに `pnpm run build`、出力ディレクトリに `dist` を入力します。これらの設定は `edgeone.json` にも記載されており、実際の設定はファイルが優先されます。
+
+> **重要**：`cloud-functions/[[default]].js` はビルド成果物ですが、EdgeOne はデプロイ時にリポジトリからこれを読み取るため、リポジトリにコミットする必要があり、`.gitignore` に追加してはいけません。
+> このファイルがないと、EdgeOne は `No server-handler detected` を報告し、プロジェクトは単なる静的サイトへと退化します。
+> リポジトリ内の `EdgeOne Artifact Guard` ワークフローは、成果物の有効期限が切れた際に自動的に再構築してコミットするため、通常は手動でメンテナンスする必要はありません。
+
+ストレージについて、EdgeOne の KV と Blob は**エッジ関数**にのみ注入され、Node クラウド関数からは取得できません。そのため本プロジェクトでは EdgeOne 上で 2 つのエントリーポイントを使用しています：
+
+| ファイル | 役割 |
+|---|---|
+| `api/_makers.ts`（ビルド成果物 `cloud-functions/[[default]].js`） | Node クラウド関数、バックエンド本体 |
+| `functions/*` | エッジ関数。KV プロキシとストレージプローブを担当 |
+| `middleware.js` | エッジミドルウェア。フロントエンドのルーティングフォールバックを担当 |
+
+`DB_DRIVER` をデフォルトの `auto` のままにしておくと、プログラムは以下の順序でストレージを自動選択します：
+
+1. 外部データベース（もし `DATABASE_URL` を設定した場合）
+2. **KV**：コンソールの「KV ストレージ」で名前空間を作成し、それを**エッジ関数**（Node クラウド関数ではない）にバインドする。バインド変数名には `KV` を入力し、さらに `EO_KV_URLS` と `JWT_SECRET` を設定する
+3. **Blob**：設定は一切不要。最初の書き込み時に `@edgeone/pages-blob` が自動的にストレージを作成する
+
+注意すべきいくつかの落とし穴があります（本プロジェクトではすでに対処済みですが、自分で設定を変更する際は留意してください）：
+
+- `edgeone.json` 内の `nodeVersion` はプラットフォームにあらかじめインストールされているバージョン（14.21.3／16.20.2／18.20.4／20.18.0／22.11.0）でなければならず、それ以外を入力するとビルドに失敗します
+- `maxDuration` は `cloudFunctions.nodejs` の中に書く必要があり、`cloudFunctions.maxDuration` と書いても効力を持ちません
+- フロントエンドのルーティングフォールバックはルートディレクトリの `middleware.js` が担当します。`edgeone.json` の `rewrites` は静的リソースに対してのみ有効であり、公式ドキュメントでもフロントエンドルーティングはサポートしていないと明記されているため、`/*` を追加するとかえって静的ファイルにマッチしてしまいます
+- ストレージの検証に `*.edgeone.cool` のような一時ドメインを使用しないでください。このドメインには全サイト認証パラメーターが付与されており、エッジ関数とクラウド関数間の KV プロキシリクエストを遮断します。検証する前に必ずカスタムドメインをバインドしてください
+
+ワンクリックデプロイボタンを使いたくない場合は、Makers CLI も利用できます：
+
+```bash
+EO_PAGES_PROJECT=openlist-next \
+EO_PAGES_API_TOKEN=<コンソールで取得した Token> \
+pnpm run deploy:edgeone -- --url https://あなたのドメイン --deep
+```
+
+このスクリプトはビルド、デプロイを行い、その後ストレージが実際に利用可能かどうかを自動的にチェックします。
+
+### Vercel へのデプロイ
+
+デプロイボタンをクリックすると、デプロイページの下部に **Marketplace Database Providers** のリストが表示されるので、いずれかを選んで「接続」をクリックするだけです。Vercel は接続情報を自動的に環境変数として注入し、本プロジェクトの `DB_DRIVER=auto` がそれを認識して自動的に接続するため、コードを変更する必要はありません。
+
+対応状況：Neon、Upstash、Supabase、Turso はそのまま利用可能。Nile、Prisma Postgres、AWS RDS には Postgres-over-HTTP ゲートウェイが必要。Redis（純 TCP）、MongoDB、Convex、MotherDuck はエッジ環境では利用できません。詳細は [ワンクリックでデータベースに接続](../docs/ONE_CLICK_DATABASE.md) を参照してください。
+
+また、Vercel コンソールで Import Git Repository を選び、フレームワーク検出で **Other** を選ぶ（設定はすべて `vercel.json` に記載）か、コマンドラインを使用することもできます：
+
+```bash
+npx vercel login
+npx vercel deploy --prod --yes
+
+# または、ビルド・デプロイ・ストレージチェックを 1 コマンドで完了する
+pnpm run deploy:vercel -- --url https://あなたのドメイン
+```
+
+Vercel の関数の 1 回の実行上限はデフォルトで 10 秒（Pro は 60 秒）で、ディレクトリが非常に大きい場合はタイムアウトする可能性があるため、`DB_FORMAT=map` を使用してデータベースへの往復回数を減らすことをおすすめします。
+
+### Alibaba Cloud ESA へのデプロイ
+
+ESA コンソールの「エッジコンピューティング → 関数と Pages」でプロジェクトを作成し、GitHub リポジトリをインポートします。ビルドコマンドに `pnpm run build`、静的リソースディレクトリに `./dist`、関数ファイルのパスに `./dist-server/esa-entry.js` を入力します。
+
+コマンドラインも利用できます：
+
+```bash
+pnpm install
+pnpm run build
+
+npx esa-cli login
+npx esa-cli commit
+npx esa-cli deploy
+
+# または、ビルド・コミット・デプロイ・ストレージチェックを 1 コマンドで完了する
+pnpm run deploy:esa -- --url https://あなたのドメイン
+```
+
+`esa.jsonc` には 2 つの重要な設定があります：
+
+- `entry` は `./dist-server/esa-entry.js` を指します。サーバー側の成果物は、静的ファイルとして公開ダウンロードされてしまわないよう、意図的に `dist-server/` ではなく `dist/` の外に置かれています
+- `assets.notFoundStrategy` を `singlePageApplication` に設定します。これを設定しないと、`/login`、`/@manage/*` のようなフロントエンドルーティングが直接 404 になります
+
+ESA はリクエストごとに KV サブリクエストの回数制限があり、プラットフォーム標準の EdgeKV を使い続ける場合は `DB_FORMAT=map`（データベース全体を 1 つの key とし、読み書きそれぞれ 1 回）の使用をおすすめします。
+
+### Netlify へのデプロイ
+
+Netlify で Git リポジトリを接続するだけです。`netlify.toml` にはすでにビルド設定が記述されています。コマンドラインでは `netlify deploy --build --prod` も利用できます。
+
+Netlify にはプラットフォームレベルのストレージがないため、外部データベースへの接続が必須です。環境変数は **Site configuration → Environment variables** で設定します。例えば：
+
+```bash
+JWT_SECRET=<ランダムな文字列>
+DATABASE_URL=postgres://user:pass@ep-xxx.neon.tech/neondb
+DB_FORMAT=map
+```
+
+> Netlify Functions の 1 回の実行上限は 10 秒（Pro は 26 秒）で、コールドスタートにクラウドストレージ API の往復が加わるとタイムアウトしやすいため、本番環境では Cloudflare Workers を優先することをおすすめします。
+
+### Node / Docker へのデプロイ
+
+これが `DB_DRIVER=mysql` で TCP に直接接続できる唯一のシナリオです。
+
+```bash
+pnpm install
+pnpm run build
+pnpm start
+```
+
+環境変数はルートディレクトリの `.env` に記述します（`loadEnv.js` が読み取ります）：
+
+```bash
+JWT_SECRET=<ランダムな文字列>
+DATABASE_URL=mysql://user:pass@127.0.0.1:3306/openlist
+DB_DRIVER=mysql
+DB_FORMAT=sql
+```
+
+---
+
+## デプロイ後の確認
+
+デプロイが成功することと、ストレージが利用可能であることは別の問題です。最悪の場合、ストレージドライバーがこっそりメモリモードに退避してしまいます。サイトは開き、ログインもできますが、再起動するとデータが消えてしまいます。
+
+```bash
+curl https://あなたのドメイン/api/public/env_check
+```
+
+返された内容の中で、特に以下のフィールドを確認してください：
+
+- `storage.driver`：実際に有効になっているドライバー。`memory` の場合はデータが永続化されないため、対処が必要です
+- `jwt.ready`：`JWT_SECRET` が設定されているかどうか。設定されていないと、マウント認証情報などの暗号化フィールドを復号できません
+- `ready`：全体として準備完了かどうか
+
+統合スクリプトにチェックを任せることもできます（チェックのみで、再デプロイはしません）：
+
+```bash
+pnpm run deploy:edgeone -- --no-deploy --url https://あなたのドメイン
+pnpm run deploy:esa     -- --no-deploy --url https://あなたのドメイン
+pnpm run deploy:vercel  -- --no-deploy --url https://あなたのドメイン
+```
+
+終了コード `0` はストレージが準備完了であることを、終了コード `2` はまだ準備ができていないことを意味します。EdgeOne ではさらに `/storage-probe` を 1 回読み取り、KV と Blob がそれぞれ利用可能かどうかを通知します。
+
+---
+
+## 技術アーキテクチャ
+
+### バックエンド
+
+- **実行環境**：Cloudflare Workers／Tencent Cloud EdgeOne／Alibaba Cloud ESA／Vercel／Netlify／Node.js コンテナ
+- **Web フレームワーク**：Hono.js
+- **言語**：TypeScript
+- **ビルドツール**：Wrangler、esbuild
+
+### フロントエンド
+
+- **フレームワーク**：React 19 + TypeScript
+- **UI ライブラリ**：Ant Design／Material-UI
+- **ビルドツール**：Vite
+
+> フロントエンドは本リポジトリにはなく、ビルド時に `scripts/fetch-frontend.mjs` によって公式リポジトリから取得されます。
+
+---
+
+## 設定
+
+### データストレージ
+
+データの保存先と構成方法を決定する 2 つの変数があります。
+
+**`DB_DRIVER`** —— データの保存先
+
+- `auto`（デフォルト）：自動判別。外部データベースを設定していればそれを使用し、そうでなければプラットフォーム標準のストレージを使用します
+- プラットフォームストレージ：`kv`、`d1`、`r2`、`blob`、`cfkv`、`do`
+- 外部データベース：`neon`、`turso`、`pgrest`、`pghttp`、`mysqlhttp`、`upstash`、`s3`
+- `mysql`：Node コンテナでのみ利用可能
+
+**`DB_FORMAT`** —— データの構成方法
+
+- `map`（デフォルト）：データベース全体を 1 つの JSON として保存し、読み書きをそれぞれ 1 回行います。KV やオブジェクトストレージに適しています
+- `key`：エンティティごとに 1 レコード（例：`users_1`）。エンティティが多い場合は `map` より節約になります
+- `sql`：リレーショナルテーブルで保存。テーブル構造は Go 版 OpenList と一致しており、Go 版と同じデータベースを共有できます
+
+よく使う組み合わせの例：
+
+```bash
+# Cloudflare Workers + D1
+DB_FORMAT=sql
+DB_DRIVER=d1
+
+# EdgeOne + Blob（ゼロコンフィグ）
+DB_FORMAT=map
+DB_DRIVER=blob
+
+# 外部データベース、例えば Neon
+DB_FORMAT=map
+DB_DRIVER=auto
+DATABASE_URL=postgres://user:pass@ep-xxx.neon.tech/neondb
+```
+
+### セキュリティ
+
+- `JWT_SECRET`：必須。セッション署名、マウント認証情報の暗号化、および定期タスクの認証に使用します
+- `ADMIN_PASS`：任意。設定するとインストールウィザードをスキップし、このパスワードで管理者アカウントを直接初期化します
+
+### 外部データベース
+
+接続文字列を 1 行入力し、`DB_DRIVER=auto` のままにしておくと、プログラムがプロトコルとホスト名に基づいて自動的にドライバーを選択します：
+
+| 接続文字列 | 使用されるドライバー |
+|---|---|
+| `postgres://…@ep-xxx.neon.tech/…` | `neon` |
+| `postgresql://…@db.xxx.supabase.co/…` | `pgrest`、さらに `SUPABASE_KEY` の入力が必要 |
+| `libsql://xxx.turso.io` | `turso`、さらに `TURSO_AUTH_TOKEN` の入力が必要 |
+| `redis://xxx.upstash.io` | `upstash` |
+| `mysql://…` | `mysqlhttp`、さらに `MYSQL_HTTP_URL` の入力が必要 |
+
+ベンダー固有の変数（`NEON_DATABASE_URL`、`TURSO_DATABASE_URL` など）の優先度は `DATABASE_URL` より高くなります。
+
+完全なドライバーリストおよび各データベースの設定例は [外部ストレージ設定ガイド](../docs/EXTERNAL_STORAGE.md) を、変数のテンプレートは [`.dev.vars.example`](../.dev.vars.example) を参照してください。
+
+### その他の変数
+
+- `ALLOW_URLS`：CORS の許可リスト。カンマ区切り。未指定の場合は同一オリジンからのリクエストのみ許可されます
+- `MAX_UPLOAD`：1 回のアップロードのサイズ上限。デフォルトは 26214400 バイト（25MB）
+- `MAX_UPPART`：チャンクアップロードの 1 チャンクのサイズ上限。デフォルトは 16777216 バイト（16MB）
+- `ALLOW_SEED`：シードデータのソースとして許可するホストの許可リスト
+
+---
+
+## よくある質問
+
+| 現象 | 原因と対処法 |
+|---|---|
+| `No storage backend is available` と表示される | ストレージバインディングが一つも設定されていない。`DATABASE_URL` を入力するか、プラットフォーム上で KV／D1 をバインドする |
+| 毎回再起動時に再初期化が必要になる | データが永続化されていない。`/api/public/env_check` の戻り値にある `storage.driver` が `memory` になっていないか確認する |
+| ページが 404 になるが API は正常 | 静的リソースがアップロードされていない。`dist/` がビルドで出力されていること、およびプラットフォームの静的リソースディレクトリがそこを指していることを確認する |
+| 2 つのプラットフォームにデプロイしたらデータが一致しない | 両者の `JWT_SECRET` が異なり、暗号化フィールドを復号できない。両者で一致させる |
+| `mysql2 is not available` と報告される | エッジランタイムで `DB_DRIVER=mysql` を使用している。このドライバーは Node コンテナでのみ利用可能。`mysqlhttp` に変更する |
+| Supabase で 404 になる | `kv` テーブルが存在しない。まず `CREATE TABLE kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);` を実行する |
+
+---
+
+## よく使うコマンド
+
+```bash
+pnpm run dev:worker     # Worker 開発サーバーを起動する
+pnpm run dev:unified    # フロントエンドを取得して Worker を起動する
+pnpm run build          # フロントエンドとバックエンドをビルドする
+pnpm run lint           # TypeScript の型チェックを行う
+pnpm run test:all       # すべての単体テストを実行する
+pnpm run format         # prettier でコードをフォーマットする
+```
+
+---
+
+## ヘルプとサポート
+
+利用中に問題が発生した場合は、以下のチャネルからヘルプを得ることができます：
+
+- 🐛 **バグ報告や機能リクエスト**：本リポジトリの [_Issues_](https://github.com/LegspCpd/openlist-next/issues) へ
+- 💬 **一般的な質問や議論**：本リポジトリの [_Discussions_](https://github.com/LegspCpd/openlist-next/discussions) 掲示板へ
+
+## オープンソースライセンス
+
+本プロジェクトは [AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.txt) ライセンスの下で公開されています。
+
+## お問い合わせ
+
+🌐 [@LegspCpd](https://github.com/LegspCpd) · 📦 [openlist-next](https://github.com/LegspCpd/openlist-next) · 🐛 [Issues](https://github.com/LegspCpd/openlist-next/issues)
+
+## 貢献者
+
+本プロジェクトは **LegspCpd** によって開発・保守されています。
+
+[![Contributors](https://contrib.rocks/image?repo=LegspCpd/openlist-next)](https://github.com/LegspCpd/openlist-next/graphs/contributors)
+
+---
+
+## 謝辞
+
+本プロジェクトの設計と実装は以下のオープンソースプロジェクトを参考にしており、それぞれの作者およびすべての開発者の皆様に感謝いたします：
+
+- [Alist](https://github.com/AlistGo/alist) プロジェクトの作者およびすべての開発者
+- [OpenList](https://github.com/OpenListTeam/OpenList)（Go 版）プロジェクトの作者およびすべての開発者
+- [OpenList-Worker](https://github.com/OpenListTeam/OpenList-Worker)（公式 TypeScript 移植版）プロジェクトの作者およびすべての開発者
+- [openlistnext](https://github.com/Polonium-salts/openlistnext) コミュニティプロジェクトの作者およびすべての開発者
+
+> 上記のプロジェクトの開発者**は**本リポジトリの貢献者ではありません。本リポジトリは LegspCpd によって独立して開発・保守されており、これらのプロジェクトおよび OpenListTeam との間に所属・認可・推奨の関係はなく、オープンソースライセンスの許す範囲内でのみその成果を参考にしています。詳細は [NOTICE.md](../NOTICE.md) を参照してください。
+>
+> フロントエンドの著作権は公式の [OpenList-Frontend](https://github.com/OpenListTeam/OpenList-Frontend) の開発者に帰属します。本リポジトリにはフロントエンドのソースコードは含まれていません。
