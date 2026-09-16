@@ -46,10 +46,15 @@ OpenList 是一个基于 **SolidJS** + **Hono** + **TypeScript** 的现代化全
 
 ### 3. 参与国际化翻译 (i18n)
 
-项目使用 Crowdin 管理多语言翻译：
+前端语言包**不在本仓库里**：官方前端
+[OpenListTeam/OpenList-Frontend](https://github.com/OpenListTeam/OpenList-Frontend) 的
+`src/lang/` 只提交英文，各语言翻译由 Crowdin 维护、随 release 以 `i18n.tar.gz` 发布，
+构建时由 `scripts/fetch-frontend.mjs` 拉取并合并进来。
 
-- 可通过运行 `pnpm run crowdin:download` 同步最新文案。
-- 也欢迎在 [Crowdin 项目页面](https://oplist.org/) 或通过 PR 完善语言包。
+- 上游翻译滞后的部分（如某个键还没翻、或值仍是英文），由本仓库的
+  `scripts/i18n-overrides/` 补齐 —— 改这里就能直接提 PR，详见
+  [国际化翻译 (i18n)](#国际化翻译-i18n) 一节。
+- 想从根上解决，可到前端仓库对应的 Crowdin 项目页完善语言包，上游更新后会自动带下来。
 
 ### 4. 提交代码 (Code Contributions)
 
@@ -61,8 +66,8 @@ OpenList 是一个基于 **SolidJS** + **Hono** + **TypeScript** 的现代化全
 
 ### 环境要求
 
-- **Node.js**：`>= 18.0.0`（推荐 `22.x`）
-- **包管理器**：推荐使用 **`pnpm`**（`>= 9.0.0`）
+- **Node.js**：`22.x`（`package.json` 的 `engines.node` 已锁定为 `22.x`）
+- **包管理器**：**`pnpm`**（仓库 pin 的是 `pnpm@9.15.4`，用 corepack 或 `npx pnpm@9` 均可）
 
 ### 快速起步
 
@@ -79,31 +84,35 @@ OpenList 是一个基于 **SolidJS** + **Hono** + **TypeScript** 的现代化全
    pnpm install
    ```
 
-3. **启动本地开发服务器**：
+3. **启动本地开发环境**：
 
    ```bash
-   pnpm run dev
+   pnpm run dev:unified   # 先拉取官方前端产物，再启动 wrangler dev
+   pnpm run dev:worker    # 只启动 wrangler dev（dist/ 里已有前端产物时用）
    ```
 
-   开发服务器将同时启动 Hono 后端 API 与 Vite 前端服务，默认访问地址：`http://localhost:3000`。
-
-4. **Cloudflare Workers 边缘模拟调试（可选）**：
-   ```bash
-   pnpm run dev:worker
-   ```
+   前端源码不在本仓库里，`dev:unified` 会先跑 `scripts/fetch-frontend.mjs` 把官方前端产物放到
+   `dist/`，再启动 `wrangler dev` 做边缘环境模拟（监听端口以 wrangler 输出为准）。
+   想以 Node 容器方式调试后端，用 `pnpm run build && pnpm run start`。
 
 ### 常用脚本
 
-| 命令                  | 说明                                             |
-| :-------------------- | :----------------------------------------------- |
-| `pnpm run dev`        | 启动本地全栈开发环境（Vite + Hono）              |
-| `pnpm run lint`       | 执行 TypeScript 类型检查 (`tsc --noEmit`)        |
-| `pnpm run format`     | 使用 Prettier 格式化源码                         |
-| `pnpm run build`      | 构建完整生产产物（前端静态资源 + Edge 后端脚本） |
-| `pnpm run build:edge` | 使用 esbuild 单独打包无服务器/边缘后端脚本       |
-| `pnpm run test:189`   | 运行 189Cloud 驱动单元测试                       |
-| `pnpm run crowdin`    | 上传并下载 Crowdin 国际化翻译资源                |
-| `pnpm run i18n:build` | 更新并编译国际化语言包                           |
+| 命令                      | 说明                                                           |
+| :------------------------ | :------------------------------------------------------------- |
+| `pnpm run dev:unified`    | 拉取官方前端产物后启动 `wrangler dev`（边缘环境模拟）           |
+| `pnpm run dev:worker`     | 只启动 `wrangler dev`（需 `dist/` 里已有前端产物）              |
+| `pnpm run fetch:frontend` | 只重新拉取并构建官方前端产物到 `dist/`                          |
+| `pnpm run build`          | 构建完整生产产物（官方前端 `dist/` + 边缘后端 `dist-server/`）  |
+| `pnpm run build:edge`     | 只打包边缘后端（`scripts/build-edge.mjs`）                      |
+| `pnpm run start`          | 用 Node 容器方式启动已构建的后端                                |
+| `pnpm run lint`           | 执行 TypeScript 类型检查（`tsc --noEmit`）                      |
+| `pnpm run format`         | 使用 Prettier 格式化 `src/backend/**/*.ts`                      |
+| `pnpm run test:all`       | 依次运行全部单元测试与回归测试                                  |
+| `pnpm run env:check`      | 检查运行环境变量是否齐备                                        |
+
+> `test:*` 还按模块细分：`test:189`、`test:drivers`、`test:server`、`test:store`、
+> `test:dialect`、`test:dsn`、`test:http-sql`、`test:regress`，可单独运行。
+> 全部命令以 `package.json` 的 `scripts` 为准。
 
 ---
 
@@ -133,7 +142,7 @@ OpenList 的后端设计目标是**跨平台与边缘原生**（既能在 Node.j
 2. **禁止在通用后端直接引入 Node.js 独占模块**：
    - 禁止在 `src/backend/server/` 或通用驱动中静态引入 `fs`、`path`、`net`、`child_process` 等 Node 原生包。
    - 如需仅限 Node.js 容器的功能（如本地文件系统驱动 `LocalDriver`），必须使用动态导入 `await import(...)` 并做好运行环境检测隔离。
-   - 依赖 Node 原生二进制的驱动（当前为 `sftp` / `ftp`）会在边缘构建阶段被 [`scripts/build-edge.mjs`](../scripts/build-edge.mjs) 的 `emptyNodeDriverPlugin` 替换为空实现（构造时抛错）。**新增此类驱动时，必须同步把驱动目录与相关原生包加入该插件的依赖过滤规则**，否则边缘平台会因缺少 `.node` 文件 loader 而打包失败。
+   - 依赖 Node 原生二进制的驱动（当前为 `sftp` / `ftp`）会在边缘构建阶段被 [`scripts/build-edge.mjs`](scripts/build-edge.mjs) 的 `emptyNodeDriverPlugin` 替换为空实现（构造时抛错）。**新增此类驱动时，必须同步把驱动目录与相关原生包加入该插件的依赖过滤规则**，否则边缘平台会因缺少 `.node` 文件 loader 而打包失败。
 3. **数据持久化适配**：
    - 核心数据操作通过模型层抽象，支持 **Cloudflare KV**（边缘环境）与 **JSON 文件**（Node.js 容器环境）无缝适配。
 
@@ -161,6 +170,56 @@ OpenList 的后端设计目标是**跨平台与边缘原生**（既能在 Node.j
 - UI 组件库使用 `@hope-ui/solid` 与原生 CSS，避免引入冗余庞大的样式库。
 - 遵循 SolidJS 细粒度响应式最佳实践（正确使用 `createSignal`、`createMemo`、`createStore`，避免解构 props 导致丢失响应性）。
 - 注意暗色模式 (Dark Mode) 与移动端响应式布局的适配。
+
+### 国际化翻译 (i18n)
+
+本仓库不保存前端源码：构建时 `scripts/fetch-frontend.mjs` 会克隆官方前端
+[OpenList-Frontend](https://github.com/OpenListTeam/OpenList-Frontend)，再下载官方随 release
+发布的翻译包 `i18n.tar.gz` 解压进 `src/lang/`。官方仓库的 `src/lang/` **只提交英文**，
+中文等语言全部来自那份翻译包（目前包里只有 `zh-CN` 与 `zh-TW`）。
+
+**为什么中文界面会混英文**：前端合并词典的写法是
+
+```ts
+// OpenList-Frontend 的 src/app/i18n.ts
+const flatDict = i18n.flatten(dict) // 把嵌套词典拍平成 "init.env_check" 这样的键
+return { ...enDict, ...flatDict } // 英文铺底，当前语言覆盖
+```
+
+所以某个键只要在翻译包里不存在，界面上就直接显示英文。而翻译包由 Crowdin 异步产出，
+必然落后于英文源 —— 实测 zh-CN 的 `init.json` 只有 11 个键，同一提交的英文源有 51 个，
+整个初始化向导在中文界面下都是英文。
+
+**补齐机制**：
+
+| 文件                                         | 作用                                                                 |
+| :------------------------------------------- | :------------------------------------------------------------------- |
+| `scripts/i18n-overrides/<语言>.json`         | 按语言包文件名分组的补丁，只覆盖列出的键，其余原样保留                |
+| `scripts/i18n-overrides/<语言>.allowed.json` | 白名单：确实该保持英文的键（Cookie / S3 / 驱动产品名…），每条写明理由 |
+| `scripts/i18n-patch.mjs`                     | 构建时执行，深合并补丁、回读校验，并报告仍会显示英文的键              |
+
+上游补齐后同名键仍会被补丁覆盖（值一致时无影响）；想撤销某条，把补丁里的键删掉即可。
+
+**新增界面文案后怎么办**：如果上游翻译包还没跟上，构建日志会点名：
+
+```
+[i18n-patch] zh-CN: ACTION REQUIRED — 3 key(s) would show English in this locale
+[i18n-patch]   missing      init.json::new_key = "New key"
+[i18n-patch]   untranslated plugins.json::empty_desc = "No description provided"
+```
+
+按提示把该键加进 `scripts/i18n-overrides/<语言>.json`（若该词本就该是英文，则加进
+`<语言>.allowed.json`）。补丁里按语言包的文件名与嵌套层级写即可，例如
+`{ "init.json": { "new_key": "新文案" } }`。
+
+两点注意：
+
+- 补丁只在「克隆前端源码构建」时生效。若设置了 `FRONTEND_DIST` 直接使用现成 dist 产物，
+  没有前端源码可改，补丁不会生效。
+- 只改翻译也会触发 `cloud-functions/[[default]].js` 产物重建 —— `scripts/i18n-patch.mjs`
+  与 `scripts/i18n-overrides/**` 已写进
+  [`edgeone-artifact-guard.yml`](.github/workflows/edgeone-artifact-guard.yml) 的 `paths`。
+  以后新增其它构建输入时记得照做，否则补丁进不了部署包。
 
 ---
 
