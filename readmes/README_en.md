@@ -190,7 +190,7 @@ You can click the one-click deploy button above, or create a project in the cons
 > Without this file, EdgeOne will report `No server-handler detected`, and the project will degrade into a pure static site.
 > The `EdgeOne Artifact Guard` workflow in the repository automatically rebuilds and commits the artifact when it expires, so manual maintenance is generally unnecessary.
 
-Regarding storage: EdgeOne's KV and Blob are only injected into **edge functions**, not Node cloud functions. Therefore, this project uses two entry points on EdgeOne:
+Regarding storage: EdgeOne's KV and Blob Web APIs are only available to **edge functions**, not to Node cloud functions. Note that a Node cloud function *does* see an object named `KV`, but it is a Redis/RESP client rather than the KV Web API — the app deliberately ignores it, so do not use it as KV. Therefore, this project uses two entry points on EdgeOne:
 
 | File | Role |
 |---|---|
@@ -463,6 +463,8 @@ Every variable is listed with comments in the [variable template](../.dev.vars.e
 | Cannot log in, or netdisk mounts fail, after changing `JWT_SECRET` | Passwords, netdisk credentials and OTP secrets are encrypted with `JWT_SECRET` before being written to the store, so a new key cannot decrypt them (the log shows `Failed to decrypt a sealed secret (wrong JWT_SECRET?)`). Restore the old value, or re-enter the password and netdisk credentials. |
 | Data becomes inconsistent when two platforms share one store | Their `JWT_SECRET` values differ, so the encrypted fields cannot be decrypted. Platforms sharing one store must use the same value; platforms with separate stores do not. |
 | KV returns 401 on EdgeOne | `JWT_SECRET` differs between the Node cloud function and the Edge Function (or it was rotated). Use the same value on both, or point `EO_KV_URLS` at the correct deployment origin. |
+| Logs show `Error reading config from kv: Not connected` and every `/api/*` returns 503 | The Node cloud function receives the KV namespace as a **Redis/RESP client** (the KV Web API is only available to edge functions). The app ignores it and falls back to Blob — this is expected. To actually use KV from Node, bind the namespace to edge functions and set `DB_DRIVER=kv` + `JWT_SECRET` |
+| Setup intermittently fails with 400 `system has already been initialized`, then succeeds on retry | A false `already initialized`: when storage is unreachable the app falls back to memory, so the first setup only wrote to memory and a retry on the same instance finds an existing admin and returns 400. Fix storage and it disappears |
 | Reports `Storage driver "mysql" is not available in this runtime` | `DB_DRIVER=mysql` is set on an edge runtime, but this driver only works in a Node container. Switch to `mysqlhttp`. |
 | Supabase returns 404 | The `kv` table does not exist; create it first: `CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);`. Note that Supabase uses PostgREST, which only supports KV — `DB_FORMAT=sql` is not supported. |
 | Clicking "offline download" reports `capability unavailable` | This runtime has no durable offline-download adapter, so `/fs/add_offline_download` returns 501. Use `/api/fs/seed/offline_download` instead (configure the `ALLOW_SEED` allowlist first); retry/cancel in the task list also return 501 |

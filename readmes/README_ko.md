@@ -190,7 +190,7 @@ Cloudflare 백엔드에서 Git 저장소를 연결할 수도 있습니다: 빌�
 > 이 파일이 없으면 EdgeOne에서 `No server-handler detected` 오류를 내고 프로젝트가 순수 정적 사이트로 전락합니다.
 > 저장소의 `EdgeOne Artifact Guard` 워크플로는 산출물이 만료되면 자동으로 재빌드하고 커밋하므로 보통 수동 유지보수가 필요 없습니다.
 
-스토리지 측면에서, EdgeOne의 KV와 Blob은 **엣지 함수**에만 주입되며 Node 클라우드 함수에서는 가져올 수 없습니다. 따라서 본 프로젝트는 EdgeOne에서 두 개의 엔트리 포인트를 사용합니다:
+스토리지 측면에서, EdgeOne의 KV와 Blob Web API는 **엣지 함수**에서만 사용할 수 있고 Node 클라우드 함수에서는 가져올 수 없습니다. 참고로 Node 쪽에도 `KV`라는 객체가 보이지만 이는 Redis/RESP 클라이언트이며 KV Web API가 아닙니다. 본 앱은 이를 의도적으로 무시하므로 KV로 사용하지 마세요. 따라서 본 프로젝트는 EdgeOne에서 두 개의 엔트리 포인트를 사용합니다:
 
 | 파일 | 역할 |
 |---|---|
@@ -463,6 +463,8 @@ DATABASE_URL=postgres://user:pass@ep-xxx.neon.tech/neondb
 | `JWT_SECRET`을 바꾼 뒤 로그인이 안 되거나 네트워크 드라이브 마운트가 실패함 | 비밀번호, 네트워크 드라이브 자격 증명, OTP 시크릿은 `JWT_SECRET`으로 암호화한 뒤 저장되므로 키를 바꾸면 복호화할 수 없습니다(로그에 `Failed to decrypt a sealed secret (wrong JWT_SECRET?)`가 남습니다). 원래 값으로 되돌리거나 비밀번호와 자격 증명을 다시 입력하세요 |
 | 두 플랫폼이 하나의 스토어를 공유하면 데이터가 어긋남 | 양쪽 `JWT_SECRET`이 달라 암호화 필드를 풀 수 없음. 스토어를 공유하면 같은 값을 써야 하며, 스토어가 따로면 일치시킬 필요가 없습니다 |
 | EdgeOne에서 KV가 401을 반환함 | Node 클라우드 함수와 Edge Function의 `JWT_SECRET`이 다름(또는 교체됨). 양쪽을 같은 값으로 맞추거나 `EO_KV_URLS`를 올바른 배포 오리진으로 지정하세요 |
+| 로그에 `Error reading config from kv: Not connected`가 뜨고 모든 `/api/*`가 503을 반환함 | Node 클라우드 함수는 KV 네임스페이스를 **Redis/RESP 클라이언트**로 받습니다(KV Web API는 엣지 함수 전용). 앱은 이를 무시하고 Blob으로 폴백합니다(정상 동작). Node에서 KV를 실제로 쓰려면 네임스페이스를 엣지 함수에 바인딩하고 `DB_DRIVER=kv`와 `JWT_SECRET`을 설정하세요 |
+| 초기화가 간헐적으로 400 `system has already been initialized`로 실패하고 재시도하면 성공함 | 가짜 '초기화됨'입니다. 스토리지에 연결되지 않으면 앱이 메모리 모드로 폴백하여 같은 인스턴스에서는 첫 초기화가 메모리에만 기록되고, 재시도 시 기존 관리자를 읽어 400을 반환합니다. 스토리지를 고치면 사라집니다 |
 | `Storage driver "mysql" is not available in this runtime` 오류 | 엣지 런타임에서 `DB_DRIVER=mysql`을 사용함. 이 드라이버는 Node 컨테이너에서만 사용 가능하니 `mysqlhttp`로 바꾸세요 |
 | Supabase에서 404 발생 | `kv` 테이블이 없음. 먼저 `CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);`를 실행하세요. 또한 Supabase는 PostgREST를 사용하므로 KV만 지원하며 `DB_FORMAT=sql`은 쓸 수 없습니다 |
 | "오프라인 다운로드"에서 `capability unavailable` 표시 | 이 런타임에는 영속적인 오프라인 다운로드 어댑터가 없어 `/fs/add_offline_download`가 501을 반환합니다. 대신 `/api/fs/seed/offline_download`를 사용하세요(`ALLOW_SEED` 허용 목록을 먼저 설정). 작업 목록의 재시도 / 취소도 마찬가지로 501입니다 |

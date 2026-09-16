@@ -79,8 +79,32 @@ export function resolveKvWithName(env) {
   return { kv: null, name: null }
 }
 
+/**
+ * 判断对象是否是「可用的 KV Web binding」。
+ *
+ * 必须同时满足两个条件：
+ *   1. 具备 KV Web API 的读写接口 —— EdgeOne KV 与 Cloudflare KV 的写接口
+ *      都是 `put`（Redis 客户端只有 `set`，没有 `put`）；
+ *   2. **不具备 Redis/RESP 客户端特征** —— EdgeOne 的 Node 云函数会注入一个
+ *      名为 KV 的 RESP 客户端，它同样暴露 get/set，若只按形状判断会被误当成
+ *      KV Web API，之后每次调用都抛 `Not connected` / `cannot find the
+ *      collection by name`。边缘函数侧目前不会遇到，但判定保持一致，
+ *      避免同一个坑在两层各踩一次。
+ */
 export function isKvLike(v) {
-  return !!v && typeof v.get === "function" && typeof v.put === "function"
+  if (!v || typeof v.get !== "function" || typeof v.put !== "function") {
+    return false
+  }
+  try {
+    if (typeof v.sendCommand === "function") return false
+    if (typeof v.send === "function" && typeof v.status === "string") return false
+    if (typeof v.duplicate === "function" && typeof v.disconnect === "function") {
+      return false
+    }
+  } catch {
+    return false
+  }
+  return true
 }
 
 /* ─────────────────────────── 密钥获取 ─────────────────────────── */

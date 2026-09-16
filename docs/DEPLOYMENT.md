@@ -120,6 +120,15 @@ EdgeOne 的 Edge Functions 只注入 KV/Blob 给边缘函数，Node 云函数拿
      （不是 Node 云函数），**绑定变量名请填 `KV`**，并设置 `JWT_SECRET`。
      云函数拿不到这个绑定，读写是经 `functions/kv-*` 这几个边缘函数转发的；
      `EO_KV_URLS` **一般留空**，它到底填什么见下方「KV 代理与 `EO_KV_URLS`」；
+
+     > ⚠️ **Node 云函数侧也会看到一个名为 `KV` 的对象，但它不是 KV Web API**，
+     > 而是 Redis/RESP 协议的客户端（TCP socket）。程序会**主动忽略**它。
+     > 若误把它当 KV 用，驱动会「解析成功、读写全失败」：日志里是
+     > `Not connected`，所有依赖存储的 `/api/*` 被拦成 503。
+     > 这是**预期行为**，不是配置漏了 —— Node 侧要用 KV 只能走代理。
+     >
+     > 想让配置、密钥、审计日志都稳定落在 KV，请**显式设 `DB_DRIVER=kv`**；
+     > 只留 `auto` 时，配置可能走 KV 代理而密钥类数据落到 Blob。
    - **Blob（零配置兜底）**：无需任何控制台操作，`@edgeone/pages-blob`
      首次写入即自动建库，命名空间归属当前 Pages 项目；
    - 外部数据库（优先级最高）：`DATABASE_URL=postgres://…@ep-xxx.neon.tech/…`。
@@ -189,6 +198,8 @@ EO_KV_URLS=https://openlist.example.com
 | `cannot determine deployment origin. Set EO_KV_URLS to the deployment origin.` | 既没填 `EO_KV_URLS`，请求 origin 也没被注入 |
 | KV 读写 401 | 两侧 `JWT_SECRET` 不一致或被轮换过；也可能 `EO_KV_URLS` 指错了域名 |
 | 用了 `.edgeone.cool` 临时域名后 KV 不通 | 该域名带全站鉴权参数，拦掉了边缘函数 ↔ 云函数的代理回调，换自定义域名 |
+| 日志反复出现 `[DB] Auto-detected driver: kv` + `Error reading config from kv: Error: Not connected`，随后 `Storage unhealthy: Not connected`，所有 `/api/*` 返回 503 | Node 云函数把 KV 命名空间当成 **Redis/RESP 客户端**注入了（KV Web API 只给边缘函数）。程序会打印 `[KV] Ignoring the \`KV\` binding…` 并忽略它，再回落 Blob。若仍然报错，说明显式设了 `DB_DRIVER=kv` 却没配通代理 —— 按上一行补 `JWT_SECRET`，或去掉 `DB_DRIVER=kv` 让 Blob 兜底 |
+| 初始化时偶尔报 400 `system has already been initialized`，重试又成功 | 这不是真的已初始化，而是**存储没通导致的假象**：读配置失败时程序退回内存态，同实例内第一次初始化只写进了内存，重试时从内存读到「已存在管理员」就返回 400。根因是存储不可用，按上一行排查 |
 
 ---
 

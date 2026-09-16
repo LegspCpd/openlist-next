@@ -190,7 +190,7 @@ pnpm run deploy:worker
 > 缺了这个文件，EdgeOne 会报 `No server-handler detected`，项目会退化成一个纯静态站点。
 > 仓库里的 `EdgeOne Artifact Guard` 工作流会在产物过期时自动重建并提交，一般不用手工维护。
 
-存储方面，EdgeOne 的 KV 和 Blob 只会注入给**边缘函数**，Node 云函数拿不到。所以本项目在 EdgeOne 上用了两个入口：
+存储方面，EdgeOne 的 KV 和 Blob 的 Web API 只会给**边缘函数**，Node 云函数拿不到 —— 注意 Node 侧也会看到一个叫 `KV` 的对象，但它是 Redis/RESP 客户端（不是 KV Web API），程序会主动忽略它，别拿它当 KV 用。所以本项目在 EdgeOne 上用了两个入口：
 
 | 文件 | 作用 |
 |---|---|
@@ -463,6 +463,8 @@ DATABASE_URL=postgres://user:pass@ep-xxx.neon.tech/neondb
 | 换了 `JWT_SECRET` 之后登录不上、网盘挂载失败 | 密码、网盘凭据、OTP 密钥都是用 `JWT_SECRET` 加密后才落库的，密钥换了就解不开（日志里是 `Failed to decrypt a sealed secret (wrong JWT_SECRET?)`）。改回原来的值，或者把密码和网盘凭据重新填一遍 |
 | 两个平台共用一个库时数据错乱 | 两边的 `JWT_SECRET` 不一致，加密字段解不开。共用一个库就必须填同一个值；各用各的库则不需要一致 |
 | EdgeOne 上 KV 报 401 | Node 云函数和 Edge Function 的 `JWT_SECRET` 不一致（或轮换过）。两边填同一个，或者把 `EO_KV_URLS` 指向正确的部署域名 |
+| 日志出现 `Error reading config from kv: Not connected`，所有 `/api/*` 返回 503 | Node 云函数把 KV 命名空间当成 **Redis/RESP 客户端**注入了（KV Web API 只给边缘函数），程序会忽略它并回落 Blob。这是预期行为；想让 Node 真的用上 KV，就把命名空间绑到边缘函数，并设 `DB_DRIVER=kv` + `JWT_SECRET` |
+| 初始化偶尔报 400 `system has already been initialized`，重试又成功 | 假的「已初始化」：存储不通时程序退回内存态，同一实例内第一次初始化只写进了内存，重试时从内存读到已有管理员就报 400。把存储修好就消失了 |
 | 报 `Storage driver "mysql" is not available in this runtime` | 边缘运行时用了 `DB_DRIVER=mysql`，这个驱动只在 Node 容器里可用。改用 `mysqlhttp` |
 | Supabase 报 404 | `kv` 表不存在，先建表：`CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);`。另外 Supabase 走 PostgREST，只支持 KV，不能配 `DB_FORMAT=sql` |
 | 点「离线下载」提示 `capability unavailable` | 这个运行时没有可持久化的离线下载适配器，`/fs/add_offline_download` 返回 501。改用 `/api/fs/seed/offline_download`（先配 `ALLOW_SEED` 白名单）；任务列表里的重试 / 取消也同样是 501 |

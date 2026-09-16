@@ -74,6 +74,20 @@ const origin = `http://127.0.0.1:${server.address().port}`
 
 const respClient = { status: "ready", send() { throw new Error("cannot find the collection by name") } }
 
+// 真实 Redis/RESP 客户端形态：除 sendCommand 外，`get` / `set` 也都存在。
+//
+// 为什么必须有这个用例：上面那个 respClient 没有 get/set，
+// 任何形状校验都会拒绝它 —— 于是测试永远绿，但线上仍然出问题。
+// EdgeOne Node 云函数注入的正是**下面这个形态**（有 get/set，
+// 调用时抛 `Not connected`），历史上它被当成合法 KV binding 选中，
+// 导致 driver=kv 解析成功、每次读写都失败、整站 503。
+const redisClient = {
+  status: "ready",
+  async get() { throw new Error("Not connected") },
+  async set() { throw new Error("Not connected") },
+  sendCommand() { throw new Error("Not connected") },
+}
+
 try {
   console.log("=== A. 键名编码 ===")
   check("users_1", codec.entityKeyOf("users", "1") === "users_1", codec.entityKeyOf("users", "1"))
@@ -169,6 +183,15 @@ try {
   const ld = await b2.load(envP)
   check("代理 save/load 正常", ld?.users?.[0]?.username === "admin")
 
+  // 换成真实 Redis 客户端：必须同样被绕过，读写走代理而不是 RESP socket。
+  // 旧实现会把它选中为 binding，save/load 直接抛 `Not connected`。
+  store.clear()
+  const envR = { DB_DRIVER: "kv", DB_FORMAT: "key", KV: redisClient, JWT_SECRET, __requestOrigin: origin }
+  const b3 = await backendMod.getStoreBackend(envR)
+  await b3.save({ users: [{ id: 1, username: "redis-bypass" }], storages: [], settings: [], shares: [], metas: [], plugins: [] }, envR)
+  const ld3 = await b3.load(envR)
+  check("Redis 客户端被绕过，代理 save/load 正常", ld3?.users?.[0]?.username === "redis-bypass")
+
   console.log("=== H. 配置错误透出 ===")
   const ce1 = await backendMod.getStoreConfigError({ __requestOrigin: origin })
   check("worker 无存储错误", typeof ce1 === "string" && ce1.includes("No storage backend"))
@@ -179,9 +202,28 @@ try {
 
   console.log("=== I. 绑定形态 ===")
   check("RESP 不算 binding", kvDrv.checkProxyConfig({ DB_DRIVER: "kv", KV: respClient }) !== null)
+  check(
+    "Redis 客户端(get+set+sendCommand) 不算 binding",
+    kvDrv.checkProxyConfig({ DB_DRIVER: "kv", KV: redisClient }) !== null,
+  )
   check("字符串不算", kvDrv.checkProxyConfig({ DB_DRIVER: "kv", KV: "n" }) !== null)
   check("空对象不算", kvDrv.checkProxyConfig({ DB_DRIVER: "kv", KV: {} }) !== null)
   check("Web KV 算", kvDrv.checkProxyConfig({ DB_DRIVER: "kv", KV: { async get() {}, async put() {} } }) === null)
+
+  // auto 模式下：Redis 客户端不得被当成可用存储，否则会「看似选到了存储、
+  // 实际每个请求都失败」。EdgeOne serverless 环境应直接报「无可用存储」，
+  // 而不是静默退回内存（那会造成写入丢失 + 初始化重试误报已初始化）。
+  let e4 = false
+  try {
+    await backendMod.getStorageBackend({
+      DB_DRIVER: "auto",
+      KV: redisClient,
+      TENCENTCLOUD_SCF_FUNCTIONNAME: "openlist-test",
+    })
+  } catch (x) {
+    e4 = String(x.message).includes("No storage backend is available")
+  }
+  check("auto: Redis 客户端不算可用存储", e4)
 
   console.log("=== I2. 安全：内部调用必须提交完整密钥 ===")
   const mkReq = (headers) => ({

@@ -8,26 +8,15 @@
  * 自动检测环境并选择合适的模式。
  */
 import { sanitizeProxyOrigin } from "../proxy"
+import { probeWebKvBinding } from "../kv-binding"
 import type { Driver, EnvContext } from "../types"
 
-/**
- * 判断某个值是否具备 KV Web API 的接口形态。
- *
- * 这一步是必需的：EdgeOne Node 云函数也会注入一个名为 `KV` 的绑定，
- * 但它走的是 RESP/Redis 协议（TCP socket），调用 put/get 会抛出
- * "cannot find the collection by name"，而不是提供 Web KV API。
- * 必须靠接口形状区分，否则会把 RESP 客户端误当作 KV 使用。
+/*
+ * 形态判定（含 RESP 客户端排除）统一在 ../kv-binding 实现。
+ * 历史教训：EdgeOne Node 云函数注入的 `KV` 是 Redis/RESP 客户端，
+ * 它同样暴露 get/set —— 只在本地按「有没有 get/set」判断会把它当 KV 用，
+ * 于是驱动被选中、每次读写却抛 `Not connected`，整站存储被拦成 503。
  */
-function isWebKvLike(b: any): boolean {
-  if (!b || typeof b !== "object") return false
-  // 属性访问可能触发异常 getter，任何异常都视为「不是可用绑定」。
-  try {
-    if (typeof b.get !== "function") return false
-    return typeof b.put === "function" || typeof b.set === "function"
-  } catch {
-    return false
-  }
-}
 
 /**
  * 获取 KV binding（仅返回符合 Web KV API 的绑定）。
@@ -39,9 +28,7 @@ function isWebKvLike(b: any): boolean {
 function getKvBinding(env?: any): any | null {
   const g = globalThis as any
   // 绑定名统一为 KV（KV namespace binding 的通用约定名）
-  if (isWebKvLike(env?.KV)) return env.KV
-  if (isWebKvLike(g?.KV)) return g.KV
-  return null
+  return probeWebKvBinding([env?.KV, g?.KV])
 }
 
 /**
