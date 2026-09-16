@@ -91,16 +91,16 @@ OpenList-Worker는 공식 [OpenListTeam/OpenList](https://github.com/OpenListTea
 - **업로드/다운로드**: 스토리지 간 업로드, 일괄 다운로드, 스트리밍 전송 및 직접 링크 이동을 지원합니다.
 - **파일 공유**: 유효 기간, 비밀번호, 권한 제어가 포함된 공유 링크를 생성하며 익명 접근과 디렉터리 공유를 지원합니다.
 - **전문 검색**: 인덱싱된 스토리지에서 파일을 빠르게 검색합니다.
-- **오프라인 작업**: 백그라운드 작업 큐로 일괄 작업과 비동기 처리를 지원합니다.
+- **오프라인 다운로드(제한적)**: `/api/fs/seed/offline_download`가 seed 데이터(토렌트, 직링크, CAS)를 해석해 대상 스토리지에 동기적으로 기록합니다. `ALLOW_SEED` 허용 목록과 `OFFLINE_DOWNLOAD` 권한이 필요합니다. 백그라운드 작업 큐는 없으며 `/fs/add_offline_download`와 작업 재시도 / 취소는 구현되지 않았습니다(501).
 - **외부 인터페이스**: 통합 스토리지를 WebDAV 또는 S3 호환 프로토콜로 외부에 노출하여 타사 도구에 마운트할 수 있습니다.
 - **MCP 서비스**: Model Context Protocol 엔드포인트를 제공하여 AI 어시스턴트 같은 클라이언트가 통합해 호출할 수 있습니다.
 
 ### 권한 관리
 
-- **권한 관리**: 역할 기반 접근 제어(RBAC)로 사용자 그룹, 디렉터리 단위 읽기/쓰기 권한 및 할당량을 지원합니다.
-- **인증 방식**: 내장 계정/비밀번호, TOTP 검증, WebAuthn/FIDO 로그인, SSO 단일 사인온 및 LDAP 디렉터리 인증을 지원합니다.
-- **보안 강화**: JWT 세션, CSRF 방어, 클릭재킹 방어(X-Frame-Options), 콘텐츠 보안 정책(CSP).
-- **상태 확인**: 모니터링과 알림에 사용할 수 있는 `/health` 생존 프로브와 `/healthz` 준비 프로브를 제공합니다.
+- **권한 관리**: 세 가지 역할(관리자 / 일반 사용자 / 게스트)과 디렉터리 단위 읽기/쓰기 권한(메타데이터의 `read_users` / `write_users`, 하위 디렉터리 포함 가능)을 지원합니다.
+- **인증 방식**: 내장 계정/비밀번호, TOTP 검증, WebAuthn 로그인(패스키, 기본값은 꺼져 있으며 설정에서 켜야 함), SSO 단일 사인온 및 LDAP 디렉터리 인증을 지원합니다.
+- **보안 강화**: JWT 세션, 동일 출처 CORS 정책(`ALLOW_URLS`로 허용하지 않는 한 임의의 Origin을 되돌려주지 않음), 클릭재킹 방어(`X-Frame-Options: DENY`), 콘텐츠 보안 정책(CSP), HSTS.
+- **상태 확인**: `/api/healthz`가 준비 상태 프로브입니다. 실제로 스토리지를 한 번 읽고 사용할 수 없으면 503을 반환하므로 모니터링·알림에는 이쪽을 연결하세요. `/api/health`는 생존 표시일 뿐 스토리지 상태를 반영하지 않습니다.
 
 ### 플랫폼 배포
 
@@ -114,12 +114,12 @@ OpenList-Worker는 공식 [OpenListTeam/OpenList](https://github.com/OpenListTea
 
 | | 공식 OpenList-Worker | 본 프로젝트 |
 |---|---|---|
-| 스토리지 드라이버 | 7개 | 15개, neon / turso / pgrest / pghttp / mysqlhttp / upstash / r2 / s3 추가 |
+| 스토리지 드라이버 | 6개 | 16개, 10개 추가(`neon`, `turso`, `pgrest`, `pghttp`, `mysqlhttp`, `upstash`, `s3`, `r2`, `netlifyblobs`, `hyperdrive`) |
 | SQL 방언 | SQLite, MySQL | PostgreSQL 추가( `$n` 플레이스홀더 포함) |
 | 네트워크 드라이브 드라이버 | 78개 | 81개, `123_link`, `ilanzou`, `halalcloud` 보완 |
-| 배포 플랫폼 | Cloudflare Workers, EdgeOne, ESA, Serverless | Vercel, Netlify, Node/Docker 추가 |
+| 배포 플랫폼 | Cloudflare Workers, EdgeOne, ESA, Vercel, Serverless, Node/Docker | Netlify 추가, EdgeOne / ESA / Vercel용 원클릭 배포 스크립트 보완 |
 
-공식 버전의 `mysql` 드라이버는 Node 컨테이너에서만 동작합니다 — Cloudflare Workers에는 raw TCP가 없으므로 엣지에 배포하면 플랫폼 기본 KV만 사용할 수 있습니다. 본 프로젝트가 새로 추가한 8개의 스토리지 드라이버는 모두 `fetch` 기반으로 구현되어 있으므로 엣지 런타임에서도 외부 데이터베이스에 연결할 수 있고, `DATABASE_URL` 한 줄만 채우면 됩니다.
+공식 버전의 `mysql` 드라이버는 Node 컨테이너에서만 동작합니다 — Cloudflare Workers에는 raw TCP가 없으므로 엣지에 배포하면 플랫폼 기본 KV만 사용할 수 있습니다. 본 프로젝트가 추가한 10개 중 8개(`neon`, `turso`, `pgrest`, `pghttp`, `mysqlhttp`, `upstash`, `s3`, `netlifyblobs`)는 HTTP를 사용하므로 엣지 런타임에서도 외부 데이터베이스에 연결할 수 있고, `DATABASE_URL` 한 줄만 채우면 됩니다. 나머지 두 개는 방식이 다릅니다. `r2`는 Cloudflare 버킷 바인딩을, `hyperdrive`는 `mysql2`로 TCP에 직접 연결하므로 Node 환경에서만 사용할 수 있습니다.
 
 자세한 설명은 [외부 스토리지 설정 가이드](../docs/EXTERNAL_STORAGE.md)를 참고하세요.
 
@@ -206,9 +206,9 @@ Cloudflare 백엔드에서 Git 저장소를 연결할 수도 있습니다: 빌�
 
 주의할 점몇 가지(본 프로젝트는 이미 처리해 두었으나, 직접 설정을 고칠 때 유의하세요):
 
-- `edgeone.json`의 `nodeVersion`은 플랫폼에 미리 설치된 버전(14.21.3 / 16.20.2 / 18.20.4 / 20.18.0 / 22.11.0 / 22.17.1 / 22.21.1 / 24.5.0 / 24.11.0 / 24.18.0) 중 하나여야 하며, 다른 값을 넣으면 빌드에 실패합니다. 이 프로젝트는 `22.21.1`을 사용합니다. 이 필드는 콘솔의 프로젝트 설정을 덮어씁니다
+- `edgeone.json`의 `nodeVersion`에는 플랫폼에 미리 설치된 버전을 지정합니다. 공식 문서에 나열된 버전은 14.21.3 / 16.20.2 / 18.20.4 / 20.18.0 / 22.11.0 다섯 개뿐이며, 다른 값을 넣으면 빌드에 실패할 수 있습니다. 이 프로젝트는 `22.11.0`을 사용합니다. 프론트엔드를 받을 때 `scripts/fetch-frontend.mjs`가 업스트림이 pin한 pnpm 11이 Node ≥ 22.13을 요구한다는 것을 감지하고 자동으로 pnpm 10으로 폴백합니다. 이 필드는 콘솔의 프로젝트 설정을 덮어씁니다
 - `maxDuration`은 `cloudFunctions.nodejs` 안에 작성해야 하고, `cloudFunctions.maxDuration`으로 쓰면 적용되지 않습니다
-- 프론트엔드 라우팅 폴백은 루트 디렉터리의 `middleware.js`가 담당합니다. `edgeone.json`의 `rewrites`는 정적 자원에만 적용되며, 공식 문서에서 명시적으로 프론트엔드 라우팅을 지원하지 않는다고 했으므로 `/*`를 추가하면 오히려 정적 파일과 매칭됩니다
+- 프론트엔드 라우팅 폴백은 루트의 `middleware.js`가 담당하므로 `edgeone.json`에는 `rewrites`를 두지 않았습니다. Makers는 이제 `{"source": "/*", "destination": "/index.html"}`로 SPA 폴백을 선언하는 것도 지원합니다(일반 리라이트가 아니라 fallback으로 인식됩니다). 다만 같은 폴백을 두 곳에 두면 서로 충돌하기 쉬워 이 프로젝트는 `middleware.js` 한 곳만 유지합니다
 - `*.edgeone.cool` 같은 임시 도메인으로 스토리지를 검증하지 마세요. 이 도메인은 사이트 전역 인증 매개변수가 붙어 엣지 함수와 클라우드 함수 사이의 KV 프록시 요청을 차단합니다. 먼저 커스텀 도메인을 바인딩한 뒤 검증하세요
 
 원클릭 배포 버튼을 쓰지 않으려면 Makers CLI를 써도 됩니다:
@@ -337,8 +337,8 @@ pnpm run deploy:vercel  -- --no-deploy --url https://your-domain
 
 ### 프론트엔드
 
-- **프레임워크**: React 19 + TypeScript
-- **UI 라이브러리**: Ant Design / Material-UI
+- **프레임워크**: SolidJS + TypeScript
+- **UI 라이브러리**: Hope UI
 - **빌드 도구**: Vite
 
 > 프론트엔드는 본 저장소에 없으며, 빌드 시 `scripts/fetch-frontend.mjs`가 공식 저장소에서 가져옵니다.
@@ -427,6 +427,7 @@ DATABASE_URL=postgres://user:pass@ep-xxx.neon.tech/neondb
 | `HYPERDRIVE` | Cloudflare Hyperdrive 연결 문자열, 엣지에서 MySQL에 접속할 수 있게 합니다, `DB_DRIVER=hyperdrive`에서 사용됩니다 | Hyperdrive를 쓰려면 바인딩하세요 |
 | `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | S3 호환 객체 스토리지(R2 / MinIO / B2 등)의 버킷 이름과 액세스 자격 증명, `DB_DRIVER=s3`에서 사용됩니다 | S3 스토리지를 쓰려면 다섯 항목을 모두 채우세요 |
 | `CF_ACCOUNT`, `CF_KV_UUID`, `CF_API_KEY` | Cloudflare REST API로 KV를 읽고 씁니다, `DB_DRIVER=cfkv`에서 사용됩니다. 각각 계정 ID, KV 네임스페이스 ID, KV 읽기/쓰기 권한이 있는 API Token입니다 | `cfkv`를 쓰려면 세 항목을 모두 채우세요 |
+| `BUCKET` | Cloudflare R2 버킷 바인딩. `DB_DRIVER=r2`에서 사용합니다(`R2_BUCKET` / `OPENLIST_BUCKET` / `OPENLIST_R2`도 허용) | R2를 쓰려면 바인딩하고 이름을 `BUCKET`으로 지정하세요 |
 
 ### 기타 변수(대부분 신경 쓰지 않아도 됩니다)
 
@@ -464,6 +465,7 @@ DATABASE_URL=postgres://user:pass@ep-xxx.neon.tech/neondb
 | EdgeOne에서 KV가 401을 반환함 | Node 클라우드 함수와 Edge Function의 `JWT_SECRET`이 다름(또는 교체됨). 양쪽을 같은 값으로 맞추거나 `EO_KV_URLS`를 올바른 배포 오리진으로 지정하세요 |
 | `Storage driver "mysql" is not available in this runtime` 오류 | 엣지 런타임에서 `DB_DRIVER=mysql`을 사용함. 이 드라이버는 Node 컨테이너에서만 사용 가능하니 `mysqlhttp`로 바꾸세요 |
 | Supabase에서 404 발생 | `kv` 테이블이 없음. 먼저 `CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);`를 실행하세요. 또한 Supabase는 PostgREST를 사용하므로 KV만 지원하며 `DB_FORMAT=sql`은 쓸 수 없습니다 |
+| "오프라인 다운로드"에서 `capability unavailable` 표시 | 이 런타임에는 영속적인 오프라인 다운로드 어댑터가 없어 `/fs/add_offline_download`가 501을 반환합니다. 대신 `/api/fs/seed/offline_download`를 사용하세요(`ALLOW_SEED` 허용 목록을 먼저 설정). 작업 목록의 재시도 / 취소도 마찬가지로 501입니다 |
 
 ---
 

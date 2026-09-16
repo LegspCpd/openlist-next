@@ -12,7 +12,8 @@
 #
 # 本地开发：复制为 `.dev.vars`（已被 .gitignore 忽略）并填入真实值。
 #
-# 本项目新增的外部存储（Neon / Turso / Supabase / MySQL 网关 / Upstash / R2 / S3）
+# 本项目新增的外部存储（Neon / Turso / Supabase / Postgres 网关 / MySQL 网关 / Upstash / S3）
+#（R2 和 Hyperdrive 走平台绑定，不在这里填）
 #   见：./docs/EXTERNAL_STORAGE.md
 # 上游通用环境变量的权威说明（非本项目文档）：
 #   https://doc.oplist.org/ecosystem/official_worker/guide_env

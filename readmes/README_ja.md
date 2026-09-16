@@ -91,16 +91,16 @@ OpenList-Worker は公式の [OpenListTeam/OpenList](https://github.com/OpenList
 - **アップロード／ダウンロード**：ストレージをまたいだアップロード、一括ダウンロード、ストリーミング転送、および直リンクへのジャンプ。
 - **ファイル共有**：有効期限・パスワード・権限管理付きの共有リンクを生成し、匿名アクセスやディレクトリ共有に対応。
 - **全文検索**：インデックス済みのストレージ内でファイルを高速に検索。
-- **オフラインタスク**：バックグラウンドのタスクキュー。一括操作と非同期処理に対応。
+- **オフラインダウンロード（制限あり）**：`/api/fs/seed/offline_download` が seed データ（トレント、直リンク、CAS）を解析して対象ストレージへ同期的に書き込みます。`ALLOW_SEED` の許可リストと `OFFLINE_DOWNLOAD` 権限が必要です。バックグラウンドのタスクキューはありません。`/fs/add_offline_download` とタスクの再試行 / キャンセルは未実装（501）です。
 - **外部インターフェース**：集約したストレージを WebDAV または S3 互換プロトコルとして外部に公開し、サードパーティツールへのマウントが容易。
 - **MCP サービス**：Model Context Protocol のエンドポイントを提供し、AI アシスタントなどのクライアントから統合して呼び出し可能。
 
 ### 権限管理
 
-- **権限管理**：ロールベースのアクセス制御（RBAC）。ユーザーグループ、ディレクトリ単位の読み書き権限、クォータに対応。
-- **認証方式**：内蔵のアカウント／パスワードに加え、TOTP 認証、WebAuthn／FIDO ログイン、SSO シングルサインオン、LDAP ディレクトリ認証に対応。
-- **セキュリティ強化**：JWT セッション、CSRF 対策、クリックジャッキング対策（X-Frame-Options）、コンテンツセキュリティポリシー（CSP）。
-- **ヘルスチェック**：`/health` の生存プローブと `/healthz` の準備完了プローブを提供。監視やアラートに利用可能。
+- **権限管理**：3 つのロール（管理者 / 一般ユーザー / ゲスト）に加え、ディレクトリ単位の読み書き権限（メタデータの `read_users` / `write_users`。サブディレクトリも指定可）に対応。
+- **認証方式**：内蔵のアカウント／パスワードに加え、TOTP 認証、WebAuthn ログイン（パスキー。既定では無効で、設定で有効化が必要）、SSO シングルサインオン、LDAP ディレクトリ認証に対応。
+- **セキュリティ強化**：JWT セッション、同一オリジン CORS ポリシー（`ALLOW_URLS` で許可しない限り任意の Origin は返しません）、クリックジャッキング対策（`X-Frame-Options: DENY`）、コンテンツセキュリティポリシー（CSP）、HSTS。
+- **ヘルスチェック**：`/api/healthz` が準備完了プローブです。実際にストレージを 1 回読み、利用できない場合は 503 を返すため、監視・アラートにはこちらを使ってください。`/api/health` は生存マーカーにすぎず、ストレージの状態は反映しません。
 
 ### プラットフォームデプロイ
 
@@ -114,12 +114,12 @@ OpenList-Worker は公式の [OpenListTeam/OpenList](https://github.com/OpenList
 
 | | 公式 OpenList-Worker | 本プロジェクト |
 |---|---|---|
-| ストレージドライバー | 7 個 | 15 個、neon／turso／pgrest／pghttp／mysqlhttp／upstash／r2／s3 を新規追加 |
+| ストレージドライバー | 6 個 | 16 個、10 個を新規追加（`neon`、`turso`、`pgrest`、`pghttp`、`mysqlhttp`、`upstash`、`s3`、`r2`、`netlifyblobs`、`hyperdrive`）|
 | SQL 方言 | SQLite、MySQL | PostgreSQL を追加（$n プレースホルダーを含む） |
 | クラウドドライブドライバー | 78 個 | 81 個、`123_link`、`ilanzou`、`halalcloud` を補完 |
-| デプロイプラットフォーム | Cloudflare Workers、EdgeOne、ESA、Serverless | Vercel、Netlify、Node／Docker を追加 |
+| デプロイプラットフォーム | Cloudflare Workers、EdgeOne、ESA、Vercel、Serverless、Node／Docker | Netlify を追加し、EdgeOne / ESA / Vercel 向けのワンコマンドデプロイスクリプトも補完 |
 
-公式バージョンの `mysql` ドライバーは Node コンテナでのみ動作します——Cloudflare Workers には生 TCP がないため、エッジにデプロイするとプラットフォーム標準の KV しか使えません。本プロジェクトが新たに追加した 8 つのストレージドライバーはすべて `fetch` ベースで実装されているため、エッジランタイムでも外部データベースに接続でき、`DATABASE_URL` を 1 行入力するだけで済みます。
+公式バージョンの `mysql` ドライバーは Node コンテナでのみ動作します——Cloudflare Workers には生 TCP がないため、エッジにデプロイするとプラットフォーム標準の KV しか使えません。本プロジェクトが追加した 10 個のうち 8 個（`neon`、`turso`、`pgrest`、`pghttp`、`mysqlhttp`、`upstash`、`s3`、`netlifyblobs`）は HTTP 経由なので、エッジランタイムでも外部データベースに接続でき、`DATABASE_URL` を 1 行入力するだけで済みます。残り 2 つの方式は異なり、`r2` は Cloudflare のバケットバインディングを、`hyperdrive` は `mysql2` による TCP 直結を使うため Node 環境でのみ利用できます。
 
 詳細は [外部ストレージ設定ガイド](../docs/EXTERNAL_STORAGE.md) を参照してください。
 
@@ -206,9 +206,9 @@ pnpm run deploy:worker
 
 注意すべきいくつかの落とし穴があります（本プロジェクトではすでに対処済みですが、自分で設定を変更する際は留意してください）：
 
-- `edgeone.json` 内の `nodeVersion` はプラットフォームにあらかじめインストールされているバージョン（14.21.3／16.20.2／18.20.4／20.18.0／22.11.0／22.17.1／22.21.1／24.5.0／24.11.0／24.18.0）のいずれかでなければならず、それ以外を入力するとビルドに失敗します。本プロジェクトは `22.21.1` を使っています。このフィールドはコンソール側のプロジェクト設定を上書きします
+- `edgeone.json` の `nodeVersion` にはプラットフォームにプリインストールされたバージョンを指定します。公式ドキュメントに記載されているのは 14.21.3／16.20.2／18.20.4／20.18.0／22.11.0 の 5 つだけで、それ以外を指定するとビルドに失敗する可能性があります。本プロジェクトは `22.11.0` を使用します。フロントエンド取得時、`scripts/fetch-frontend.mjs` は上流が pin している pnpm 11 が Node ≥ 22.13 を要求することに気づき、自動的に pnpm 10 へフォールバックします。このフィールドはコンソール側のプロジェクト設定を上書きします
 - `maxDuration` は `cloudFunctions.nodejs` の中に書く必要があり、`cloudFunctions.maxDuration` と書いても効力を持ちません
-- フロントエンドのルーティングフォールバックはルートディレクトリの `middleware.js` が担当します。`edgeone.json` の `rewrites` は静的リソースに対してのみ有効であり、公式ドキュメントでもフロントエンドルーティングはサポートしていないと明記されているため、`/*` を追加するとかえって静的ファイルにマッチしてしまいます
+- フロントエンドのルーティングフォールバックはルートの `middleware.js` が担当するため、`edgeone.json` に `rewrites` は設定していません。Makers は現在 `{"source": "/*", "destination": "/index.html"}` による SPA フォールバックの宣言にも対応しています（通常のリライトではなく fallback として認識されます）が、同じフォールバックを 2 か所に書くと衝突しやすいため、本プロジェクトは `middleware.js` の 1 か所だけにしています
 - ストレージの検証に `*.edgeone.cool` のような一時ドメインを使用しないでください。このドメインには全サイト認証パラメーターが付与されており、エッジ関数とクラウド関数間の KV プロキシリクエストを遮断します。検証する前に必ずカスタムドメインをバインドしてください
 
 ワンクリックデプロイボタンを使いたくない場合は、Makers CLI も利用できます：
@@ -337,8 +337,8 @@ pnpm run deploy:vercel  -- --no-deploy --url https://あなたのドメイン
 
 ### フロントエンド
 
-- **フレームワーク**：React 19 + TypeScript
-- **UI ライブラリ**：Ant Design／Material-UI
+- **フレームワーク**：SolidJS + TypeScript
+- **UI ライブラリ**：Hope UI
 - **ビルドツール**：Vite
 
 > フロントエンドは本リポジトリにはなく、ビルド時に `scripts/fetch-frontend.mjs` によって公式リポジトリから取得されます。
@@ -427,6 +427,7 @@ DATABASE_URL=postgres://user:pass@ep-xxx.neon.tech/neondb
 | `HYPERDRIVE` | Cloudflare Hyperdrive の接続文字列。エッジから MySQL にアクセスできるようにします。`DB_DRIVER=hyperdrive` で使用します | Hyperdrive を使うならバインド |
 | `S3_BUCKET`、`S3_REGION`、`S3_ENDPOINT`、`S3_ACCESS_KEY_ID`、`S3_SECRET_ACCESS_KEY` | S3 互換オブジェクトストレージ（R2 / MinIO / B2 など）のバケット名とアクセス認証情報。`DB_DRIVER=s3` で使用します | S3 ストレージを使うなら 5 項目すべてを設定 |
 | `CF_ACCOUNT`、`CF_KV_UUID`、`CF_API_KEY` | Cloudflare REST API 経由で KV を読み書きする際の値。`DB_DRIVER=cfkv` で使用します。それぞれアカウント ID、KV 名前空間 ID、KV の読み書き権限を持つ API Token です | `cfkv` を使うなら 3 項目すべてを設定 |
+| `BUCKET` | Cloudflare R2 のバケットバインディング。`DB_DRIVER=r2` で使用します（`R2_BUCKET`／`OPENLIST_BUCKET`／`OPENLIST_R2` も可） | R2 を使うならバインドし、名前を `BUCKET` にする |
 
 ### その他の変数（たいていは設定不要）
 
@@ -464,6 +465,7 @@ DATABASE_URL=postgres://user:pass@ep-xxx.neon.tech/neondb
 | EdgeOne で KV が 401 を返す | Node クラウド関数と Edge Function の `JWT_SECRET` が一致していない（またはローテートされた）。両者で同じ値にするか、`EO_KV_URLS` を正しいデプロイ先のオリジンに向ける |
 | `Storage driver "mysql" is not available in this runtime` と報告される | エッジランタイムで `DB_DRIVER=mysql` を使用しているが、このドライバーは Node コンテナでのみ利用可能。`mysqlhttp` に変更する |
 | Supabase で 404 になる | `kv` テーブルが存在しない。まず `CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);` を実行する。なお Supabase は PostgREST 経由のため KV のみ対応で、`DB_FORMAT=sql` は使用できない |
+| 「オフラインダウンロード」で `capability unavailable` と表示される | このランタイムには永続化可能なオフラインダウンロードアダプターがなく、`/fs/add_offline_download` は 501 を返します。代わりに `/api/fs/seed/offline_download` を使用してください（先に `ALLOW_SEED` の許可リストを設定）。タスク一覧の再試行 / キャンセルも同様に 501 です |
 
 ---
 
