@@ -48,12 +48,45 @@ function detectPackageManager(dir) {
 }
 
 /**
- * 目标仓库锁定了独立的 pnpm 版本（packageManager 字段，如前端仓库 pnpm@11.24.0），
- * 用 npx 按精确版本执行。
+ * pnpm 各主版本要求的最低 Node 版本，取自 npm registry 上各版本的 engines.node。
+ * 校验过：11.20.0 / 11.22.0 / 11.23.0 / 11.24.0 / 11.25.0 均为 ">=22.13"；
+ * 10.34.5 与 9.x 为 ">=18.12"。上游改成新的主版本时，这里要跟着补。
+ */
+const PNPM_MIN_NODE = {
+  9: [18, 12, 0],
+  10: [18, 12, 0],
+  11: [22, 13, 0],
+}
+
+/**
+ * 当前 Node 跑不动上游 pin 的 pnpm 时改用的版本。
  *
- * 不走 corepack：旧版 Node（如 EdgeOne 构建环境的 22.11.0）自带的 corepack
- * 内置 npm 签名密钥已过期（2025-04 registry 密钥轮换），`corepack pnpm` 会报
- * "Cannot find matching keyid" 直接失败；npx 只经 npm 下载，无此问题。
+ * 选 10.x 而不是 9.x：上游前端的 pnpm-workspace.yaml 省略了 packages 字段，
+ * pnpm 9 会直接报 "packages field missing or empty"（pnpm 10 起才允许省略），
+ * 而 10.x 只要求 Node >= 18.12，能覆盖 EdgeOne 这类构建环境。
+ * 实测 pnpm@10.34.5 能解析上游的 lockfileVersion 9.0 与该 workspace 配置，
+ * lockfile 供应链校验也能通过。
+ */
+const FALLBACK_PNPM = "pnpm@10.34.5"
+
+/** 逐段比较 Node 版本号，a > b 返回正数，相等返回 0 */
+function compareNode(a, b) {
+  for (let i = 0; i < 3; i++) {
+    const diff = (a[i] ?? 0) - (b[i] ?? 0)
+    if (diff !== 0) return diff
+  }
+  return 0
+}
+
+/**
+ * 目标仓库锁定了独立的 pnpm 版本（packageManager 字段，如前端仓库 pnpm@11.25.0），
+ * 用 npx 按精确版本执行；当前 Node 低于该版本的要求时退回 FALLBACK_PNPM。
+ * 不退这一步的话，npx 会以 EBADENGINE 直接拒绝执行——EdgeOne 构建环境是
+ * Node 22.11.0，而 pnpm 11.x 要求 >= 22.13，整个构建就卡在前端拉取这一步。
+ *
+ * 不走 corepack：旧版 Node 自带的 corepack 内置 npm 签名密钥已过期
+ * （2025-04 registry 密钥轮换），`corepack pnpm` 会报 "Cannot find matching keyid"
+ * 直接失败；npx 只经 npm 下载，无此问题。
  */
 function resolvePmCommand(dir, pm) {
   if (pm !== "pnpm") return pm
@@ -65,7 +98,23 @@ function resolvePmCommand(dir, pm) {
   } catch {
     return pm
   }
-  return pinned?.startsWith("pnpm@") ? `npx -y ${pinned}` : pm
+  if (!pinned?.startsWith("pnpm@")) return pm
+
+  // corepack 的写法可能带 `+sha512.…` 后缀，npx 不认，需要截掉
+  const version = pinned.slice("pnpm@".length).split("+")[0]
+  const minNode = PNPM_MIN_NODE[Number.parseInt(version, 10)]
+  const current = process.versions.node.split(".").map(Number)
+
+  // 没登记的主版本（如上游升到 12）不拦，按仓库自己的 pin 走
+  if (!minNode || compareNode(current, minNode) >= 0) {
+    return `npx -y pnpm@${version}`
+  }
+  console.warn(
+    `  [fetch-frontend] pnpm@${version} requires Node >= ${minNode.join(".")}, ` +
+      `but this environment runs Node ${process.versions.node}; ` +
+      `falling back to ${FALLBACK_PNPM}`,
+  )
+  return `npx -y ${FALLBACK_PNPM}`
 }
 
 function requireDist(src) {

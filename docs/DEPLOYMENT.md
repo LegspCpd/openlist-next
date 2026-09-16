@@ -101,7 +101,10 @@ EdgeOne 的 Edge Functions 只注入 KV/Blob 给边缘函数，Node 云函数拿
 
    > **`edgeone.json` 的三个坑**（已在本项目中修正）：
    > - `nodeVersion` 必须是平台预装版本之一（14.21.3 / 16.20.2 / 18.20.4 /
-   >   20.18.0 / **22.11.0**），填别的版本号会构建失败；
+   >   20.18.0 / 22.11.0 / 22.17.1 / **22.21.1** / 24.5.0 / 24.11.0 / 24.18.0），
+   >   填别的版本号会构建失败。这个字段**覆盖控制台的项目设置**，想换版本只能改它。
+   >   本项目取 `22.21.1`：构建时 `scripts/fetch-frontend.mjs` 要按上游前端 pin 的
+   >   pnpm（11.x，要求 Node ≥ 22.13）安装前端，22.11.0 会直接报 EBADENGINE 卡住；
    > - `maxDuration` 必须嵌在 `cloudFunctions.nodejs` 下，写成
    >   `cloudFunctions.maxDuration` 不生效；
    > - SPA 路由回退由根目录 `middleware.js` 承担。`edgeone.json` 的 `rewrites`
