@@ -1,0 +1,111 @@
+name: Deploy Preflight
+
+# 部署前检查：把每个部署平台**实际会执行的入口**真编译一遍、真调用一次，
+# 并核对平台配置里写的路径是否真实存在。
+#
+# 为什么单独一条工作流：线上事故里「部署成功但打不开」占绝大多数，成因集中在
+# 三类 —— 平台配置指向的入口不存在、入口依赖解析不了、入口导出形状不符合平台
+# 约定。这三类都能在推送后 1 分钟内查出来，不必等部署完再猜。
+#
+# 覆盖的平台：
+#   - Cloudflare Workers / Pages（wrangler.jsonc）
+#   - Vercel（vercel.json）
+#   - Netlify（netlify.toml）
+#   - EdgeOne Makers（edgeone.json，含云函数产物是否在仓库里）
+#
+# 与 edgeone-artifact-guard 的分工：那条工作流负责「真构建并同步产物」，
+# 这条负责「按各平台入口做编译与调用检查」。两者互不替代。
+#
+# 本工作流只读代码与依赖，不写仓库文件（权限显式为 contents: read）。
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "api/**"
+      - "netlify/**"
+      - "functions/**"
+      - "cloud-functions/**"
+      - "wrangler.jsonc"
+      - "vercel.json"
+      - "netlify.toml"
+      - "edgeone.json"
+      - "serverless.yml"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "scripts/deploy-preflight.mjs"
+      - "scripts/secret-scan.mjs"
+      - "scripts/secret-scan.allow.json"
+      - ".github/workflows/deploy-preflight.yml"
+  pull_request:
+    paths:
+      - "src/**"
+      - "api/**"
+      - "netlify/**"
+      - "functions/**"
+      - "cloud-functions/**"
+      - "wrangler.jsonc"
+      - "vercel.json"
+      - "netlify.toml"
+      - "edgeone.json"
+      - "serverless.yml"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "scripts/deploy-preflight.mjs"
+      - "scripts/secret-scan.mjs"
+      - "scripts/secret-scan.allow.json"
+      - ".github/workflows/deploy-preflight.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-preflight-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    name: Compile and smoke-test every deploy entrypoint
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # 与各平台的安装命令保持一致（vercel.json / netlify.toml / edgeone.json
+      # 用的都是 --no-frozen-lockfile），这样这里装的依赖就是线上装的依赖。
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      # 被提交的凭据一旦推上来就已经泄露了（远端历史、部署产物都会带上），
+      # 所以这一步放在编译检查之前，先扫**被跟踪的文件**。
+      - name: Scan tracked files for committed secrets
+        run: node scripts/secret-scan.mjs
+
+      - name: Run deploy preflight
+        run: node scripts/deploy-preflight.mjs
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "### 部署前检查结果"
+            echo ""
+            echo "对 Cloudflare Workers、Vercel、Netlify、EdgeOne 四个平台的部署入口做了："
+            echo "配置解析与路径核对、esbuild 真编译、动态 import 并真发一个请求。"
+            echo ""
+            echo "另外扫描了被 git 跟踪的文件，确认没有提交进去的凭据。"
+            echo ""
+            echo "复现方式：\`pnpm install && node scripts/secret-scan.mjs && node scripts/deploy-preflight.mjs\`"
+          } >> "$GITHUB_STEP_SUMMARY"
