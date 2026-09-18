@@ -1,8 +1,8 @@
 <!--
 PR title / PR 标题:
 - Use Conventional Commits: `type(scope): summary`
-- Allowed types: `feat`, `docs`, `fix`, `style`, `refactor`, `chore`
-- Scope is required by the current PR title check.
+- Allowed types: `feat`, `docs`, `fix`, `style`, `refactor`, `chore`, `ci`
+- Include a scope whenever the change has one: `ci(workflows): ...`, `fix(vercel): ...`
 - For breaking changes, add `!`: `feat(driver)!: change auth flow`
 -->
 
@@ -27,13 +27,6 @@ Briefly describe what changed and why.
       / 此 PR 包含破坏性变更。
 - [ ] This PR changes public API, config, storage format, or migration behavior.
       / 此 PR 修改了公开 API、配置、存储格式或迁移行为。
-- [ ] This PR requires corresponding changes in related repositories.
-      / 此 PR 需要关联仓库同步修改。
-
-Related repository PRs / 关联仓库 PR:
-
-- OpenList:
-- OpenList-Docs:
 
 ## Related Issues / 关联 Issue
 
@@ -47,24 +40,33 @@ Remove this section if not applicable.
 ## Testing / 测试
 
 <!--
-Describe commands, platforms, and manual checks.
-If not tested, explain why.
+Which of these did you actually run? Leaving them unchecked is fine as long as the
+summary says which path was not verified.
 
-说明执行过的命令、测试平台和手动验证。
-如果未测试，请说明原因。
+这几条你实际跑了哪些？没跑也没关系，只要在摘要里说清哪条链路没验过。
+
+CI 会在每个 PR 上自动跑（无需本地准备）：
+  - Cloudflare  `wrangler deploy --dry-run`
+  - Netlify     `netlify build --offline`
+  - EdgeOne     产物是否与源码同步
+  - gitleaks    凭据泄露扫描
+Vercel 那条要等仓库配好三个 Secret 才会真正执行，未配置时会在摘要里明确写「未启用」。
 -->
 
-- [ ] `go test ./...`
+- [ ] `pnpm run lint`
+- [ ] `pnpm run build`
 - [ ] Manual test / 手动测试:
 
 ## Checklist / 检查清单
 
 - [ ] I have read [CONTRIBUTING](https://github.com/LegspCpd/openlist-next/blob/main/CONTRIBUTING.md).
-      / 我已阅读 [CONTRIBUTING](https://github.com/OpenListTeam/OpenList/blob/main/CONTRIBUTING.md)。
+      / 我已阅读 [CONTRIBUTING](https://github.com/LegspCpd/openlist-next/blob/main/CONTRIBUTING.md)。
 - [ ] I confirm this contribution follows the repository license, contribution policy, and code of conduct.
       / 我确认此贡献符合仓库许可证、贡献规范和行为准则。
-- [ ] I have formatted the changed code with `gofmt`, `go fmt`, or `prettier` where applicable.
-      / 我已按适用情况使用 `gofmt`、`go fmt` 或 `prettier` 格式化变更代码。
+- [ ] I have formatted the changed code with `pnpm run format` where applicable.
+      / 我已按适用情况用 `pnpm run format` 格式化变更代码。
+- [ ] If this PR touches `src/**`, `api/**` or the build scripts, `cloud-functions/[[default]].js` is rebuilt and committed in this PR.
+      / 如此 PR 改动 `src/**`、`api/**` 或构建脚本，已在本次 PR 内重建并提交 `cloud-functions/[[default]].js`。
 - [ ] I have requested review from relevant maintainers or code owners where applicable.
       / 我已在适用情况下请求相关维护者或代码所有者审查。
 
@@ -108,7 +110,10 @@ Usage scope / 使用范围:
 
 - [ ] I have reviewed and validated all AI-assisted content included in this PR.
       / 我已审核并验证此 PR 中的所有 AI 辅助内容。
-- [ ] I have ensured that all AI-assisted commits include `Co-Authored-By` attribution.
-      / 我已确保所有 AI 辅助提交都包含 `Co-Authored-By` 归属信息。
 - [ ] I can reproduce all AI-assisted content included in this PR without any AI tools.
       / 我可以在没有任何 AI 工具的情况下重现此 PR 中包含的所有 AI 辅助内容。
+
+<!--
+本仓库的提交不加 `Co-Authored-By` 归属行 —— 提交的 author 就是贡献者本人。
+This repository does not use `Co-Authored-By` lines; the author of a commit is its contributor.
+-->
