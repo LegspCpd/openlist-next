@@ -78,12 +78,12 @@ It ships with **81 storage drivers** and mounts various storage backends out of 
 
 - **Domestic cloud drives**: Alibaba Cloud Drive (Open Platform / Share), Quark Cloud Drive (Open Platform / UC TV), Baidu Netdisk (Albums), 115 Cloud Drive (Open Platform / Share), 123 Cloud Drive (Open Platform / Share), Tianyi Cloud (189 / PC / TV), China Mobile Cloud (139 / Hecaiyun), Wo Home Cloud, Xunlei Cloud Drive, Tencent Weiyun, Lanzo Cloud, PikPak (Share), Doubao Cloud Drive, Guangya Cloud, Chaoxing Group Cloud, Lenovo NAS Share, Teambition Cloud, WPS Cloud, Alibaba Docs, HalalCloud, MediaTrack, etc.
 - **International cloud drives**: Google Drive (Albums), OneDrive (App / Share Link), Dropbox, MEGA, MediaFire, Proton Drive, Yandex Disk, Degoo, Bunny Storage, TeraBox, etc.
-- **Object storage**: S3-compatible (AWS / OSS / COS / MinIO, etc.), UpYun USS, Azure Blob, WebDAV, FTP, SFTP, SMB, IPFS, etc.
+- **Object storage**: S3-compatible (AWS / OSS / COS / MinIO, etc.), UpYun USS, Azure Blob, WebDAV, IPFS, etc.
 - **Code hosting**: GitHub, GitHub Releases, CNB Releases
 - **Cloud drive software**: OpenList (Share), AList V3, Cloudreve V3/V4, Kodbox (Kodcloud), Seafile, Teldrive, Febbox, etc.
 - **Other drivers**: NetEase Cloud Music, Misskey, Emby, Cloudflare image hosting, etc.
 
-In addition to the real storages above, it also provides virtual/functional drivers such as `Local`, `Alias`, `UrlTree`, `AutoIndex`, `Strm`, `Crypt`, `Virtual`, `Chunk`, which can be used for local mounting, address aliasing, URL listing, encrypted storage, and chunking.
+In addition to the real storages above, it also provides virtual/functional drivers such as `Alias`, `UrlTree`, `AutoIndex`, `Strm`, `Crypt`, `Virtual`, `Chunk`, which can be used for address aliasing, URL listing, encrypted storage, and chunking.
 
 ### Core Capabilities
 

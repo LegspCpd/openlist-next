@@ -78,12 +78,12 @@ OpenList-Worker は公式の [OpenListTeam/OpenList](https://github.com/OpenList
 
 - **国内クラウドストレージ**：Alibaba Cloud Drive（オープンプラットフォーム／共有）、Quark クラウドドライブ（オープンプラットフォーム／UC TV 版）、Baidu クラウドドライブ（アルバム）、115 クラウドドライブ（オープンプラットフォーム／共有）、123 クラウドドライブ（オープンプラットフォーム／共有）、Tianyi クラウドドライブ（189／PC／TV）、China Mobile クラウドドライブ（139／Hecaiyun）、Woja クラウドドライブ、Xunlei クラウドドライブ、Tencent Weiyun、Lanzou、PikPak（共有）、Doubao クラウドドライブ、Guangya ドライブ、Chaoxing グループクラウドドライブ、Lenovo NAS 共有、Teambition クラウドドライブ、WPS クラウドドライブ、Ali ドキュメント、HalalCloud、MediaTrack など
 - **海外クラウドストレージ**：Google Drive（アルバム）、OneDrive（アプリ／共有リンク）、Dropbox、MEGA、MediaFire、Proton Drive、Yandex Disk、Degoo、Bunny Storage、TeraBox など
-- **オブジェクトストレージ**：S3 互換（AWS／OSS／COS／MinIO など）、UPYUN USS、Azure Blob、WebDAV、FTP、SFTP、SMB、IPFS など
+- **オブジェクトストレージ**：S3 互換（AWS／OSS／COS／MinIO など）、UPYUN USS、Azure Blob、WebDAV、IPFS など
 - **コードホスティング**：GitHub、GitHub Releases、CNB Releases
 - **クラウドドライブソフトウェア**：OpenList（共有）、AList V3、Cloudreve V3／V4、Kodbox（可道雲）、Seafile、Teldrive、Febbox など
 - **その他のドライバー**：NetEase Cloud Music、Misskey、Emby、Cloudflare 画像ホスティングなど
 
-上記の実ストレージに加え、`Local`、`Alias`、`UrlTree`、`AutoIndex`、`Strm`、`Crypt`、`Virtual`、`Chunk` といった仮想／機能型ドライバーも用意されており、ローカルマウント、アドレスの別名、URL リスト、暗号化ストレージ、チャンク分割などのシナリオに利用できます。
+上記の実ストレージに加え、`Alias`、`UrlTree`、`AutoIndex`、`Strm`、`Crypt`、`Virtual`、`Chunk` といった仮想／機能型ドライバーも用意されており、アドレスの別名、URL リスト、暗号化ストレージ、チャンク分割などのシナリオに利用できます。
 
 ### コア機能
 
