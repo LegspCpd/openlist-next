@@ -1,0 +1,518 @@
+{
+  "drivers.json": {
+    "AliyundriveOpen": {
+      "chunk_size": "Chunk size",
+      "drive_id": "Drive ID",
+      "alipan_types": {
+        "alipanQR": "Aliyun Drive QR code"
+      }
+    },
+    "Onedrive": {
+      "order_by": "Order by",
+      "order_direction": "Order direction",
+      "order_bys": {
+        "filename": "Filename",
+        "size": "Size",
+        "modified_time": "Modified time"
+      },
+      "order_directions": {
+        "asc": "Asc",
+        "desc": "Desc"
+      }
+    },
+    "OnedriveAPP": {
+      "order_by": "Order by",
+      "order_direction": "Order direction",
+      "order_bys": {
+        "filename": "Filename",
+        "size": "Size",
+        "modified_time": "Modified time"
+      },
+      "order_directions": {
+        "asc": "Asc",
+        "desc": "Desc"
+      }
+    },
+    "Quark": {
+      "variant": "Variant",
+      "variants": {
+        "Quark": "Quark",
+        "UC": "UC"
+      }
+    },
+    "123Pan": {
+      "access_token": "Access token",
+      "cookie": "Cookie",
+      "upload_thread": "Upload thread",
+      "order_by": "Order by",
+      "order_direction": "Order direction",
+      "order_bys": {
+        "file_name": "File name",
+        "size": "Size",
+        "created_at": "Created at",
+        "updated_at": "Updated at",
+        "file_id": "File ID"
+      },
+      "order_directions": {
+        "asc": "Asc",
+        "desc": "Desc"
+      },
+      "root_id": "Root ID",
+      "access_token-tips": "Login token (optional, saved automatically). You only need to fill in the 123Pan phone number and password above; the token is obtained and saved after login, so repeated logins are skipped and risk control on overseas IPs is avoided.",
+      "cookie-tips": "Browser cookie (optional). After logging in to 123Pan in the browser, copy the whole Cookie header value (including sso-token), or copy the token/Bearer value from Authorization: Bearer <token>. The JWT inside is used as a Bearer token — the same effect as an access token, which helps when password login is blocked by risk control.",
+      "upload_thread-tips": "Number of concurrent upload threads"
+    },
+    "BaiduNetdisk": {
+      "access_token": "Access token",
+      "access_token-tips": "Access token (required). Get it from https://api.oplist.org/. If it expires, the driver gets a new one through the online API with the refresh token and saves it.",
+      "use_online_api-tips": "Refresh the token through the online API (no ClientID / ClientSecret needed)"
+    },
+    "GitHub API": {
+      "order_by": "Order by",
+      "order_direction": "Order direction",
+      "order_bys": {
+        "name": "Name",
+        "size": "Size",
+        "modified": "Modified"
+      },
+      "order_directions": {
+        "asc": "Asc",
+        "desc": "Desc"
+      }
+    },
+    "Thunder": {
+      "order_by": "Order by",
+      "order_direction": "Order direction",
+      "client_id": "Client id",
+      "client_secret": "Client secret",
+      "order_bys": {
+        "name": "Name",
+        "size": "Size",
+        "modified": "Modified"
+      },
+      "order_directions": {
+        "asc": "Asc",
+        "desc": "Desc"
+      },
+      "device_id-tips": "32 hex characters"
+    },
+    "ThunderExpert": {
+      "order_by": "Order by",
+      "order_direction": "Order direction",
+      "order_bys": {
+        "name": "Name",
+        "size": "Size",
+        "modified": "Modified"
+      },
+      "order_directions": {
+        "asc": "Asc",
+        "desc": "Desc"
+      },
+      "client_id-tips": "Thunder open platform OAuth client_id (required)",
+      "client_secret-tips": "Thunder open platform OAuth client_secret (required)"
+    },
+    "189Cloud": {
+      "order_by": "Order by",
+      "order_direction": "Order direction",
+      "order_bys": {
+        "lastOpTime": "LastOpTime",
+        "filename": "Filename",
+        "fileSize": "FileSize"
+      },
+      "order_directions": {
+        "desc": "Desc",
+        "asc": "Asc"
+      },
+      "username-tips": "The phone number used to log in",
+      "password-tips": "Password used to log in",
+      "root_folder_id-tips": "Root folder ID, default -11 (personal cloud root)"
+    },
+    "Lanzou": {
+      "order_by": "Order by",
+      "order_direction": "Order direction",
+      "order_bys": {
+        "name": "Name",
+        "size": "Size",
+        "time": "Time"
+      },
+      "order_directions": {
+        "asc": "Asc",
+        "desc": "Desc"
+      },
+      "account-tips": "Account (phone number / UID), only needed in account mode",
+      "password-tips": "Password, only needed in account mode",
+      "root_folder_id-tips": "Root folder ID / share ID (use -1 for your own drive, or the share ID such as b00xxxx for a share link)",
+      "share_password-tips": "Share password (leave empty if the share has none)",
+      "user_agent-tips": "Client User-Agent sent to the Lanzou API and used when resolving direct links"
+    },
+    "WebDav": {
+      "order_by": "Order by",
+      "order_direction": "Order direction",
+      "order_bys": {
+        "name": "Name",
+        "size": "Size",
+        "modified": "Modified"
+      },
+      "order_directions": {
+        "asc": "Asc",
+        "desc": "Desc"
+      }
+    },
+    "WoPan": {
+      "order_by": "Order by",
+      "order_direction": "Order direction",
+      "order_bys": {
+        "name": "Name",
+        "size": "Size",
+        "modified": "Modified"
+      },
+      "order_directions": {
+        "asc": "Asc",
+        "desc": "Desc"
+      }
+    },
+    "S3": {
+      "order_by": "Order by",
+      "order_direction": "Order direction",
+      "order_bys": {
+        "name": "Name",
+        "size": "Size",
+        "modified": "Modified"
+      },
+      "order_directions": {
+        "asc": "Asc",
+        "desc": "Desc"
+      }
+    },
+    "Doge": {
+      "order_by": "Order by",
+      "order_direction": "Order direction",
+      "order_bys": {
+        "name": "Name",
+        "size": "Size",
+        "modified": "Modified"
+      },
+      "order_directions": {
+        "asc": "Asc",
+        "desc": "Desc"
+      }
+    },
+    "PikPak": {
+      "order_by": "Order by",
+      "order_direction": "Order direction",
+      "client_id": "Client id",
+      "client_secret": "Client secret",
+      "order_bys": {
+        "name": "Name",
+        "size": "Size",
+        "modified": "Modified"
+      },
+      "order_directions": {
+        "asc": "Asc",
+        "desc": "Desc"
+      }
+    },
+    "Seafile": {
+      "repo_id": "RepoId",
+      "repo_pwd": "RepoPwd",
+      "order_by": "Order by",
+      "order_direction": "Order direction",
+      "order_bys": {
+        "name": "Name",
+        "size": "Size",
+        "modified": "Modified"
+      },
+      "order_directions": {
+        "asc": "Asc",
+        "desc": "Desc"
+      }
+    },
+    "Alias": {
+      "order_by": "Order by",
+      "order_direction": "Order direction",
+      "order_bys": {
+        "name": "Name",
+        "size": "Size",
+        "modified": "Modified"
+      },
+      "order_directions": {
+        "asc": "Asc",
+        "desc": "Desc"
+      },
+      "paths-tips": "Newline-separated list of paths, e.g. /local or sub:/target"
+    },
+    "Dropbox": {
+      "order_by": "Order by",
+      "order_direction": "Order direction",
+      "access_token": "Access token",
+      "order_bys": {
+        "name": "Name",
+        "size": "Size",
+        "modified": "Modified"
+      },
+      "order_directions": {
+        "asc": "Asc",
+        "desc": "Desc"
+      },
+      "root_namespace_id": "RootNamespaceId"
+    },
+    "WPS": {
+      "order_by": "Order by",
+      "order_direction": "Order direction",
+      "order_bys": {
+        "name": "Name",
+        "size": "Size",
+        "modified": "Modified"
+      },
+      "order_directions": {
+        "asc": "Asc",
+        "desc": "Desc"
+      }
+    },
+    "139Yun": {
+      "order_by": "Order by",
+      "order_direction": "Order direction",
+      "order_bys": {
+        "name": "Name",
+        "size": "Size",
+        "modified": "Modified"
+      },
+      "order_directions": {
+        "asc": "Asc",
+        "desc": "Desc"
+      }
+    },
+    "Mega_nz": {
+      "order_by": "Order by",
+      "order_direction": "Order direction",
+      "root_folder_id": "Root folder id",
+      "order_bys": {
+        "name": "Name",
+        "size": "Size",
+        "modified": "Modified"
+      },
+      "order_directions": {
+        "asc": "Asc",
+        "desc": "Desc"
+      }
+    },
+    "115 Share": {
+      "order_by": "Order by",
+      "order_direction": "Order direction",
+      "order_bys": {
+        "name": "Name",
+        "size": "Size",
+        "modified": "Modified"
+      },
+      "order_directions": {
+        "asc": "Asc",
+        "desc": "Desc"
+      }
+    },
+    "123PanShare": {
+      "order_by": "Order by",
+      "order_direction": "Order direction",
+      "order_bys": {
+        "name": "Name",
+        "size": "Size",
+        "modified": "Modified"
+      },
+      "order_directions": {
+        "asc": "Asc",
+        "desc": "Desc"
+      }
+    },
+    "Onedrive Sharelink": {
+      "order_by": "Order by",
+      "order_direction": "Order direction",
+      "order_bys": {
+        "name": "Name",
+        "size": "Size",
+        "modified": "Modified"
+      },
+      "order_directions": {
+        "asc": "Asc",
+        "desc": "Desc"
+      }
+    },
+    "PikPakShare": {
+      "order_by": "Order by",
+      "order_direction": "Order direction",
+      "order_bys": {
+        "name": "Name",
+        "size": "Size",
+        "modified": "Modified"
+      },
+      "order_directions": {
+        "asc": "Asc",
+        "desc": "Desc"
+      }
+    },
+    "SMB": {
+      "order_by": "Order by",
+      "order_direction": "Order direction",
+      "order_bys": {
+        "name": "Name",
+        "size": "Size",
+        "modified": "Modified"
+      },
+      "order_directions": {
+        "asc": "Asc",
+        "desc": "Desc"
+      },
+      "port": "Port",
+      "domain": "Domain"
+    },
+    "UrlTree": {
+      "root_folder_path": "Root folder path",
+      "writable-tips": "Allow adding, changing and deleting entries in the file tree (changes are saved back to url_structure)"
+    },
+    "Strm": {
+      "root_folder_path": "Root folder path",
+      "paths-tips": "Path mapping, one per line: virtual name:underlying path (e.g. movies:/aliyundrive/movies), or just the underlying path"
+    },
+    "cloudflare_imgbed": {
+      "small_channel_name": "SmallChannelName",
+      "large_channel_name": "LargeChannelName",
+      "large_channel_type": "LargeChannelType",
+      "upload_thread": "Upload thread"
+    },
+    "GuangYaPan": {
+      "root_folder_path": "Root folder path"
+    },
+    "ProtonDrive": {
+      "reusable_credential": "Reusable credential",
+      "email-tips": "Proton account email",
+      "password-tips": "Proton account password",
+      "two_fa_code-tips": "Two-factor code (if 2FA is enabled)",
+      "root_folder_id-tips": "Root folder LinkID; the default root means the main shared root folder",
+      "chunk_size-tips": "Chunk size (MB)"
+    },
+    "ILanZou": {
+      "token": "Token",
+      "root_id": "Root ID",
+      "uuid": "UUID",
+      "ip-tips": "Optional, used for X-Forwarded-For",
+      "token-tips": "Login token (saved automatically, no need to fill in)",
+      "uuid-tips": "Device UUID (obtained and saved on first initialization)"
+    },
+    "123 Open": {
+      "client_id": "Client id",
+      "client_secret": "Client secret",
+      "access_token": "Access token",
+      "refresh_token": "Refresh token"
+    },
+    "189CloudPC": {
+      "device_id": "Device id",
+      "captcha_mode": "Captcha mode",
+      "session_key": "Session key",
+      "session_secret": "Session secret"
+    },
+    "FebBox": {
+      "refresh_token": "Refresh token"
+    },
+    "HalalCloudOpen": {
+      "root_folder_id": "Root folder id"
+    },
+    "IPFS API": {
+      "root_path": "Root path"
+    },
+    "KodBox": {
+      "root_path": "Root path"
+    },
+    "LenovoNasShare": {
+      "root_path": "Root path"
+    },
+    "Misskey": {
+      "root_path": "Root path"
+    },
+    "OpenList": {
+      "root_path": "Root path"
+    },
+    "QuarkTV": {
+      "variant": "Variant",
+      "variants": {
+        "quark": "Quark",
+        "uc": "UC"
+      }
+    },
+    "Teldrive": {
+      "access_token": "Access token",
+      "root_path": "Root path"
+    },
+    "UCTV": {
+      "variant": "Variant",
+      "variants": {
+        "quark": "Quark",
+        "uc": "UC"
+      }
+    },
+    "GoogleDrive": {
+      "order_bys": {
+        "name": "Name",
+        "folder": "Folder",
+        "modifiedTime desc": "Modified time (desc)"
+      }
+    },
+    "115 Open": {
+      "root_id": "Root ID",
+      "access_token-tips": "Access token (required). Get it from the 115 open platform; when it expires it is refreshed with refresh_token and saved automatically.",
+      "refresh_token-tips": "Refresh token (required). Get it from the 115 open platform; it is used to refresh access_token automatically.",
+      "root_id-tips": "Root folder ID, default 0 (the root directory)"
+    },
+    "SFTP": {
+      "address-tips": "SSH host:port (e.g. 127.0.0.1:22)",
+      "ignore_symlink_error-tips": "Ignore symlink error"
+    },
+    "FTP": {
+      "address-tips": "FTP host:port (e.g. 127.0.0.1:21)",
+      "encoding-tips": "Character encoding, e.g. utf-8, gbk, gb2312"
+    },
+    "Crypt": {
+      "filename_encryption-tips": "File name encryption mode. Currently only off is supported (file names are not encrypted, only contents)"
+    },
+    "Virtual": {
+      "num_file-tips": "Number of placeholder files generated in each directory",
+      "num_folder-tips": "Number of placeholder directories generated in each directory",
+      "max_file_size-tips": "Maximum size of a placeholder file, in bytes",
+      "min_file_size-tips": "Minimum size of a placeholder file, in bytes"
+    },
+    "AList V3": {
+      "url-tips": "Address of another OpenList / AList instance, e.g. https://example.com",
+      "token-tips": "Access token (optional, saved automatically, no need to fill in)"
+    },
+    "USS": {
+      "endpoint-tips": "Download domain (may include the scheme)",
+      "anti_theft_chain_token-tips": "Anti-leech token (leave empty to use the operator password)",
+      "sign_url_expire-tips": "Link validity period (hours)"
+    },
+    "AliDoc": {
+      "root_folder_id-tips": "Root dentryUuid"
+    },
+    "Emby": {
+      "url-tips": "Emby server address, e.g. http://localhost:8096",
+      "root_folder_id-tips": "Root folder ID, default 1"
+    },
+    "Bunny Storage": {
+      "sign_url_expire-tips": "Link validity period (hours)"
+    },
+    "AutoIndex": {
+      "url-tips": "AutoIndex directory page URL"
+    },
+    "123PanLink": {
+      "private_key-tips": "Signing private key for 123Pan direct links (leave empty to pass through the raw URL)",
+      "uid-tips": "123Pan user ID (used in the auth_key signature)"
+    }
+  },
+  "storages.json": {
+    "common": {
+      "seed_policys": {
+        "off": "Off",
+        "inherit": "Inherit",
+        "on": "On"
+      },
+      "seed_policy": "Seed policy",
+      "seed_policy-tips": "Override automatic transfer-seed generation for this storage"
+    }
+  }
+}

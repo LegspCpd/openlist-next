@@ -74,7 +74,7 @@ OpenList-Worker 是官方 [OpenListTeam/OpenList](https://github.com/OpenListTea
 
 ### 存储聚合
 
-内置 **81 个存储驱动**，开箱即用地挂载各类存储后端：
+内置 **80 个存储驱动**，开箱即用地挂载各类存储后端：
 
 - **国内网盘**：阿里云盘（开放平台/分享）、夸克网盘（开放平台/UC TV 版）、百度网盘（相册）、115 网盘（开放平台/分享）、123 云盘（开放平台/分享）、天翼云盘（189/PC/TV）、中国移动云盘（139/和彩云）、沃家云盘、迅雷云盘、腾讯微云、蓝奏云、PikPak（分享）、豆包网盘、光亚盘、超星小组网盘、联想 NAS 分享、Teambition 网盘、WPS 网盘、阿里文档、HalalCloud、MediaTrack 等
 - **国际网盘**：Google Drive（相册）、OneDrive（应用/分享链接）、Dropbox、MEGA、MediaFire、Proton Drive、Yandex Disk、Degoo、Bunny Storage、TeraBox 等
@@ -116,7 +116,7 @@ OpenList-Worker 是官方 [OpenListTeam/OpenList](https://github.com/OpenListTea
 |---|---|---|
 | 存储驱动 | 6 个 | 16 个，新增 10 个（`neon`、`turso`、`pgrest`、`pghttp`、`mysqlhttp`、`upstash`、`s3`、`r2`、`netlifyblobs`、`hyperdrive`）|
 | SQL 方言 | SQLite、MySQL | 增加 PostgreSQL（含 `$n` 占位符） |
-| 网盘驱动 | 78 个 | 81 个，补齐 `123_link`、`ilanzou`、`halalcloud` |
+| 网盘驱动 | 78 个 | 80 个，补齐 `123_link`、`ilanzou`、`halalcloud`；移除了只在本地文件系统上才有意义的 `Local` |
 | 部署平台 | Cloudflare Workers、EdgeOne、ESA、Vercel、Serverless、Node/Docker | 新增 Netlify，并为 EdgeOne / ESA / Vercel 补了一键部署脚本 |
 
 官方版本里的 `mysql` 驱动只能跑在 Node 容器中——Cloudflare Workers 没有裸 TCP，部署到边缘就只能用平台自带的 KV。本项目新增的 10 个驱动里，`neon`、`turso`、`pgrest`、`pghttp`、`mysqlhttp`、`upstash`、`s3`、`netlifyblobs` 这 8 个走 HTTP，所以在边缘运行时也能连外部数据库，填一条 `DATABASE_URL` 就行；另外两个里 `r2` 用的是 Cloudflare 的存储桶绑定，`hyperdrive` 靠 `mysql2` 直连 TCP，只在 Node 环境可用。

@@ -1,32 +1,138 @@
 [
-  { "pattern": "drivers.json::drivers.*", "why": "驱动显示名，全是产品名（S3/Dropbox/Emby/115/PikPak…），中文界面同样保留原名" },
-  { "pattern": "drivers.json::*.cookie", "why": "表单字段名 Cookie，中文界面按惯例保留原文" },
-  { "pattern": "drivers.json::Crypt.filename_encodings.*", "why": "加密文件名编码名，Base32 / Base64 是标准写法" },
-  { "pattern": "drivers.json::Doge.list_object_versions.*", "why": "S3 接口版本标识 V1 / V2" },
-  { "pattern": "drivers.json::S3.list_object_versions.*", "why": "S3 接口版本标识 V1 / V2" },
-  { "pattern": "drivers.json::AliyundriveOpen.livp_download_formats.*", "why": "媒体容器格式名 Jpeg / Mov" },
-  { "pattern": "drivers.json::AutoIndex.url", "why": "URL 为通用技术缩写" },
-  { "pattern": "drivers.json::GitHub API.ref", "why": "Git 术语 Ref（分支/标签引用）" },
-  { "pattern": "drivers.json::Teldrive.cookie-tips", "why": "本身就是示例值 access_token=xxx，不是说明文字" },
-  { "pattern": "drivers.json::cloudflare_imgbed.largeChannelTypes.discord", "why": "渠道名，产品名" },
-  { "pattern": "drivers.json::cloudflare_imgbed.largeChannelTypes.s3", "why": "渠道名，产品名" },
-  { "pattern": "drivers.json::cloudflare_imgbed.largeChannelTypes.telegram", "why": "渠道名，产品名" },
-  { "pattern": "home.json::preview.tr-install", "why": "TrollStore，iOS 侧载商店名" },
-  { "pattern": "manage.json::sidemenu.ldap", "why": "LDAP，目录服务协议名" },
-  { "pattern": "manage.json::sidemenu.ftp", "why": "FTP，传输协议名" },
-  { "pattern": "settings.json::search_indexs.bleve", "why": "Bleve，搜索引擎产品名" },
-  { "pattern": "settings.json::search_indexs.meilisearch", "why": "Meilisearch，搜索引擎产品名" },
-  { "pattern": "settings.json::sso_login_platforms.Casdoor", "why": "Casdoor，SSO 产品名" },
-  { "pattern": "settings.json::sso_login_platforms.OIDC", "why": "OIDC，认证协议名" },
-  { "pattern": "settings_other.json::115", "why": "网盘服务名" },
-  { "pattern": "settings_other.json::aria2", "why": "下载器产品名" },
-  { "pattern": "settings_other.json::qbittorrent", "why": "下载器产品名" },
-  { "pattern": "settings_other.json::transmission", "why": "下载器产品名" },
-  { "pattern": "settings_other.json::115_open", "why": "网盘服务名 115 Open" },
-  { "pattern": "settings_other.json::123_pan", "why": "网盘服务名 123Pan" },
-  { "pattern": "settings_other.json::123_open", "why": "网盘服务名 123 Open" },
-  { "pattern": "settings_other.json::pikpak", "why": "网盘服务名" },
-  { "pattern": "settings_other.json::thunderx", "why": "下载器产品名 ThunderX" },
-  { "pattern": "shares.json::id", "why": "ID 为通用技术缩写，中文界面保留原文" },
-  { "pattern": "users.json::webauthn", "why": "WebAuthn，认证标准名" }
+  {
+    "pattern": "drivers.json::*.cookie",
+    "why": "表单字段名 Cookie，中文界面按惯例保留原文"
+  },
+  {
+    "pattern": "drivers.json::AliyundriveOpen.livp_download_formats.*",
+    "why": "媒体容器格式名 Jpeg / Mov"
+  },
+  {
+    "pattern": "drivers.json::AutoIndex.url",
+    "why": "URL 为通用技术缩写"
+  },
+  {
+    "pattern": "drivers.json::cloudflare_imgbed.largeChannelTypes.discord",
+    "why": "渠道名，产品名"
+  },
+  {
+    "pattern": "drivers.json::cloudflare_imgbed.largeChannelTypes.s3",
+    "why": "渠道名，产品名"
+  },
+  {
+    "pattern": "drivers.json::cloudflare_imgbed.largeChannelTypes.telegram",
+    "why": "渠道名，产品名"
+  },
+  {
+    "pattern": "drivers.json::Crypt.filename_encodings.*",
+    "why": "加密文件名编码名，Base32 / Base64 是标准写法"
+  },
+  {
+    "pattern": "drivers.json::Doge.list_object_versions.*",
+    "why": "S3 接口版本标识 V1 / V2"
+  },
+  {
+    "pattern": "drivers.json::drivers.*",
+    "why": "驱动显示名，全是产品名（S3/Dropbox/Emby/115/PikPak…），中文界面同样保留原名"
+  },
+  {
+    "pattern": "drivers.json::GitHub API.ref",
+    "why": "Git 术语 Ref（分支/标签引用）"
+  },
+  {
+    "pattern": "drivers.json::ILanZou.uuid",
+    "why": "UUID，技术缩写，中文界面保留原文"
+  },
+  {
+    "pattern": "drivers.json::Quark.variants.UC",
+    "why": "UC，网盘服务名"
+  },
+  {
+    "pattern": "drivers.json::QuarkTV.variants.uc",
+    "why": "UC，网盘服务名"
+  },
+  {
+    "pattern": "drivers.json::S3.list_object_versions.*",
+    "why": "S3 接口版本标识 V1 / V2"
+  },
+  {
+    "pattern": "drivers.json::Teldrive.cookie-tips",
+    "why": "本身就是示例值 access_token=xxx，不是说明文字"
+  },
+  {
+    "pattern": "drivers.json::UCTV.variants.uc",
+    "why": "UC，网盘服务名"
+  },
+  {
+    "pattern": "home.json::preview.tr-install",
+    "why": "TrollStore，iOS 侧载商店名"
+  },
+  {
+    "pattern": "manage.json::sidemenu.ftp",
+    "why": "FTP，传输协议名"
+  },
+  {
+    "pattern": "manage.json::sidemenu.ldap",
+    "why": "LDAP，目录服务协议名"
+  },
+  {
+    "pattern": "settings_other.json::115",
+    "why": "网盘服务名"
+  },
+  {
+    "pattern": "settings_other.json::115_open",
+    "why": "网盘服务名 115 Open"
+  },
+  {
+    "pattern": "settings_other.json::123_open",
+    "why": "网盘服务名 123 Open"
+  },
+  {
+    "pattern": "settings_other.json::123_pan",
+    "why": "网盘服务名 123Pan"
+  },
+  {
+    "pattern": "settings_other.json::aria2",
+    "why": "下载器产品名"
+  },
+  {
+    "pattern": "settings_other.json::pikpak",
+    "why": "网盘服务名"
+  },
+  {
+    "pattern": "settings_other.json::qbittorrent",
+    "why": "下载器产品名"
+  },
+  {
+    "pattern": "settings_other.json::thunderx",
+    "why": "下载器产品名 ThunderX"
+  },
+  {
+    "pattern": "settings_other.json::transmission",
+    "why": "下载器产品名"
+  },
+  {
+    "pattern": "settings.json::search_indexs.bleve",
+    "why": "Bleve，搜索引擎产品名"
+  },
+  {
+    "pattern": "settings.json::search_indexs.meilisearch",
+    "why": "Meilisearch，搜索引擎产品名"
+  },
+  {
+    "pattern": "settings.json::sso_login_platforms.Casdoor",
+    "why": "Casdoor，SSO 产品名"
+  },
+  {
+    "pattern": "settings.json::sso_login_platforms.OIDC",
+    "why": "OIDC，认证协议名"
+  },
+  {
+    "pattern": "shares.json::id",
+    "why": "ID 为通用技术缩写，中文界面保留原文"
+  },
+  {
+    "pattern": "users.json::webauthn",
+    "why": "WebAuthn，认证标准名"
+  }
 ]

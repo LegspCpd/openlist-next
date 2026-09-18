@@ -59,10 +59,22 @@
       "per_page-tips": "每页获取的发布版本数量（最大 100），仅在「显示所有版本」时生效"
     },
     "139Yun": {
-      "link_id": "分享链接 ID"
+      "link_id": "分享链接 ID",
+      "order_by": "排序依据",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名称",
+        "size": "大小",
+        "modified": "修改时间"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
     },
     "AliDoc": {
-      "root_folder_id": "根文件夹 ID"
+      "root_folder_id": "根文件夹 ID",
+      "root_folder_id-tips": "根目录 dentryUuid"
     },
     "GuangYaPan": {
       "captcha_token": "验证码令牌",
@@ -71,18 +83,512 @@
       "device_sign-tips": "可选自定义的 X-Device-Sign 请求头（留空时从 device_id 生成）",
       "order_by-tips": "文件列表使用的排序字段",
       "sort_type-tips": "文件列表使用的排序方向",
-      "send_code-tips": "打开开关并保存以发送短信验证码，发送后自动关闭"
+      "send_code-tips": "打开开关并保存以发送短信验证码，发送后自动关闭",
+      "root_folder_path": "根文件夹路径"
     },
     "cloudflare_imgbed": {
       "address-tips": "图床服务的后端 API 地址，例如 https://img.example.com",
       "smallChannelName-tips": "普通文件的渠道名称（通常 <20MB）",
       "largeChannelType-tips": "大文件渠道类型：Hugging Face（直接上传）、Telegram/Cloudflare R2/S3/Discord（分片上传）",
-      "uploadThread-tips": "HuggingFace 分片直传的上传线程数"
+      "uploadThread-tips": "HuggingFace 分片直传的上传线程数",
+      "small_channel_name": "普通文件渠道名称",
+      "large_channel_name": "大文件渠道名称",
+      "large_channel_type": "大文件渠道类型",
+      "upload_thread": "上传线程"
     },
     "config": {
       "GuangYaPan": {
         "alert": "教程：(1) 填写 电话号码（如需要，还需填写 验证码令牌），打开 发送验证码 选项 并保存；(2) 填写 短信验证码 并保存，以完成登录，如果成功会自动保存 access_token/refresh_token。"
       }
+    },
+    "AliyundriveOpen": {
+      "chunk_size": "分片大小",
+      "drive_id": "云盘 ID",
+      "alipan_types": {
+        "alipanQR": "阿里云盘扫码登录"
+      }
+    },
+    "Onedrive": {
+      "order_by": "排序依据",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "filename": "文件名称",
+        "size": "大小",
+        "modified_time": "修改时间"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
+    },
+    "OnedriveAPP": {
+      "order_by": "排序依据",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "filename": "文件名称",
+        "size": "大小",
+        "modified_time": "修改时间"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
+    },
+    "Quark": {
+      "variant": "账号类型",
+      "variants": {
+        "Quark": "夸克",
+        "UC": "UC"
+      }
+    },
+    "123Pan": {
+      "access_token": "访问令牌",
+      "cookie": "Cookie",
+      "upload_thread": "上传线程",
+      "order_by": "排序依据",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "file_name": "文件名称",
+        "size": "大小",
+        "created_at": "创建时间",
+        "updated_at": "修改时间",
+        "file_id": "文件 ID"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      },
+      "root_id": "根目录 ID",
+      "access_token-tips": "登录令牌（可选，自动持久化，无需手动填写）。仅需填写上方 123 网盘手机号和密码，登录后自动获取并保存，跳过重复登录可避免境外 IP 触发风控。",
+      "cookie-tips": "浏览器 Cookie（可选）。在 123 网盘网页登录后，从开发者工具复制请求头中的 Cookie 整串粘贴于此（含 sso-token），或从 Authorization: Bearer <token> 中复制 token/Bearer 值。解析出的 JWT 会作为 Bearer 令牌使用，效果等同访问令牌，适合账号密码登录被风控拦截的环境。",
+      "upload_thread-tips": "上传线程数"
+    },
+    "BaiduNetdisk": {
+      "access_token": "访问令牌",
+      "access_token-tips": "访问令牌（必填）。通过 https://api.oplist.org/ 获取。若令牌失效，挂载时会自动根据 refresh_token 通过在线 API 换新并持久化。",
+      "use_online_api-tips": "使用在线 API 刷新 token（无需 ClientID/ClientSecret）"
+    },
+    "GitHub API": {
+      "order_by": "排序依据",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名称",
+        "size": "大小",
+        "modified": "修改时间"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
+    },
+    "Thunder": {
+      "order_by": "排序依据",
+      "order_direction": "排序方式",
+      "client_id": "客户端 ID",
+      "client_secret": "客户端密钥",
+      "order_bys": {
+        "name": "名称",
+        "size": "大小",
+        "modified": "修改时间"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      },
+      "device_id-tips": "32 位十六进制字符"
+    },
+    "ThunderExpert": {
+      "order_by": "排序依据",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名称",
+        "size": "大小",
+        "modified": "修改时间"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      },
+      "client_id-tips": "迅雷开放平台 OAuth client_id（必填）。",
+      "client_secret-tips": "迅雷开放平台 OAuth client_secret（必填）。"
+    },
+    "189Cloud": {
+      "order_by": "排序依据",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "lastOpTime": "修改时间",
+        "filename": "文件名称",
+        "fileSize": "文件大小"
+      },
+      "order_directions": {
+        "desc": "降序",
+        "asc": "升序"
+      },
+      "username-tips": "登录用的手机号",
+      "password-tips": "登录密码",
+      "root_folder_id-tips": "根文件夹ID，默认为 -11（个人云根目录）"
+    },
+    "Lanzou": {
+      "order_by": "排序依据",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名称",
+        "size": "大小",
+        "time": "时间"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      },
+      "account-tips": "账号（手机号/UID），仅 account 模式需填写",
+      "password-tips": "密码，仅 account 模式需填写",
+      "root_folder_id-tips": "根文件夹 ID / 分享 ID（个人盘默认 -1，分享链接填分享 ID 如 b00xxxx）",
+      "share_password-tips": "提取码 / 访问密码（无密码留空）",
+      "user_agent-tips": "发送给蓝奏云 API 与直链解析时携带的客户端 User-Agent"
+    },
+    "WebDav": {
+      "order_by": "排序依据",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名称",
+        "size": "大小",
+        "modified": "修改时间"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
+    },
+    "WoPan": {
+      "order_by": "排序依据",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名称",
+        "size": "大小",
+        "modified": "修改时间"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
+    },
+    "S3": {
+      "order_by": "排序依据",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名称",
+        "size": "大小",
+        "modified": "修改时间"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
+    },
+    "Doge": {
+      "order_by": "排序依据",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名称",
+        "size": "大小",
+        "modified": "修改时间"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
+    },
+    "PikPak": {
+      "order_by": "排序依据",
+      "order_direction": "排序方式",
+      "client_id": "客户端 ID",
+      "client_secret": "客户端密钥",
+      "order_bys": {
+        "name": "名称",
+        "size": "大小",
+        "modified": "修改时间"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
+    },
+    "Seafile": {
+      "repo_id": "仓库 ID",
+      "repo_pwd": "仓库密码",
+      "order_by": "排序依据",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名称",
+        "size": "大小",
+        "modified": "修改时间"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
+    },
+    "Alias": {
+      "order_by": "排序依据",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名称",
+        "size": "大小",
+        "modified": "修改时间"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      },
+      "paths-tips": "路径列表，每行一个，例如 /local 或 sub:/target"
+    },
+    "Dropbox": {
+      "order_by": "排序依据",
+      "order_direction": "排序方式",
+      "access_token": "访问令牌",
+      "order_bys": {
+        "name": "名称",
+        "size": "大小",
+        "modified": "修改时间"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      },
+      "root_namespace_id": "根命名空间 ID"
+    },
+    "WPS": {
+      "order_by": "排序依据",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名称",
+        "size": "大小",
+        "modified": "修改时间"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
+    },
+    "Mega_nz": {
+      "order_by": "排序依据",
+      "order_direction": "排序方式",
+      "root_folder_id": "根文件夹 ID",
+      "order_bys": {
+        "name": "名称",
+        "size": "大小",
+        "modified": "修改时间"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
+    },
+    "115 Share": {
+      "order_by": "排序依据",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名称",
+        "size": "大小",
+        "modified": "修改时间"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
+    },
+    "123PanShare": {
+      "order_by": "排序依据",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名称",
+        "size": "大小",
+        "modified": "修改时间"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
+    },
+    "Onedrive Sharelink": {
+      "order_by": "排序依据",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名称",
+        "size": "大小",
+        "modified": "修改时间"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
+    },
+    "PikPakShare": {
+      "order_by": "排序依据",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名称",
+        "size": "大小",
+        "modified": "修改时间"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
+    },
+    "SMB": {
+      "order_by": "排序依据",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名称",
+        "size": "大小",
+        "modified": "修改时间"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      },
+      "port": "端口",
+      "domain": "域"
+    },
+    "UrlTree": {
+      "root_folder_path": "根文件夹路径",
+      "writable-tips": "允许增删改文件树（会持久化回 url_structure）"
+    },
+    "Strm": {
+      "root_folder_path": "根文件夹路径",
+      "paths-tips": "路径映射，每行一个：虚拟名:底层路径（如 movies:/aliyundrive/movies），或直接底层路径"
+    },
+    "ProtonDrive": {
+      "reusable_credential": "可复用凭据",
+      "email-tips": "Proton 账号邮箱",
+      "password-tips": "Proton 账号密码",
+      "two_fa_code-tips": "两步验证码（如已启用 2FA）",
+      "root_folder_id-tips": "根文件夹 LinkID，默认 root 表示主共享根目录",
+      "chunk_size-tips": "分块大小（MB）"
+    },
+    "ILanZou": {
+      "token": "令牌",
+      "root_id": "根目录 ID",
+      "uuid": "UUID",
+      "ip-tips": "可选，用于 X-Forwarded-For",
+      "token-tips": "登录令牌（自动持久化，无需手动填写）",
+      "uuid-tips": "设备 UUID（首次初始化自动获取并持久化）"
+    },
+    "123 Open": {
+      "client_id": "客户端 ID",
+      "client_secret": "客户端密钥",
+      "access_token": "访问令牌",
+      "refresh_token": "刷新令牌"
+    },
+    "189CloudPC": {
+      "device_id": "设备 ID",
+      "captcha_mode": "验证码方式",
+      "session_key": "会话密钥",
+      "session_secret": "会话密钥密文"
+    },
+    "FebBox": {
+      "refresh_token": "刷新令牌"
+    },
+    "HalalCloudOpen": {
+      "root_folder_id": "根文件夹 ID"
+    },
+    "IPFS API": {
+      "root_path": "根文件夹路径"
+    },
+    "KodBox": {
+      "root_path": "根文件夹路径"
+    },
+    "LenovoNasShare": {
+      "root_path": "根文件夹路径"
+    },
+    "Misskey": {
+      "root_path": "根文件夹路径"
+    },
+    "OpenList": {
+      "root_path": "根文件夹路径"
+    },
+    "QuarkTV": {
+      "variant": "账号类型",
+      "variants": {
+        "quark": "夸克",
+        "uc": "UC"
+      }
+    },
+    "Teldrive": {
+      "access_token": "访问令牌",
+      "root_path": "根文件夹路径"
+    },
+    "UCTV": {
+      "variant": "账号类型",
+      "variants": {
+        "quark": "夸克",
+        "uc": "UC"
+      }
+    },
+    "GoogleDrive": {
+      "order_bys": {
+        "name": "名称",
+        "folder": "文件夹",
+        "modifiedTime desc": "修改时间倒序"
+      }
+    },
+    "115 Open": {
+      "root_id": "根目录 ID",
+      "access_token-tips": "访问令牌（必填）。通过 115 开放平台获取；失效时自动用 refresh_token 刷新并持久化。",
+      "refresh_token-tips": "刷新令牌（必填）。通过 115 开放平台获取；access_token 失效时自动刷新。",
+      "root_id-tips": "根文件夹 ID，默认 0（根目录）"
+    },
+    "SFTP": {
+      "address-tips": "SSH 主机:端口（如 127.0.0.1:22）",
+      "ignore_symlink_error-tips": "忽略符号链接错误"
+    },
+    "FTP": {
+      "address-tips": "FTP 主机:端口（如 127.0.0.1:21）",
+      "encoding-tips": "字符编码，如 utf-8、gbk、gb2312"
+    },
+    "Crypt": {
+      "filename_encryption-tips": "文件名加密方式。当前仅支持 off（文件名不加密，仅内容加密）"
+    },
+    "Virtual": {
+      "num_file-tips": "每个目录下生成的占位文件数量",
+      "num_folder-tips": "每个目录下生成的占位目录数量",
+      "max_file_size-tips": "占位文件最大字节数",
+      "min_file_size-tips": "占位文件最小字节数"
+    },
+    "AList V3": {
+      "url-tips": "另一个 OpenList / AList 实例的地址，如 https://example.com",
+      "token-tips": "访问令牌（可选，自动持久化，无需手动填写）"
+    },
+    "USS": {
+      "endpoint-tips": "下载域名（可含协议头）",
+      "anti_theft_chain_token-tips": "防盗链 Token（留空则用操作员密码）",
+      "sign_url_expire-tips": "链接有效期（小时）"
+    },
+    "Emby": {
+      "url-tips": "Emby 服务器地址，如 http://localhost:8096",
+      "root_folder_id-tips": "根目录 ID，默认 1"
+    },
+    "Bunny Storage": {
+      "sign_url_expire-tips": "链接有效期（小时）"
+    },
+    "AutoIndex": {
+      "url-tips": "AutoIndex 目录页 URL"
+    },
+    "123PanLink": {
+      "private_key-tips": "123 网盘直链签名私钥（留空则直接透传原始 URL）",
+      "uid-tips": "123 网盘用户 ID（参与 auth_key 签名）"
+    }
+  },
+  "storages.json": {
+    "common": {
+      "seed_policys": {
+        "off": "关闭",
+        "inherit": "跟随上级",
+        "on": "开启"
+      },
+      "seed_policy": "做种策略",
+      "seed_policy-tips": "覆盖这个存储的自动做种设置"
     }
   }
 }

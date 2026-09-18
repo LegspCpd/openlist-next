@@ -74,7 +74,7 @@ OpenList-Worker est un portage TypeScript + Serverless du projet officiel [OpenL
 
 ### Agrégation de stockage
 
-**81 pilotes de stockage** intégrés, permettant de monter divers backends de stockage immédiatement :
+**80 pilotes de stockage** intégrés, permettant de monter divers backends de stockage immédiatement :
 
 - **Disques cloud chinois** : Alibaba Cloud Drive (plateforme ouverte/partage), Quark Cloud (plateforme ouverte/version UC TV), Baidu Netdisk (albums), 115 Cloud (plateforme ouverte/partage), 123 Cloud (plateforme ouverte/partage), Tianyi Cloud (189/PC/TV), China Mobile Cloud (139/Hecaiyun), Wo Cloud, Xunlei Cloud, Tencent Weiyun, Lanzou Cloud, PikPak (partage), Doubao Cloud, Guangya Cloud, Chaoxing Group Cloud, Lenovo NAS (partage), Teambition Cloud, WPS Cloud, Alibaba Docs, HalalCloud, MediaTrack, etc.
 - **Disques cloud internationaux** : Google Drive (albums), OneDrive (application/lien de partage), Dropbox, MEGA, MediaFire, Proton Drive, Yandex Disk, Degoo, Bunny Storage, TeraBox, etc.
@@ -116,7 +116,7 @@ Outre les stockages réels ci-dessus, des pilotes virtuels/fonctionnels tels que
 |---|---|---|
 | Pilote de stockage | 6 | 16, avec 10 ajouts (`neon`, `turso`, `pgrest`, `pghttp`, `mysqlhttp`, `upstash`, `s3`, `r2`, `netlifyblobs`, `hyperdrive`) |
 | Dialecte SQL | SQLite, MySQL | Ajout de PostgreSQL (avec espaces réservés `$n`) |
-| Pilote de disque cloud | 78 | 81, complété avec `123_link`, `ilanzou`, `halalcloud` |
+| Pilote de disque cloud | 78 | 80, complété avec `123_link`, `ilanzou`, `halalcloud` ; `Local` supprimé (il n'a de sens que sur un système de fichiers local) |
 | Plateforme de déploiement | Cloudflare Workers, EdgeOne, ESA, Vercel, Serverless, Node/Docker | ajout de Netlify, et scripts de déploiement en une commande pour EdgeOne / ESA / Vercel |
 
 Le pilote `mysql` de la version officielle ne peut s'exécuter que dans un conteneur Node — Cloudflare Workers n'ayant pas de TCP brut, le déploiement en edge ne peut utiliser que le KV intégré à la plateforme. Sur les 10 pilotes ajoutés par ce projet, 8 passent par HTTP (`neon`, `turso`, `pgrest`, `pghttp`, `mysqlhttp`, `upstash`, `s3`, `netlifyblobs`) et peuvent donc joindre une base externe même en edge : il suffit de renseigner une `DATABASE_URL`. Les deux autres diffèrent : `r2` utilise un binding de bucket Cloudflare, et `hyperdrive` se connecte en TCP via `mysql2`, donc uniquement sur Node.

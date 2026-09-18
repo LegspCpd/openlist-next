@@ -195,11 +195,23 @@
       },
       "use_old_stream_upload": "使用舊的流式上傳",
       "use_old_stream_upload-tips": "啟用以使用舊的流式上傳方法（不支持快傳）",
-      "username-tips": "僅在配合郵箱 Cookie 使用密碼登錄回退時需要。"
+      "username-tips": "僅在配合郵箱 Cookie 使用密碼登錄回退時需要。",
+      "order_by": "排序依據",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名稱",
+        "size": "大小",
+        "modified": "修改時間"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
     },
     "AliDoc": {
       "cookie-tips": "釘釘文檔網頁 Cookie",
-      "root_folder_id": "根文件夾 ID"
+      "root_folder_id": "根文件夾 ID",
+      "root_folder_id-tips": "根目錄 dentryUuid"
     },
     "Bunny Storage": {
       "access_key": "訪問密鑰",
@@ -215,19 +227,44 @@
       "placeholder": "佔位文件名",
       "root_folder_path": "根文件夾路徑",
       "sign_url_expire": "簽名鏈接有效期",
-      "storage_zone_name": "存儲區域名稱"
+      "storage_zone_name": "存儲區域名稱",
+      "sign_url_expire-tips": "鏈接有效期（小時）"
     },
     "Doge": {
       "user_agent": "用戶代理",
-      "user_agent-tips": "自定義 S3 請求的用戶代理。"
+      "user_agent-tips": "自定義 S3 請求的用戶代理。",
+      "order_by": "排序依據",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名稱",
+        "size": "大小",
+        "modified": "修改時間"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
     },
     "FTP": {
       "cwd_list": "使用 Cwd 列出",
-      "cwd_list-tips": "在列出前進入目錄"
+      "cwd_list-tips": "在列出前進入目錄",
+      "address-tips": "FTP 主機:端口（如 127.0.0.1:21）",
+      "encoding-tips": "字符編碼，如 utf-8、gbk、gb2312"
     },
     "GitHub API": {
       "accurate_modified_time": "準確修改時間",
-      "accurate_modified_time-tips": "盡量準確的小目錄列表修改時間（默認禁用）。會多一次 GitHub GraphQL 請求，失敗時回退到舊版零時間值。"
+      "accurate_modified_time-tips": "盡量準確的小目錄列表修改時間（默認禁用）。會多一次 GitHub GraphQL 請求，失敗時回退到舊版零時間值。",
+      "order_by": "排序依據",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名稱",
+        "size": "大小",
+        "modified": "修改時間"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
     },
     "GitHub Releases": {
       "max_page": "最大分頁數",
@@ -264,15 +301,29 @@
       "verification_id": "驗證 ID",
       "verification_id-tips": "發送短信驗證碼後自動生成，不要手動編輯",
       "verify_code": "短信驗證碼",
-      "verify_code-tips": "與電話號碼一起使用的短信驗證碼；填寫後保存以完成登錄"
+      "verify_code-tips": "與電話號碼一起使用的短信驗證碼；填寫後保存以完成登錄",
+      "root_folder_path": "根文件夾路徑"
     },
     "S3": {
       "user_agent": "用戶代理",
-      "user_agent-tips": "自定義 S3 請求的用戶代理。"
+      "user_agent-tips": "自定義 S3 請求的用戶代理。",
+      "order_by": "排序依據",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名稱",
+        "size": "大小",
+        "modified": "修改時間"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
     },
     "Strm": {
       "minFileSize": "最小文件大小",
-      "minFileSize-tips": "過濾小於此大小的文件 (單位：MB，0 以禁用)"
+      "minFileSize-tips": "過濾小於此大小的文件 (單位：MB，0 以禁用)",
+      "root_folder_path": "根文件夾路徑",
+      "paths-tips": "路徑映射，每行一個：虛擬名:底層路徑（如 movies:/aliyundrive/movies），或直接底層路徑"
     },
     "cloudflare_imgbed": {
       "address": "地址",
@@ -291,7 +342,11 @@
       "token": "令牌",
       "token-tips": "認證令牌",
       "uploadThread": "上傳線程數",
-      "uploadThread-tips": "HuggingFace 分片直傳的上傳線程數"
+      "uploadThread-tips": "HuggingFace 分片直傳的上傳線程數",
+      "small_channel_name": "普通文件渠道名稱",
+      "large_channel_name": "大文件渠道名稱",
+      "large_channel_type": "大文件渠道類型",
+      "upload_thread": "上傳線程"
     },
     "config": {
       "AliDoc": {
@@ -300,6 +355,445 @@
       "GuangYaPan": {
         "alert": "教程：(1) 填寫 電話號碼（如需要，還需填寫 驗證碼令牌），打開 發送驗證碼 選項 並保存；(2) 填寫 短信驗證碼 並保存，以完成登錄，如果成功會自動保存 access_token/refresh_token。"
       }
+    },
+    "AliyundriveOpen": {
+      "chunk_size": "分片大小",
+      "drive_id": "雲盤 ID",
+      "alipan_types": {
+        "alipanQR": "阿里雲盤掃碼登入"
+      }
+    },
+    "Onedrive": {
+      "order_by": "排序依據",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "filename": "文件名稱",
+        "size": "大小",
+        "modified_time": "修改時間"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
+    },
+    "OnedriveAPP": {
+      "order_by": "排序依據",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "filename": "文件名稱",
+        "size": "大小",
+        "modified_time": "修改時間"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
+    },
+    "Quark": {
+      "variant": "帳號類型",
+      "variants": {
+        "Quark": "夸克",
+        "UC": "UC"
+      }
+    },
+    "123Pan": {
+      "access_token": "訪問令牌",
+      "cookie": "Cookie",
+      "upload_thread": "上傳線程",
+      "order_by": "排序依據",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "file_name": "文件名稱",
+        "size": "大小",
+        "created_at": "創建時間",
+        "updated_at": "修改時間",
+        "file_id": "檔案 ID"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      },
+      "root_id": "根目錄 ID",
+      "access_token-tips": "登錄令牌（可選，自動持久化，無需手動填寫）。僅需填寫上方 123 網盤手機號和密碼，登錄後自動獲取並保存，跳過重複登錄可避免境外 IP 觸發風控。",
+      "cookie-tips": "瀏覽器 Cookie（可選）。在 123 網盤網頁登錄後，從開發者工具複製請求頭中的 Cookie 整串粘貼於此（含 sso-token），或從 Authorization: Bearer <token> 中複製 token/Bearer 值。解析出的 JWT 會作為 Bearer 令牌使用，效果等同訪問令牌，適合賬號密碼登錄被風控攔截的環境。",
+      "upload_thread-tips": "上傳線程數"
+    },
+    "BaiduNetdisk": {
+      "access_token": "訪問令牌",
+      "access_token-tips": "訪問令牌（必填）。通過 https://api.oplist.org/ 獲取。若令牌失效，掛載時會自動根據 refresh_token 通過在線 API 換新並持久化。",
+      "use_online_api-tips": "使用在線 API 刷新 token（無需 ClientID/ClientSecret）"
+    },
+    "Thunder": {
+      "order_by": "排序依據",
+      "order_direction": "排序方式",
+      "client_id": "客户端 ID",
+      "client_secret": "客户端密鑰",
+      "order_bys": {
+        "name": "名稱",
+        "size": "大小",
+        "modified": "修改時間"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      },
+      "device_id-tips": "32 位十六進制字符"
+    },
+    "ThunderExpert": {
+      "order_by": "排序依據",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名稱",
+        "size": "大小",
+        "modified": "修改時間"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      },
+      "client_id-tips": "迅雷開放平台 OAuth client_id（必填）。",
+      "client_secret-tips": "迅雷開放平台 OAuth client_secret（必填）。"
+    },
+    "189Cloud": {
+      "order_by": "排序依據",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "lastOpTime": "修改時間",
+        "filename": "文件名稱",
+        "fileSize": "文件大小"
+      },
+      "order_directions": {
+        "desc": "降序",
+        "asc": "升序"
+      },
+      "username-tips": "登錄用的手機號",
+      "password-tips": "登錄密碼",
+      "root_folder_id-tips": "根文件夾 ID，默認為 -11（個人雲根目錄）"
+    },
+    "Lanzou": {
+      "order_by": "排序依據",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名稱",
+        "size": "大小",
+        "time": "時間"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      },
+      "account-tips": "賬號（手機號/UID），僅 account 模式需填寫",
+      "password-tips": "密碼，僅 account 模式需填寫",
+      "root_folder_id-tips": "根文件夾 ID / 分享 ID（個人盤默認 -1，分享鏈接填分享 ID 如 b00xxxx）",
+      "share_password-tips": "提取碼 / 訪問密碼（無密碼留空）",
+      "user_agent-tips": "發送給藍奏雲 API 與直鏈解析時攜帶的客戶端 User-Agent"
+    },
+    "WebDav": {
+      "order_by": "排序依據",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名稱",
+        "size": "大小",
+        "modified": "修改時間"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
+    },
+    "WoPan": {
+      "order_by": "排序依據",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名稱",
+        "size": "大小",
+        "modified": "修改時間"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
+    },
+    "PikPak": {
+      "order_by": "排序依據",
+      "order_direction": "排序方式",
+      "client_id": "客户端 ID",
+      "client_secret": "客户端密鑰",
+      "order_bys": {
+        "name": "名稱",
+        "size": "大小",
+        "modified": "修改時間"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
+    },
+    "Seafile": {
+      "repo_id": "倉庫 ID",
+      "repo_pwd": "倉庫密碼",
+      "order_by": "排序依據",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名稱",
+        "size": "大小",
+        "modified": "修改時間"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
+    },
+    "Alias": {
+      "order_by": "排序依據",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名稱",
+        "size": "大小",
+        "modified": "修改時間"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      },
+      "paths-tips": "路徑列表，每行一個，例如 /local 或 sub:/target"
+    },
+    "Dropbox": {
+      "order_by": "排序依據",
+      "order_direction": "排序方式",
+      "access_token": "訪問令牌",
+      "order_bys": {
+        "name": "名稱",
+        "size": "大小",
+        "modified": "修改時間"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      },
+      "root_namespace_id": "根命名空間 ID"
+    },
+    "WPS": {
+      "order_by": "排序依據",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名稱",
+        "size": "大小",
+        "modified": "修改時間"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
+    },
+    "Mega_nz": {
+      "order_by": "排序依據",
+      "order_direction": "排序方式",
+      "root_folder_id": "根文件夾 ID",
+      "order_bys": {
+        "name": "名稱",
+        "size": "大小",
+        "modified": "修改時間"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
+    },
+    "115 Share": {
+      "order_by": "排序依據",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名稱",
+        "size": "大小",
+        "modified": "修改時間"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
+    },
+    "123PanShare": {
+      "order_by": "排序依據",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名稱",
+        "size": "大小",
+        "modified": "修改時間"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
+    },
+    "Onedrive Sharelink": {
+      "order_by": "排序依據",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名稱",
+        "size": "大小",
+        "modified": "修改時間"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
+    },
+    "PikPakShare": {
+      "order_by": "排序依據",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名稱",
+        "size": "大小",
+        "modified": "修改時間"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      }
+    },
+    "SMB": {
+      "order_by": "排序依據",
+      "order_direction": "排序方式",
+      "order_bys": {
+        "name": "名稱",
+        "size": "大小",
+        "modified": "修改時間"
+      },
+      "order_directions": {
+        "asc": "升序",
+        "desc": "降序"
+      },
+      "port": "端口",
+      "domain": "網域"
+    },
+    "UrlTree": {
+      "root_folder_path": "根文件夾路徑",
+      "writable-tips": "允許增刪改文件樹（會持久化回 url_structure）"
+    },
+    "ProtonDrive": {
+      "reusable_credential": "可重用認證",
+      "email-tips": "Proton 賬號郵箱",
+      "password-tips": "Proton 賬號密碼",
+      "two_fa_code-tips": "兩步驗證碼（如已啟用 2FA）",
+      "root_folder_id-tips": "根文件夾 LinkID，默認 root 表示主共享根目錄",
+      "chunk_size-tips": "分塊大小（MB）"
+    },
+    "ILanZou": {
+      "token": "令牌",
+      "root_id": "根目錄 ID",
+      "uuid": "UUID",
+      "ip-tips": "可選，用於 X-Forwarded-For",
+      "token-tips": "登錄令牌（自動持久化，無需手動填寫）",
+      "uuid-tips": "設備 UUID（首次初始化自動獲取並持久化）"
+    },
+    "123 Open": {
+      "client_id": "客户端 ID",
+      "client_secret": "客户端密鑰",
+      "access_token": "訪問令牌",
+      "refresh_token": "刷新令牌"
+    },
+    "189CloudPC": {
+      "device_id": "設備 ID",
+      "captcha_mode": "驗證碼方式",
+      "session_key": "會話密鑰",
+      "session_secret": "會話密鑰密文"
+    },
+    "FebBox": {
+      "refresh_token": "刷新令牌"
+    },
+    "HalalCloudOpen": {
+      "root_folder_id": "根文件夾 ID"
+    },
+    "IPFS API": {
+      "root_path": "根文件夾路徑"
+    },
+    "KodBox": {
+      "root_path": "根文件夾路徑"
+    },
+    "LenovoNasShare": {
+      "root_path": "根文件夾路徑"
+    },
+    "Misskey": {
+      "root_path": "根文件夾路徑"
+    },
+    "OpenList": {
+      "root_path": "根文件夾路徑"
+    },
+    "QuarkTV": {
+      "variant": "帳號類型",
+      "variants": {
+        "quark": "夸克",
+        "uc": "UC"
+      }
+    },
+    "Teldrive": {
+      "access_token": "訪問令牌",
+      "root_path": "根文件夾路徑"
+    },
+    "UCTV": {
+      "variant": "帳號類型",
+      "variants": {
+        "quark": "夸克",
+        "uc": "UC"
+      }
+    },
+    "GoogleDrive": {
+      "order_bys": {
+        "name": "名稱",
+        "folder": "文件夾",
+        "modifiedTime desc": "修改時間倒序"
+      }
+    },
+    "115 Open": {
+      "root_id": "根目錄 ID",
+      "access_token-tips": "訪問令牌（必填）。通過 115 開放平台獲取；失效時自動用 refresh_token 刷新並持久化。",
+      "refresh_token-tips": "刷新令牌（必填）。通過 115 開放平台獲取；access_token 失效時自動刷新。",
+      "root_id-tips": "根文件夾 ID，默認 0（根目錄）"
+    },
+    "SFTP": {
+      "address-tips": "SSH 主機:端口（如 127.0.0.1:22）",
+      "ignore_symlink_error-tips": "忽略符號鏈接錯誤"
+    },
+    "Crypt": {
+      "filename_encryption-tips": "文件名加密方式。當前僅支持 off（文件名不加密，僅內容加密）"
+    },
+    "Virtual": {
+      "num_file-tips": "每個目錄下生成的佔位文件數量",
+      "num_folder-tips": "每個目錄下生成的佔位目錄數量",
+      "max_file_size-tips": "佔位文件最大字節數",
+      "min_file_size-tips": "佔位文件最小字節數"
+    },
+    "AList V3": {
+      "url-tips": "另一個 OpenList / AList 實例的地址，如 https://example.com",
+      "token-tips": "訪問令牌（可選，自動持久化，無需手動填寫）"
+    },
+    "USS": {
+      "endpoint-tips": "下載域名（可含協議頭）",
+      "anti_theft_chain_token-tips": "防盜鏈 Token（留空則用操作員密碼）",
+      "sign_url_expire-tips": "鏈接有效期（小時）"
+    },
+    "Emby": {
+      "url-tips": "Emby 服務器地址，如 http://localhost:8096",
+      "root_folder_id-tips": "根目錄 ID，默認 1"
+    },
+    "AutoIndex": {
+      "url-tips": "AutoIndex 目錄頁 URL"
+    },
+    "123PanLink": {
+      "private_key-tips": "123 網盤直鏈簽名私鑰（留空則直接透傳原始 URL）",
+      "uid-tips": "123 網盤用戶 ID（參與 auth_key 簽名）"
+    }
+  },
+  "storages.json": {
+    "common": {
+      "seed_policys": {
+        "off": "關閉",
+        "inherit": "跟隨上級",
+        "on": "開啟"
+      },
+      "seed_policy": "做種策略",
+      "seed_policy-tips": "覆蓋這個存儲的自動做種設定"
     }
   }
 }
