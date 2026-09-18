@@ -66,10 +66,6 @@ OpenList Next 把分散在多个网盘、对象存储和协议服务里的文件
 
 部署完成后还要配环境变量，`JWT_SECRET` 必填（`openssl rand -hex 32` 生成）。每个变量是什么、填在哪，见[环境变量](#环境变量)。
 
-- EdgeOne：[国际站控制台](https://console.edgeone.ai/makers) · [中国站控制台](https://console.cloud.tencent.com/edgeone/makers)
-- Cloudflare：[Worker 后台](https://dash.cloudflare.com/)
-- Vercel：项目设置 → Environment Variables
-- Netlify：Site configuration → Environment variables
 
 > [!IMPORTANT]
 > 如果 Cloudflare 提示「无法获取存储库内容」，先 [Fork](https://github.com/LegspCpd/openlist-next/fork) 本仓库，再用「连接到 GitHub 仓库」的方式部署。
