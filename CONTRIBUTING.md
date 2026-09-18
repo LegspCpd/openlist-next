@@ -1,6 +1,6 @@
 # 贡献指南 (Contributing Guide)
 
-感谢你对 **OpenList** 的关注与支持！🎉
+感谢你对 **OpenList Next** 的关注与支持！🎉
 
 OpenList 是一个基于 **SolidJS** + **Hono** + **TypeScript** 的现代化全栈文件列表与网盘管理系统。我们欢迎任何形式的贡献，包括但不限于报告 Bug、提出新功能建议、改进文档、参与国际化翻译以及提交代码。
 
@@ -30,7 +30,7 @@ OpenList 是一个基于 **SolidJS** + **Hono** + **TypeScript** 的现代化全
 
 ### 1. 报告 Bug
 
-如果您在使用过程中发现了 Bug，请通过 [GitHub Issues](https://github.com/OpenListTeam/OpenList/issues) 提交：
+如果您在使用过程中发现了 Bug，请通过 [GitHub Issues](https://github.com/LegspCpd/openlist-next/issues) 提交：
 
 - 检查是否已有相同或相似的 Issue。
 - 详细描述问题发生的场景、复现步骤、预期行为与实际表现。
@@ -74,8 +74,8 @@ OpenList 是一个基于 **SolidJS** + **Hono** + **TypeScript** 的现代化全
 1. **Fork 并克隆仓库**：
 
    ```bash
-   git clone https://github.com/<your-username>/OpenList.git
-   cd openlist
+   git clone https://github.com/<your-username>/openlist-next.git
+   cd openlist-next
    ```
 
 2. **安装依赖**：
@@ -119,18 +119,20 @@ OpenList 是一个基于 **SolidJS** + **Hono** + **TypeScript** 的现代化全
 ## 🧱 核心架构与开发规范
 
 ```
-openlist/
-├── api/                   # 边缘 / Serverless 入口 ([...route].ts)
+openlist-next/
+├── api/                     # 边缘 / Serverless 入口（[...route].ts 等）
+├── cloud-functions/         # EdgeOne 平台扫描的 Node 云函数产物，由构建脚本生成、需随源码提交
+├── docs/                    # 部署与存储文档
+├── netlify/functions/       # Netlify Functions 入口
+├── scripts/                 # 构建与工具脚本
 ├── src/
-│   ├── backend/           # 后端核心 (Hono)
-│   │   ├── drivers/       # 各网盘存储驱动实现
-│   │   ├── internal/      # 核心逻辑 (存储调度/数据库/操作层)
-│   │   └── server/        # API 路由 (fs/auth/admin/share/task/mcp 等)
-│   ├── components/        # SolidJS 通用前端组件
-│   ├── pages/             # 前端页面 (浏览/管理后台/分享/登录等)
-│   ├── store/             # 响应式状态管理
-│   ├── types/             # 共享 TypeScript 类型定义
-│   └── utils/             # 前端工具函数
+│   └── backend/             # 后端全部源码（前端不在本仓库，构建时另行拉取）
+│       ├── drivers/         # 各网盘 / 协议驱动实现
+│       ├── durable-objects/ # Cloudflare Durable Objects
+│       ├── internal/        # 核心逻辑（驱动接口、数据模型、操作层、流式读取等）
+│       ├── pkg/             # 通用工具（加密、HTTP、MIME、校验、权限等）
+│       └── server/          # Hono 路由（auth / admin / fs / share / task / mcp 等）
+└── tests/                   # 跨模块测试
 ```
 
 ### 全栈 Web 标准优先与边缘兼容（重要）
@@ -141,10 +143,23 @@ OpenList 的后端设计目标是**跨平台与边缘原生**（既能在 Node.j
    - 使用 `fetch`、`Web Crypto` (`crypto.subtle`)、`ReadableStream`、`Headers`、`Response` 等标准 Web API。
 2. **禁止在通用后端直接引入 Node.js 独占模块**：
    - 禁止在 `src/backend/server/` 或通用驱动中静态引入 `fs`、`path`、`net`、`child_process` 等 Node 原生包。
-   - 如需仅限 Node.js 容器的功能（如本地文件系统驱动 `LocalDriver`），必须使用动态导入 `await import(...)` 并做好运行环境检测隔离。
-   - 依赖 Node 原生二进制的驱动（当前为 `sftp` / `ftp`）会在边缘构建阶段被 [`scripts/build-edge.mjs`](scripts/build-edge.mjs) 的 `emptyNodeDriverPlugin` 替换为空实现（构造时抛错）。**新增此类驱动时，必须同步把驱动目录与相关原生包加入该插件的依赖过滤规则**，否则边缘平台会因缺少 `.node` 文件 loader 而打包失败。
+   - 如需仅限 Node.js 容器的功能，必须使用动态导入 `await import(...)` 并做好运行环境检测隔离
+     （store 层的 `mysql` / `hyperdrive` 驱动就是这样，靠 `mysql2` 直连 TCP）。
+   - 只在 Node / Docker 里跑得起来的挂载驱动（当前为 `ftp` / `sftp` / `smb`）**不会下发给边缘运行时**：
+     `src/backend/server/admin.ts` 的 `NODE_ONLY_DRIVERS` 会在非 Node 运行时把它们从「新增存储」的下拉里
+     摘掉，免得用户选完填完、保存时才发现报错。其中 `sftp` / `ftp` 另会在边缘构建阶段被
+     [`scripts/build-edge.mjs`](scripts/build-edge.mjs) 的 `emptyNodeDriverPlugin` 替换为空实现（构造时抛错）。
+     **新增此类驱动时，要同步更新 `NODE_ONLY_DRIVERS`，并把驱动目录与相关原生包加入该插件的过滤规则**，
+     否则边缘平台会因缺少 `.node` 文件 loader 而打包失败。
 3. **数据持久化适配**：
-   - 核心数据操作通过模型层抽象，支持 **Cloudflare KV**（边缘环境）与 **JSON 文件**（Node.js 容器环境）无缝适配。
+   - 核心数据操作通过模型层抽象（`src/backend/internal/model/store/`），共 **16 个 store 驱动**，由 `DB_DRIVER`
+     选择（`auto` 会按当前平台自动挑），`DB_FORMAT` 决定落库形态（`map` / `key` / `sql`）：
+     - **平台自带的存储绑定**（7 个）：`blob` / `kv` / `cfkv` / `d1` / `do` / `r2` / `netlifyblobs`
+     - **走 HTTP 连外部数据库或对象存储**（7 个，边缘也能用）：`neon` / `turso` / `pgrest` / `pghttp` /
+       `mysqlhttp` / `upstash` / `s3`
+     - **需要 Node 运行时**（2 个，靠 `mysql2` 直连 TCP）：`mysql` / `hyperdrive`
+   - 新增 store 驱动要同步登记 `backend.ts` 的 `DRIVER_MAP`、`EXTERNAL_DRIVER_ORDER`、`NO_STORAGE_MESSAGE`，
+     并在 `types.ts` 的 `StorageDriver` 联合类型里加上名字，否则会被判定成「没有可用的存储」。
 
 ### 添加新的存储驱动 (Storage Driver)
 
@@ -162,8 +177,15 @@ OpenList 的后端设计目标是**跨平台与边缘原生**（既能在 Node.j
    - `remove(virtualPath, physicalPath, names)`: 删除文件/目录
    - `move` / `copy` / `put`（按网盘支持能力选择实现）
 3. **注册驱动**：
-   - 在 `src/backend/internal/op/storage.ts` 中引入并注册驱动实例获取逻辑。
-   - 在 `src/backend/server/admin.ts` 中补充驱动配置项元数据（如需要后台驱动表单支持）。
+   - 在 `src/backend/internal/op/storage.ts` 的 `createDriver()` 里加分支。**注意分支顺序**：判断用的是
+     `startsWith()` / `includes()`，把宽泛的条件写在前面会抢走更具体的驱动（比如 `123` 会抢走
+     `123PanShare`、`onedrive` 会抢走 `Onedrive Sharelink`），所以更具体的要写在前面。
+   - 在 `src/backend/server/admin.ts` 的 `driverConfigs`（体量较大的另放在
+     `src/backend/server/driver-configs.extra.ts` 的 `EXTRA_DRIVER_CONFIGS`）里补一份驱动配置元数据。
+     这两处合起来就是 `GET /admin/driver/list` 的返回键，也是前端「新增存储」下拉的唯一来源 ——
+     **漏了这一步，驱动实现了但界面上选不到**。
+   - 最后跑 `node scripts/audit-driver-configs.mjs` 自查，它查三项：路由是否可达、配置里有没有多余字段、
+     有没有读了却没声明的字段，正常应全部为 0。
 
 ### 前端开发规范 (SolidJS)
 
@@ -239,7 +261,25 @@ return { ...enDict, ...flatDict } // 英文铺底，当前语言覆盖
 - `style`: 代码格式调整（不影响逻辑的空格、分号等）
 - `refactor`: 重构代码（既不修复 bug 也不添加新功能）
 - `chore`: 构建过程、辅助工具或依赖项的变动
+- `ci`: CI 工作流与自动化脚本的变动
 - `perf`: 性能优化
+
+### 提交信息写成双语（英文在上、中文在下）
+
+先写英文说明，再用 `---` 分隔写一段对应的中文。这样非中文读者也能看懂 history，中文读者读到的也不是
+翻译腔。标题行同样各写一次：
+
+```
+fix(i18n): fill the gaps left by the official translation pack
+
+The pack lags behind the English source, so any key it is missing falls back
+to English in the UI.
+
+---
+fix(i18n): 补齐官方翻译包漏掉的那些键
+
+翻译包落后于英文源，缺哪个键，界面上就会退回显示英文。
+```
 
 ### 示例
 
@@ -272,21 +312,23 @@ return { ...enDict, ...flatDict } // 英文铺底，当前语言覆盖
    pnpm run build
    ```
 
-4. **推送到远程并提交 PR**：
-   - 将分支推送到你的 Fork 仓库并向 `main` 分支发起 PR。
-   - 详细填写 PR 描述模板（参考项目提供的 [PULL_REQUEST_TEMPLATE.md](.github/PULL_REQUEST_TEMPLATE.md)）。
+4. **推送分支并发起 PR**：
+   - 把分支推到你自己的 Fork；本仓库维护者可以直接把分支推到本仓库（`main` 保持只经 PR 合入）。
+   - 向 `main` 发起 PR，按 [PULL_REQUEST_TEMPLATE.md](.github/PULL_REQUEST_TEMPLATE.md) 填写描述。
+   - PR 上会自动跑各平台的构建检查与凭据扫描，绿了再合并。
 
 ### PR 准备与自检清单
 
 - [ ] 代码已通过 `pnpm run lint` 类型检查。
 - [ ] 代码已通过 `pnpm run format` 格式化。
-- [ ] 已在本地测试通过（包括 Node.js 模式与边缘环境模式兼容性）。
-- [ ] PR 标题符合 Conventional Commits 规范（包含必填的 `type(scope)`）。
+- [ ] 改动过的功能自己验过；没验的链路在 PR 摘要里说清（CI 会在 PR 上真跑各平台构建检查）。
+- [ ] PR 标题符合 Conventional Commits 规范（`type(scope): summary`，有 scope 就写上）。
 - [ ] 如涉及破坏性变更或配置调整，已在 PR 摘要中明确说明。
+- [ ] 如改动 `src/**`、`api/**` 或构建脚本，已在本次 PR 内重建并提交 `cloud-functions/[[default]].js`。
 
 ### AI 辅助使用声明 (AI Disclosure)
 
-OpenList 欢迎开发者合理使用 AI 工具提升开发效率。为了确保代码库的合规性与可维护性：
+本项目欢迎开发者合理使用 AI 工具提升开发效率。为了确保代码库的合规性与可维护性：
 
 - 若 PR 中包含由 AI（如 ChatGPT、Claude、Copilot、Gemini 等）大量生成的代码或重构内容，请在 PR 模版中的 **AI Disclosure** 区域予以如实勾选与说明。
 - 贡献者需自行审查并完全理解所提交的 AI 辅助内容，确保代码质量与安全性。
