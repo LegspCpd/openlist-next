@@ -32,9 +32,9 @@ English | [简体中文](../README.md) | [繁體中文](README_zh-TW.md) | [日�
 
 ## Introduction
 
-OpenList Next brings files scattered across multiple cloud drives, object storages and protocol services into a single interface, so you can browse, preview, download, share and manage them in one place. The backend is written in TypeScript and runs on edge computing platforms.
+OpenList Next brings files scattered across multiple cloud drives, object storages and protocol services into a single interface, so you can browse, preview, download, share and manage them in one place.
 
-It is derived from the official [OpenList-Worker](https://github.com/OpenListTeam/OpenList-Worker), and adds one thing on top of it: connecting to an external database from any edge platform. The comparison table is in [Feature Overview](#feature-overview) below.
+It is derived from the official [OpenList-Worker](https://github.com/OpenListTeam/OpenList-Worker), and adds one thing on top of it: connecting to an external database from any edge platform. See the comparison table in [Feature Overview](#feature-overview).
 
 Read on in order, or jump straight to what you need:
 
@@ -64,20 +64,12 @@ Click the buttons below to deploy this project to the corresponding platform:
 
 </div>
 
-After deployment, you still need to configure environment variables. `JWT_SECRET` is required and can be generated with `openssl rand -hex 32`.
+After deployment you still need to set environment variables; `JWT_SECRET` is required (`openssl rand -hex 32`). See [Environment Variables](#environment-variables) for what each one does and where to put it.
 
 - EdgeOne: [Global Console](https://console.edgeone.ai/makers) · [China Console](https://console.cloud.tencent.com/edgeone/makers)
 - Cloudflare: [Worker Dashboard](https://dash.cloudflare.com/)
 - Vercel: Project Settings → Environment Variables
 - Netlify: Site configuration → Environment variables
-
-Commonly used variables:
-
-- `JWT_SECRET`: the key used for session signing and field encryption, **required**
-- `ADMIN_PASS`: optional; once set, skips the setup wizard and initializes the admin account directly with this password
-- `DB_FORMAT`: how data is organized, `map` (default) / `key` / `sql`
-- `DB_DRIVER`: where data is stored, `auto` (default, auto-detect) / `kv` / `d1` / `blob` / `neon` / `turso` / …
-- `DATABASE_URL`: external database connection string. Fill it in and keep `DB_DRIVER=auto`, and the program will connect automatically.
 
 > [!IMPORTANT]
 > If Cloudflare shows "cannot fetch repository content", first [Fork](https://github.com/LegspCpd/openlist-next/fork) this repository, then deploy by connecting to the GitHub repository.
@@ -85,8 +77,6 @@ Commonly used variables:
 ---
 
 ## Feature Overview
-
-This section covers four things: which storages can be mounted, what the core capabilities are, how permissions work, and where it can be deployed. The last part lists the differences from the official version.
 
 These capabilities come from the official [OpenList-Worker](https://github.com/OpenListTeam/OpenList-Worker), the TypeScript + Serverless port of [OpenListTeam/OpenList](https://github.com/OpenListTeam/OpenList). The interface and interactions are the same on both sides; the differences are limited to storage and deployment.
 
@@ -135,7 +125,7 @@ In addition to the real storages above, it also provides virtual/functional driv
 | Cloud drive drivers | 78 | 80, with `123_link`, `ilanzou`, `halalcloud` added; `Local` removed (it only makes sense on a local filesystem) |
 | Deployment platforms | Cloudflare Workers, EdgeOne, ESA, Vercel, Serverless, Node/Docker | added Netlify, plus one-command deploy scripts for EdgeOne / ESA / Vercel |
 
-The official version's `mysql` driver only runs in a Node container — Cloudflare Workers has no raw TCP, so on the edge you can only use the platform-native KV. Of the 10 drivers this project adds, 8 go over HTTP (`neon`, `turso`, `pgrest`, `pghttp`, `mysqlhttp`, `upstash`, `s3`, `netlifyblobs`), so they can reach an external database even on edge runtimes — just fill in one `DATABASE_URL`. The other two work differently: `r2` uses a Cloudflare bucket binding, and `hyperdrive` connects over raw TCP via `mysql2`, so it only works on Node.
+Of the 10 drivers this project adds, 8 go over HTTP (`neon` `turso` `pgrest` `pghttp` `mysqlhttp` `upstash` `s3` `netlifyblobs`), so they reach an external database even on the edge — one `DATABASE_URL` is enough. `r2` uses a Cloudflare bucket binding and `hyperdrive` connects over raw TCP via `mysql2`, so both are Node-only. The official `mysql` driver is Node-only for the same reason.
 
 For details, see the [External Storage Configuration Guide](../docs/EXTERNAL_STORAGE.md).
 
@@ -143,109 +133,55 @@ For details, see the [External Storage Configuration Guide](../docs/EXTERNAL_STO
 
 ## Environment Variables
 
-### Where to put the variables
+Where to put them: Cloudflare in Settings → Variables and Secrets; EdgeOne in the project's environment variables; Vercel / Netlify in the project settings; Node / Docker in the `.env` file at the root.
 
-The same variable name works exactly the same no matter where you put it.
+### Variable reference
 
-| Deployment | Where to put it |
+| Variable | Required? | Notes |
+|---|---|---|
+| `JWT_SECRET` | **Required** | Signs sessions, encrypts credentials, authenticates scheduled tasks. Generate with `openssl rand -hex 32` |
+| `ADMIN_PASS` | Optional | Set it to skip the setup wizard and create the admin account with this password |
+| `DB_DRIVER` | Optional, `auto` | Where data is stored. `auto` tries the external database first, then platform-native storage; use it when unsure. Values: `kv` `d1` `r2` `blob` `cfkv` `do` `neon` `turso` `pgrest` `pghttp` `mysqlhttp` `upstash` `s3` `hyperdrive` `netlifyblobs` `mysql` (Node only) |
+| `DB_FORMAT` | Optional, `map` | `map` keeps the whole store in one JSON — fewest requests; `key` stores one record per entity, lighter than `map` when there are many; `sql` uses relational tables and can share a database with the Go version of OpenList |
+| `DATABASE_URL` | With an external database | Generic connection string; the vendor is detected from the protocol and hostname. Usually this one is enough |
+| `SUPABASE_KEY` | With Supabase | Supabase read/write key |
+| `TURSO_AUTH_TOKEN` | With Turso | Turso access token |
+| `MYSQL_HTTP_URL` | With MySQL on the edge | HTTP forwarding gateway for MySQL / MariaDB — the only way to reach MySQL from an edge platform |
+| `PG_HTTP_URL` | With your own gateway | Address of your self-hosted Postgres HTTP gateway |
+| `MYSQL_URLS` | Connecting to MySQL from Node | Direct MySQL connection string, Node / Docker only |
+| `ALLOW_URLS` | Frontend and backend on different domains | Comma-separated CORS allowlist; same-origin only when unset |
+| `ASSET_URLS` | With a CDN | Serve frontend assets from a CDN; `$version` is replaced by the current frontend version |
+| `MAX_UPLOAD` | Optional | Limit for one whole upload, in bytes. Default 26214400 (25MB) |
+| `MAX_UPPART` | Optional | Limit for one chunk of a chunked upload, in bytes. Default 16777216 (16MB) |
+| `ALLOW_SEED` | With the seed feature | Allowlist of sites allowed as seed-data sources |
+| `EO_KV_URLS` | Usually empty | EdgeOne only. The Node cloud function cannot read the KV binding and goes through edge functions instead; put **this deployment's origin** here, e.g. `https://openlist.example.com`. Empty means the domain you are visiting, so only set it when that differs from the deployment domain, or for local debugging |
+
+> Changing `JWT_SECRET` makes the stored passwords and drive credentials undecryptable. When several platforms share one database, they must all use the same value.
+
+For each vendor's connection string and the supported variable aliases, see the [External Storage Configuration Guide](../docs/EXTERNAL_STORAGE.md).
+
+### Platform bindings (just bind them)
+
+The platform injects these at deploy time. Create the resource, then name the binding as shown.
+
+| Variable | Purpose |
 |---|---|
-| Cloudflare Workers | Project Settings → Variables and Secrets in the dashboard; or run `wrangler secret put JWT_SECRET` in the terminal |
-| Tencent Cloud EdgeOne | The "Environment Variables" of the project in the console; the deploy page asks for them directly when you click the one-click deploy button |
-| Vercel / Netlify | Environment Variables in project settings |
-| Node / Docker | The `.env` file in the root directory |
+| `DB` | Cloudflare D1 database binding, with `DB_DRIVER=d1` |
+| `KV` | Cloudflare KV / EdgeOne KV namespace binding, with `DB_DRIVER=kv` |
+| `BUCKET` | Cloudflare R2 bucket binding, with `DB_DRIVER=r2` (also accepts `R2_BUCKET` / `OPENLIST_BUCKET` / `OPENLIST_R2`) |
+| `HYPERDRIVE` | Cloudflare Hyperdrive connection string, letting the edge reach MySQL, with `DB_DRIVER=hyperdrive` |
+| `S3_BUCKET` `S3_REGION` `S3_ENDPOINT` `S3_ACCESS_KEY_ID` `S3_SECRET_ACCESS_KEY` | Bucket name and credentials for S3-compatible storage (R2 / MinIO / B2, etc.), with `DB_DRIVER=s3` |
+| `CF_ACCOUNT` `CF_KV_UUID` `CF_API_KEY` | Read/write KV over the Cloudflare REST API, with `DB_DRIVER=cfkv` (account ID, namespace ID, and a Token with KV read/write permission) |
 
-Below, each variable is explained as: variable name — what it does — whether you need to fill it in.
+### Command-line only
 
-### Required
-
-| Variable | What it does | Required? | How to fill |
-|---|---|---|---|
-| `JWT_SECRET` | The secret key for the whole program. It handles three things: signing login sessions, encrypting stored drive credentials, and authenticating scheduled tasks | **Required**. If left empty, mounting drives will fail after installation | A random string, at least 16 characters. Generate one with `openssl rand -hex 32` and paste it in |
-
-> [!IMPORTANT]
-> If `JWT_SECRET` is changed or filled in wrong, the drive credentials stored earlier can no longer be decrypted, which shows up as "mounting suddenly asks you to re-enter". When the same data is deployed on multiple platforms, the `JWT_SECRET` on each platform must stay identical.
-
-### Where data is stored
-
-Two variables decide which storage the data lands in and how it is structured.
-
-| Variable | What it does | Required? | Accepted values |
-|---|---|---|---|
-| `DB_DRIVER` | Which storage the data is stored in | Optional, defaults to `auto` | `auto`, `kv`, `d1`, `r2`, `blob`, `cfkv`, `do`, `neon`, `turso`, `pgrest`, `pghttp`, `mysqlhttp`, `upstash`, `s3`, `hyperdrive`, `netlifyblobs`, `mysql` |
-| `DB_FORMAT` | How the data is organized | Optional, defaults to `map` | `map`, `key`, `sql` |
-
-- `auto` picks in this order: the external database you configured → the platform-native storage (KV, D1, Blob, etc.). When unsure, use `auto`.
-- `map`: the entire database is stored as one JSON, one read and one write, saves the most requests, good for KV and object storage.
-- `key`: one record per entity, e.g. `users_1`. Saves more traffic than `map` when there are many entities.
-- `sql`: stored with relational tables, same schema as the Go version of OpenList, can share the same database with the Go version.
-- `mysql` only works in Node / Docker. Edge platforms have no raw TCP, so it can't connect.
-
-Common combinations:
-
-```bash
-# Cloudflare Workers + D1
-DB_FORMAT=sql
-DB_DRIVER=d1
-
-# EdgeOne + Blob (no setup needed, created on first write)
-DB_FORMAT=map
-DB_DRIVER=blob
-
-# External database, e.g. Neon
-DB_FORMAT=map
-DB_DRIVER=auto
-DATABASE_URL=postgres://user:pass@ep-xxx.neon.tech/neondb
-```
-
-### External databases (fill in when you don't want to use platform-native storage)
-
-The easiest way is to **fill in only a single `DATABASE_URL` and keep `DB_DRIVER` as `auto`**, the program recognizes the vendor from the protocol and hostname.
-
-| Variable | What it does | Required? |
-|---|---|---|
-| `DATABASE_URL` | A general database connection string; the recognized vendor's driver is used | Enough in most cases when using an external database |
-| `SUPABASE_KEY` | Supabase read/write key, needed when a single connection string is not enough | Required when using Supabase |
-| `TURSO_AUTH_TOKEN` | Turso access token | Required when using Turso |
-| `MYSQL_HTTP_URL` | MySQL / MariaDB HTTP forwarding gateway address. Edge platforms can only reach MySQL through it | Required when using MySQL on the edge |
-| `PG_HTTP_URL` | Your own Postgres HTTP gateway address | Required when using a self-hosted gateway |
-| `MYSQL_URLS` | MySQL direct connection string, only available in Node / Docker | Fill in when connecting to MySQL directly in Node |
-
-For how to write each vendor's connection string and which variable aliases are supported, see [External Storage Configuration Guide](../docs/EXTERNAL_STORAGE.md).
-
-### Platform bindings (no need to fill in by hand, just bind them)
-
-These are injected into the environment by the platform at deploy time; you only need to create the resource in the console and name the binding as shown below.
-
-| Variable | What it does | Do you need to manage it? |
-|---|---|---|
-| `DB` | Cloudflare D1 database binding, used when `DB_DRIVER=d1` | Bind it if you want D1, name it `DB` |
-| `KV` | Cloudflare KV / EdgeOne KV namespace binding, used when `DB_DRIVER=kv` | Bind it if you want KV, name it `KV` |
-| `HYPERDRIVE` | Cloudflare Hyperdrive connection string, lets the edge reach MySQL, used when `DB_DRIVER=hyperdrive` | Bind it if you want Hyperdrive |
-| `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Bucket name and access credentials for S3-compatible object storage (R2 / MinIO / B2, etc.), used when `DB_DRIVER=s3` | Fill in all five when using S3 storage |
-| `CF_ACCOUNT`, `CF_KV_UUID`, `CF_API_KEY` | Read/write KV over the Cloudflare REST API, used when `DB_DRIVER=cfkv`. They are the account ID, KV namespace ID, and an API Token with KV read/write permission, respectively | Fill in all three when using `cfkv` |
-| `BUCKET` | Cloudflare R2 bucket binding, used by `DB_DRIVER=r2` (also accepts `R2_BUCKET` / `OPENLIST_BUCKET` / `OPENLIST_R2`) | Bind it if you want R2; name it `BUCKET` |
-
-### Other variables (most can be left alone)
-
-| Variable | What it does | Required? |
-|---|---|---|
-| `EO_KV_URLS` | EdgeOne only. The KV binding is injected only into edge functions, so the Node cloud function cannot get it and can only read/write KV through **this deployment's** `/kv-get` `/kv-put` `/kv-delete` `/kv-list` edge functions. Put **this deployment's origin** here, e.g. `https://openlist.example.com` (only scheme+host+port are used; any path after it is ignored) | Usually left empty — an empty value automatically uses the domain you are visiting; set it only when the visited domain differs from the deployment domain (a CDN or custom domain in front) or for local debugging |
-| `ADMIN_PASS` | If set, skips the setup wizard and creates the admin account directly with this password | Optional, set it in the browser wizard if not filled |
-| `ALLOW_URLS` | Cross-origin allowlist, comma-separated. If not set, only same-origin requests are allowed | Fill in when the frontend and backend are on different domains |
-| `ASSET_URLS` | Load frontend static assets from a CDN, supports `$version` as a placeholder for the current frontend version | Fill in when using a CDN |
-| `MAX_UPLOAD` | Overall size limit for a single upload, in bytes | Optional, defaults to 26214400 (25MB) |
-| `MAX_UPPART` | Size limit per chunk in chunked uploads, in bytes | Optional, defaults to 16777216 (16MB) |
-| `ALLOW_SEED` | Allowlist of sites permitted as seed-data sources | Fill in when using the seed feature |
-
-### Command-line only (not filled into environment variables)
-
-| Variable | What it does |
+| Variable | Purpose |
 |---|---|
 | `EO_PAGES_PROJECT` | Which project the EdgeOne Makers CLI deploys to |
 | `EO_PAGES_API_TOKEN` | API Token from the EdgeOne Makers console, for the CLI |
 | `EO_PAGES_URL` | The domain after deployment, used by `pnpm run deploy:edgeone` for post-deploy checks |
 
-Every variable is listed with comments in the [variable template](../.dev.vars.example).
+The template is in [`.dev.vars.example`](../.dev.vars.example).
 
 ---
 
@@ -425,7 +361,7 @@ DB_FORMAT=sql
 
 ## Post-deployment Checks
 
-Successful deployment and usable storage are two different things. The worst case is the storage driver silently falling back to memory mode: the site opens and you can log in, but all data is lost on restart.
+A successful deployment does not mean usable storage — the driver can silently fall back to memory: the site opens and you can log in, but everything is lost on restart.
 
 ```bash
 curl https://your-domain/api/public/env_check
@@ -502,10 +438,8 @@ pnpm run format         # format code with prettier
 
 ## Help & Support
 
-If you encounter problems during use, you can get help through the channels below:
-
-- 🐛 **Submit a bug or feature request**: please go to [_Issues_](https://github.com/LegspCpd/openlist-next/issues) in this repository
-- 💬 **General questions and discussion**: please go to the [_Discussions_](https://github.com/LegspCpd/openlist-next/discussions) area in this repository
+- 🐛 **Bug or feature request**: [_Issues_](https://github.com/LegspCpd/openlist-next/issues)
+- 💬 **Questions and discussion**: [_Discussions_](https://github.com/LegspCpd/openlist-next/discussions)
 
 ## Open Source License
 

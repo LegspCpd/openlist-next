@@ -32,9 +32,9 @@
 
 ## 介绍
 
-OpenList Next 把分散在多个网盘、对象存储和协议服务里的文件集中到一个界面，可以浏览、预览、下载、分享和管理。后端用 TypeScript 编写，运行在边缘计算平台上。
+OpenList Next 把分散在多个网盘、对象存储和协议服务里的文件集中到一个界面，可以浏览、预览、下载、分享和管理。
 
-本项目源自官方 [OpenList-Worker](https://github.com/OpenListTeam/OpenList-Worker)，在官方版本的基础上补上了「在任何边缘平台上直连外部数据库」这件事。两个版本的差别见下方[功能介绍](#功能介绍)里的对照表。
+它源自官方 [OpenList-Worker](https://github.com/OpenListTeam/OpenList-Worker)，补上了「在任何边缘平台上直连外部数据库」这件事；差别见[功能介绍](#功能介绍)里的对照表。
 
 按顺序往下读，或者直接跳到你要看的部分：
 
@@ -64,20 +64,12 @@ OpenList Next 把分散在多个网盘、对象存储和协议服务里的文件
 
 </div>
 
-部署完成后还需要配置环境变量，其中 `JWT_SECRET` 是必填的，可以用 `openssl rand -hex 32` 生成。
+部署完成后还要配环境变量，`JWT_SECRET` 必填（`openssl rand -hex 32` 生成）。每个变量是什么、填在哪，见[环境变量](#环境变量)。
 
 - EdgeOne：[国际站控制台](https://console.edgeone.ai/makers) · [中国站控制台](https://console.cloud.tencent.com/edgeone/makers)
 - Cloudflare：[Worker 后台](https://dash.cloudflare.com/)
 - Vercel：项目设置 → Environment Variables
 - Netlify：Site configuration → Environment variables
-
-常用的几个变量：
-
-- `JWT_SECRET`：会话签名和字段加密用的密钥，**必填**
-- `ADMIN_PASS`：可选，设置后跳过安装向导，直接用这个密码初始化管理员账号
-- `DB_FORMAT`：数据怎么组织，`map`（默认）/ `key` / `sql`
-- `DB_DRIVER`：数据存在哪里，`auto`（默认，自动识别）/ `kv` / `d1` / `blob` / `neon` / `turso` / …
-- `DATABASE_URL`：外部数据库连接串。填了它并保持 `DB_DRIVER=auto`，程序会自动接上
 
 > [!IMPORTANT]
 > 如果 Cloudflare 提示「无法获取存储库内容」，先 [Fork](https://github.com/LegspCpd/openlist-next/fork) 本仓库，再用「连接到 GitHub 仓库」的方式部署。
@@ -86,9 +78,7 @@ OpenList Next 把分散在多个网盘、对象存储和协议服务里的文件
 
 ## 功能介绍
 
-本节分四块：能挂哪些存储、有哪些核心能力、权限怎么管理、能部署到哪里，最后一块列了和官方版本的差异。
-
-这些能力来自官方 [OpenList-Worker](https://github.com/OpenListTeam/OpenList-Worker) —— 官方 [OpenListTeam/OpenList](https://github.com/OpenListTeam/OpenList) 的 TypeScript + Serverless 移植版。界面与交互两边一致，差别只在存储与部署。
+这些能力来自官方 [OpenList-Worker](https://github.com/OpenListTeam/OpenList-Worker)（官方 [OpenListTeam/OpenList](https://github.com/OpenListTeam/OpenList) 的 TypeScript + Serverless 移植版），界面与交互两边一致，差别只在存储与部署。
 
 ### 存储聚合
 
@@ -135,7 +125,7 @@ OpenList Next 把分散在多个网盘、对象存储和协议服务里的文件
 | 网盘驱动 | 78 个 | 80 个，补齐 `123_link`、`ilanzou`、`halalcloud`；移除了只在本地文件系统上才有意义的 `Local` |
 | 部署平台 | Cloudflare Workers、EdgeOne、ESA、Vercel、Serverless、Node/Docker | 新增 Netlify，并为 EdgeOne / ESA / Vercel 补了一键部署脚本 |
 
-官方版本里的 `mysql` 驱动只能跑在 Node 容器中——Cloudflare Workers 没有裸 TCP，部署到边缘就只能用平台自带的 KV。本项目新增的 10 个驱动里，`neon`、`turso`、`pgrest`、`pghttp`、`mysqlhttp`、`upstash`、`s3`、`netlifyblobs` 这 8 个走 HTTP，所以在边缘运行时也能连外部数据库，填一条 `DATABASE_URL` 就行；另外两个里 `r2` 用的是 Cloudflare 的存储桶绑定，`hyperdrive` 靠 `mysql2` 直连 TCP，只在 Node 环境可用。
+新增的 10 个驱动里，8 个走 HTTP（`neon` `turso` `pgrest` `pghttp` `mysqlhttp` `upstash` `s3` `netlifyblobs`），在边缘也能连外部数据库，填一条 `DATABASE_URL` 即可；`r2` 用 Cloudflare 存储桶绑定，`hyperdrive` 靠 `mysql2` 直连 TCP，仅 Node 可用。官方版的 `mysql` 同样只在 Node 容器里能跑。
 
 详细说明见 [外部存储配置指南](./docs/EXTERNAL_STORAGE.md)。
 
@@ -143,109 +133,55 @@ OpenList Next 把分散在多个网盘、对象存储和协议服务里的文件
 
 ## 环境变量
 
-### 变量填在哪里
+填在哪：Cloudflare 在 Settings → Variables and Secrets；EdgeOne 在项目的「环境变量」；Vercel / Netlify 在项目设置；Node / Docker 写在根目录 `.env`。
 
-同一个变量名，填在下面任何一处效果都一样。
+### 变量一览
 
-| 部署方式 | 填在哪 |
-|---|---|
-| Cloudflare Workers | 控制台项目的 Settings → Variables and Secrets；或在终端执行 `wrangler secret put JWT_SECRET` |
-| 腾讯云 EdgeOne | 控制台项目的「环境变量」；点一键部署按钮时，部署页会直接问你要 |
-| Vercel / Netlify | 项目设置的 Environment Variables |
-| Node / Docker | 根目录的 `.env` 文件 |
-
-下面按「变量名 —— 它是干什么的 —— 要不要填」逐条写清楚。
-
-### 必填的
-
-| 变量名 | 它是干什么的 | 要不要填 | 怎么填 |
-|---|---|---|---|
-| `JWT_SECRET` | 整个程序的密钥。三件事都靠它：登录会话的签名、网盘凭据这类字段的加密存储、定时任务的鉴权 | **必填**。不填的话装完之后挂载网盘会失败 | 随机字符串，至少 16 位。用 `openssl rand -hex 32` 生成一串填进去 |
-
-> [!IMPORTANT]
-> `JWT_SECRET` 换了或者填错了，之前存进去的网盘凭据就解不开了，表现为「挂载突然要求重新填写」。同一份数据部署在多个平台时，各平台的 `JWT_SECRET` 必须保持一致。
-
-### 数据存在哪里
-
-这两个变量决定数据落在哪种存储、按什么结构存。
-
-| 变量名 | 它是干什么的 | 要不要填 | 可选值 |
-|---|---|---|---|
-| `DB_DRIVER` | 数据存到哪种存储里 | 选填，默认 `auto` | `auto`、`kv`、`d1`、`r2`、`blob`、`cfkv`、`do`、`neon`、`turso`、`pgrest`、`pghttp`、`mysqlhttp`、`upstash`、`s3`、`hyperdrive`、`netlifyblobs`、`mysql` |
-| `DB_FORMAT` | 数据按什么结构组织 | 选填，默认 `map` | `map`、`key`、`sql` |
-
-- `auto` 会按这个顺序挑：你配的外部数据库 → 平台自带的存储（KV、D1、Blob 之类）。拿不准就用 `auto`。
-- `map`：整个库存成一个 JSON，读一次写一次，最省请求次数，适合 KV 和对象存储。
-- `key`：每个实体存一条记录，比如 `users_1`。实体多的时候比 `map` 省流量。
-- `sql`：用关系表存，表结构和 Go 版 OpenList 一样，可以和 Go 版共用同一个数据库。
-- `mysql` 只能在 Node / Docker 里用。边缘平台没有裸 TCP，连不上。
-
-常用组合：
-
-```bash
-# Cloudflare Workers + D1
-DB_FORMAT=sql
-DB_DRIVER=d1
-
-# EdgeOne + Blob（不用建库，第一次写入自动创建）
-DB_FORMAT=map
-DB_DRIVER=blob
-
-# 外部数据库，以 Neon 为例
-DB_FORMAT=map
-DB_DRIVER=auto
-DATABASE_URL=postgres://user:pass@ep-xxx.neon.tech/neondb
-```
-
-### 外部数据库（不想用平台自带存储时填）
-
-最省事的做法是**只填一条 `DATABASE_URL`，`DB_DRIVER` 保持 `auto`**，程序自己看协议和主机名就能认出是哪家。
-
-| 变量名 | 它是干什么的 | 要不要填 |
+| 变量名 | 填不填 | 说明 |
 |---|---|---|
-| `DATABASE_URL` | 通用的数据库连接串，认出哪家就用哪家的驱动 | 用外部数据库时填这一条通常就够 |
-| `SUPABASE_KEY` | Supabase 的读写 key，只有一条连接串不够 | 用 Supabase 时必填 |
-| `TURSO_AUTH_TOKEN` | Turso 的访问令牌 | 用 Turso 时必填 |
-| `MYSQL_HTTP_URL` | MySQL / MariaDB 的 HTTP 转发网关地址。边缘平台连 MySQL 只能走它 | 在边缘用 MySQL 时必填 |
-| `PG_HTTP_URL` | 自己搭的 Postgres HTTP 网关地址 | 用自建网关时必填 |
-| `MYSQL_URLS` | MySQL 直连连接串，仅 Node / Docker 可用 | 在 Node 里直连 MySQL 时填 |
+| `JWT_SECRET` | **必填** | 会话签名、凭据加密、定时任务鉴权都用它。用 `openssl rand -hex 32` 生成 |
+| `ADMIN_PASS` | 选填 | 设了就跳过安装向导，直接用它建管理员账号 |
+| `DB_DRIVER` | 选填，默认 `auto` | 数据存到哪。`auto` 按「外部数据库 → 平台自带存储」的顺序挑，拿不准就用它。可选：`kv` `d1` `r2` `blob` `cfkv` `do` `neon` `turso` `pgrest` `pghttp` `mysqlhttp` `upstash` `s3` `hyperdrive` `netlifyblobs` `mysql`（仅 Node） |
+| `DB_FORMAT` | 选填，默认 `map` | `map` 整库存一条 JSON，最省请求；`key` 一个实体一条，实体多时比 `map` 省流量；`sql` 用关系表，可以和 Go 版 OpenList 共用同一个库 |
+| `DATABASE_URL` | 用外部库时填 | 通用连接串，程序按协议和主机名认厂家。通常填这一条就够 |
+| `SUPABASE_KEY` | 用 Supabase 时填 | Supabase 的读写 key |
+| `TURSO_AUTH_TOKEN` | 用 Turso 时填 | Turso 访问令牌 |
+| `MYSQL_HTTP_URL` | 边缘上用 MySQL 时填 | MySQL / MariaDB 的 HTTP 转发网关，边缘平台连 MySQL 只能走它 |
+| `PG_HTTP_URL` | 用自建网关时填 | 自建 Postgres HTTP 网关地址 |
+| `MYSQL_URLS` | Node 直连 MySQL 时填 | MySQL 直连连接串，仅 Node / Docker 可用 |
+| `ALLOW_URLS` | 前后端不同域时填 | 跨域白名单，逗号分隔；不填只允许同源 |
+| `ASSET_URLS` | 用 CDN 时填 | 前端静态资源从 CDN 加载，支持 `$version` 占位当前前端版本号 |
+| `MAX_UPLOAD` | 选填 | 单次整体上传上限，字节，默认 26214400（25MB） |
+| `MAX_UPPART` | 选填 | 分片上传的单片上限，字节，默认 16777216（16MB） |
+| `ALLOW_SEED` | 用种子功能时填 | 允许当作种子数据来源的站点白名单 |
+| `EO_KV_URLS` | 一般留空 | EdgeOne 专用。Node 云函数拿不到 KV 绑定，只能经边缘函数转发；填**本部署的 origin**，如 `https://openlist.example.com`。留空会自动取当前访问域名，只有访问域名≠部署域名或本地调试才手填 |
+
+> 换了 `JWT_SECRET`，库里已加密的密码和网盘凭据就解不开；多个平台共用一份数据时，各平台必须填同一个值。
 
 各家连接串怎么写、还支持哪些变量别名，见[外部存储配置指南](./docs/EXTERNAL_STORAGE.md)。
 
-### 平台绑定（不用手填，绑定好就行）
+### 平台绑定（绑好就行，不用手填）
 
-这些由平台在部署时自动注入到环境里，你只需要在控制台建好资源、绑定时把名字写成下面这样。
+这些由平台在部署时注入。建好资源，把绑定名字写成下面这样即可。
 
-| 变量名 | 它是干什么的 | 要不要管 |
-|---|---|---|
-| `DB` | Cloudflare D1 数据库绑定，`DB_DRIVER=d1` 用它 | 想用 D1 就绑，名字填 `DB` |
-| `KV` | Cloudflare KV / EdgeOne KV 的命名空间绑定，`DB_DRIVER=kv` 用它 | 想用 KV 就绑，名字填 `KV` |
-| `HYPERDRIVE` | Cloudflare Hyperdrive 连接串，让边缘能访问 MySQL，`DB_DRIVER=hyperdrive` 用它 | 想用 Hyperdrive 就绑 |
-| `S3_BUCKET`、`S3_REGION`、`S3_ENDPOINT`、`S3_ACCESS_KEY_ID`、`S3_SECRET_ACCESS_KEY` | S3 兼容对象存储（R2 / MinIO / B2 等）的桶名与访问凭据，`DB_DRIVER=s3` 用它们 | 用 S3 存储就五项都填 |
-| `CF_ACCOUNT`、`CF_KV_UUID`、`CF_API_KEY` | 走 Cloudflare REST API 读写 KV，`DB_DRIVER=cfkv` 用它们。分别是账户 ID、KV 命名空间 ID、有 KV 读写权限的 API Token | 用 `cfkv` 就三项都填 |
-| `BUCKET` | Cloudflare R2 的存储桶绑定，`DB_DRIVER=r2` 用它（也接受 `R2_BUCKET` / `OPENLIST_BUCKET` / `OPENLIST_R2`） | 想用 R2 就绑，名字填 `BUCKET` |
+| 变量名 | 用途 |
+|---|---|
+| `DB` | Cloudflare D1 数据库绑定，配 `DB_DRIVER=d1` |
+| `KV` | Cloudflare KV / EdgeOne KV 命名空间绑定，配 `DB_DRIVER=kv` |
+| `BUCKET` | Cloudflare R2 存储桶绑定，配 `DB_DRIVER=r2`（也接受 `R2_BUCKET` / `OPENLIST_BUCKET` / `OPENLIST_R2`） |
+| `HYPERDRIVE` | Cloudflare Hyperdrive 连接串，让边缘能访问 MySQL，配 `DB_DRIVER=hyperdrive` |
+| `S3_BUCKET` `S3_REGION` `S3_ENDPOINT` `S3_ACCESS_KEY_ID` `S3_SECRET_ACCESS_KEY` | S3 兼容对象存储（R2 / MinIO / B2 等）的桶名与凭据，配 `DB_DRIVER=s3` |
+| `CF_ACCOUNT` `CF_KV_UUID` `CF_API_KEY` | 走 Cloudflare REST API 读写 KV，配 `DB_DRIVER=cfkv`（账户 ID / 命名空间 ID / 有 KV 读写权限的 Token） |
 
-### 其他变量（大多可以不管）
+### 只在命令行里用
 
-| 变量名 | 它是干什么的 | 要不要填 |
-|---|---|---|
-| `EO_KV_URLS` | EdgeOne 专用。KV 绑定只注入边缘函数，Node 云函数拿不到，读写只能经**本部署**的 `/kv-get` `/kv-put` `/kv-delete` `/kv-list` 边缘函数转发；这里填**本部署的 origin**，如 `https://openlist.example.com`（只取协议+域名+端口，后面跟的路径会被忽略） | 一般留空——留空会自动取你当前访问的域名；只有访问域名≠部署域名（前面套了 CDN 或自定义域名）或本地调试才手填 |
-| `ADMIN_PASS` | 设了它就不用走安装向导，直接用这个密码创建管理员账号 | 选填，不填就在浏览器向导里设置 |
-| `ALLOW_URLS` | 跨域白名单，逗号分隔。不填只允许同源请求 | 前端和后端不在同一个域名时填 |
-| `ASSET_URLS` | 让前端静态资源从 CDN 加载，支持用 `$version` 占位当前前端版本号 | 用 CDN 时填 |
-| `MAX_UPLOAD` | 单次整体上传的大小上限，单位字节 | 选填，默认 26214400（25MB） |
-| `MAX_UPPART` | 分片上传时单片的大小上限，单位字节 | 选填，默认 16777216（16MB） |
-| `ALLOW_SEED` | 允许当作种子数据来源的站点白名单 | 用种子功能时填 |
-
-### 只在命令行里用（不用填进环境变量）
-
-| 变量名 | 它是干什么的 |
+| 变量名 | 用途 |
 |---|---|
 | `EO_PAGES_PROJECT` | EdgeOne Makers CLI 要部署到哪个项目 |
-| `EO_PAGES_API_TOKEN` | EdgeOne Makers 控制台里的 API Token，给 CLI 用 |
-| `EO_PAGES_URL` | 部署后的域名，`pnpm run deploy:edgeone` 用它做部署后的检查 |
+| `EO_PAGES_API_TOKEN` | EdgeOne Makers 控制台的 API Token，给 CLI 用 |
+| `EO_PAGES_URL` | 部署后的域名，`pnpm run deploy:edgeone` 用它做部署后检查 |
 
-每个变量都在[变量模板](./.dev.vars.example)里带注释列了一遍。
+变量模板见 [`.dev.vars.example`](./.dev.vars.example)。
 
 ---
 
@@ -425,7 +361,7 @@ DB_FORMAT=sql
 
 ## 部署后检查
 
-部署成功和存储可用是两件事。最坏的情况是存储驱动悄悄退回内存模式：站点能打开、能登录，但一重启数据就没了。
+部署成功不等于存储可用 —— 驱动可能悄悄退回内存模式：站点能打开、能登录，一重启数据就没了。
 
 ```bash
 curl https://你的域名/api/public/env_check
@@ -502,10 +438,8 @@ pnpm run format         # 用 prettier 格式化代码
 
 ## 帮助支持
 
-在使用过程中遇到问题，可以通过下面的渠道获取帮助：
-
-- 🐛 **提交 Bug 或功能请求**：请前往本仓库 [_Issues_](https://github.com/LegspCpd/openlist-next/issues)
-- 💬 **一般性问题与交流**：请前往本仓库 [_Discussions_](https://github.com/LegspCpd/openlist-next/discussions) 讨论区
+- 🐛 **Bug 或功能请求**：本仓库 [_Issues_](https://github.com/LegspCpd/openlist-next/issues)
+- 💬 **问题与交流**：本仓库 [_Discussions_](https://github.com/LegspCpd/openlist-next/discussions)
 
 ## 开源许可
 

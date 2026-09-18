@@ -32,9 +32,9 @@
 
 ## はじめに
 
-OpenList Next は、複数のクラウドストレージ、オブジェクトストレージ、プロトコルサービスに散らばったファイルを 1 つの画面に集約し、閲覧・プレビュー・ダウンロード・共有・管理を可能にします。バックエンドは TypeScript で書かれており、エッジコンピューティングプラットフォーム上で動作します。
+OpenList Next は、複数のクラウドストレージ、オブジェクトストレージ、プロトコルサービスに散らばったファイルを 1 つの画面に集約し、閲覧・プレビュー・ダウンロード・共有・管理を可能にします。
 
-公式の [OpenList-Worker](https://github.com/OpenListTeam/OpenList-Worker) をベースにしており、そこに「どのエッジプラットフォームからでも外部データベースに直接接続できる」という点を追加しています。両者の違いは下の[機能概要](#機能概要)の比較表にまとめています。
+公式の [OpenList-Worker](https://github.com/OpenListTeam/OpenList-Worker) をベースに、「どのエッジプラットフォームからでも外部データベースに直接接続できる」という点を追加しています。違いは[機能概要](#機能概要)の比較表にまとめています。
 
 順番に読み進めるか、必要な項目へ直接ジャンプしてください：
 
@@ -64,20 +64,12 @@ OpenList Next は、複数のクラウドストレージ、オブジェクトス
 
 </div>
 
-デプロイ完了後、環境変数の設定が必要です。その中でも `JWT_SECRET` は必須であり、`openssl rand -hex 32` で生成できます。
+デプロイ後は環境変数の設定が必要です。`JWT_SECRET` は必須（`openssl rand -hex 32` で生成）。各変数の意味と設定場所は[環境変数](#環境変数)を参照してください。
 
 - EdgeOne：[国際版コンソール](https://console.edgeone.ai/makers) · [中国版コンソール](https://console.cloud.tencent.com/edgeone/makers)
 - Cloudflare：[Worker 管理画面](https://dash.cloudflare.com/)
 - Vercel：プロジェクト設定 → Environment Variables
 - Netlify：Site configuration → Environment variables
-
-よく使う変数は以下のとおりです：
-
-- `JWT_SECRET`：セッション署名およびフィールド暗号化に用いる鍵、**必須**
-- `ADMIN_PASS`：任意。設定するとインストールウィザードをスキップし、このパスワードで管理者アカウントを直接初期化します
-- `DB_FORMAT`：データの構成方法。`map`（デフォルト）/ `key` / `sql`
-- `DB_DRIVER`：データの保存先。`auto`（デフォルト、自動判別）/ `kv` / `d1` / `blob` / `neon` / `turso` / …
-- `DATABASE_URL`：外部データベースの接続文字列。これを入力し `DB_DRIVER=auto` のままにしておくと、プログラムが自動的に接続します
 
 > [!IMPORTANT]
 > Cloudflare から「リポジトリの内容を取得できません」と表示された場合は、まず本リポジトリを [Fork](https://github.com/LegspCpd/openlist-next/fork) し、改めて「GitHub リポジトリに接続」する方法でデプロイしてください。
@@ -86,9 +78,7 @@ OpenList Next は、複数のクラウドストレージ、オブジェクトス
 
 ## 機能概要
 
-この節では 4 つの点を扱います。どのストレージをマウントできるか、どのようなコア機能があるか、権限をどう管理するか、どこにデプロイできるか。最後の項目で公式版との違いをまとめています。
-
-ここで挙げる機能は公式の [OpenList-Worker](https://github.com/OpenListTeam/OpenList-Worker) によるものです。公式 [OpenListTeam/OpenList](https://github.com/OpenListTeam/OpenList) の TypeScript + Serverless 移植版であり、画面と操作感は両者で同じで、違いはストレージとデプロイの 2 点だけです。
+ここで挙げる機能は公式の [OpenList-Worker](https://github.com/OpenListTeam/OpenList-Worker)（公式 [OpenListTeam/OpenList](https://github.com/OpenListTeam/OpenList) の TypeScript + Serverless 移植版）によるものです。画面と操作感は両者で同じで、違いはストレージとデプロイの 2 点だけです。
 
 ### ストレージ集約
 
@@ -135,7 +125,7 @@ OpenList Next は、複数のクラウドストレージ、オブジェクトス
 | クラウドドライブドライバー | 78 個 | 80 個、`123_link`、`ilanzou`、`halalcloud` を補完。ローカルファイルシステムでしか意味のない `Local` は削除 |
 | デプロイプラットフォーム | Cloudflare Workers、EdgeOne、ESA、Vercel、Serverless、Node／Docker | Netlify を追加し、EdgeOne / ESA / Vercel 向けのワンコマンドデプロイスクリプトも補完 |
 
-公式バージョンの `mysql` ドライバーは Node コンテナでのみ動作します——Cloudflare Workers には生 TCP がないため、エッジにデプロイするとプラットフォーム標準の KV しか使えません。本プロジェクトが追加した 10 個のうち 8 個（`neon`、`turso`、`pgrest`、`pghttp`、`mysqlhttp`、`upstash`、`s3`、`netlifyblobs`）は HTTP 経由なので、エッジランタイムでも外部データベースに接続でき、`DATABASE_URL` を 1 行入力するだけで済みます。残り 2 つの方式は異なり、`r2` は Cloudflare のバケットバインディングを、`hyperdrive` は `mysql2` による TCP 直結を使うため Node 環境でのみ利用できます。
+本プロジェクトが追加した 10 個のうち 8 個（`neon` `turso` `pgrest` `pghttp` `mysqlhttp` `upstash` `s3` `netlifyblobs`）は HTTP 経由なので、エッジランタイムでも外部データベースに接続でき、`DATABASE_URL` を 1 行入れれば済みます。残る 2 つは方式が異なり、`r2` は Cloudflare のバケットバインディング、`hyperdrive` は `mysql2` による TCP 直結で、Node 環境でのみ利用できます。公式版の `mysql` も同じ理由で Node コンテナ専用です。
 
 詳細は [外部ストレージ設定ガイド](../docs/EXTERNAL_STORAGE.md) を参照してください。
 
@@ -143,109 +133,55 @@ OpenList Next は、複数のクラウドストレージ、オブジェクトス
 
 ## 環境変数
 
-### 変数の設定場所
+設定場所：Cloudflare は Settings → Variables and Secrets、EdgeOne はプロジェクトの「環境変数」、Vercel / Netlify はプロジェクト設定、Node / Docker はルートの `.env` です。
 
-同じ変数名を、以下のいずれかに設定しても効果は同じです。
+### 変数一覧
 
-| デプロイ方式 | 設定場所 |
+| 変数名 | 設定 | 説明 |
+|---|---|---|
+| `JWT_SECRET` | **必須** | セッション署名、資格情報の暗号化、定期タスクの認証に使用。`openssl rand -hex 32` で生成 |
+| `ADMIN_PASS` | 任意 | 設定するとインストールウィザードを飛ばし、このパスワードで管理者アカウントを作成 |
+| `DB_DRIVER` | 任意、既定 `auto` | データの保存先。`auto` は「外部データベース → プラットフォーム標準ストレージ」の順に選びます。迷ったらこれ。指定可能：`kv` `d1` `r2` `blob` `cfkv` `do` `neon` `turso` `pgrest` `pghttp` `mysqlhttp` `upstash` `s3` `hyperdrive` `netlifyblobs` `mysql`（Node のみ） |
+| `DB_FORMAT` | 任意、既定 `map` | `map` は全体を 1 つの JSON として保存しリクエストが最も少なくて済みます。`key` はエンティティごとに 1 件で、多いときは `map` より通信量を抑えられます。`sql` はリレーショナルテーブルを使い、Go 版 OpenList と同じデータベースを共有できます |
+| `DATABASE_URL` | 外部 DB を使う場合 | 汎用の接続文字列。プロトコルとホスト名からベンダーを判別します。通常はこれ 1 つで十分 |
+| `SUPABASE_KEY` | Supabase を使う場合 | Supabase の読み書きキー |
+| `TURSO_AUTH_TOKEN` | Turso を使う場合 | Turso のアクセストークン |
+| `MYSQL_HTTP_URL` | エッジで MySQL を使う場合 | MySQL / MariaDB の HTTP 転送ゲートウェイ。エッジから MySQL へはこれ経由のみ |
+| `PG_HTTP_URL` | 自前のゲートウェイを使う場合 | 自前の Postgres HTTP ゲートウェイのアドレス |
+| `MYSQL_URLS` | Node から MySQL に直接接続する場合 | MySQL 直結の接続文字列。Node / Docker のみ |
+| `ALLOW_URLS` | フロントとバックエンドが別ドメインの場合 | クロスオリジン許可リスト（カンマ区切り）。未設定なら同一オリジンのみ |
+| `ASSET_URLS` | CDN を使う場合 | フロントの静的アセットを CDN から配信。`$version` で現在のフロント版数を埋め込めます |
+| `MAX_UPLOAD` | 任意 | 1 回のアップロード全体の上限（バイト）。既定 26214400（25MB） |
+| `MAX_UPPART` | 任意 | 分割アップロードの 1 チャンク上限（バイト）。既定 16777216（16MB） |
+| `ALLOW_SEED` | シード機能を使う場合 | シードデータの取得元として許可するサイトのリスト |
+| `EO_KV_URLS` | 通常は空 | EdgeOne 専用。Node クラウド関数は KV バインディングを取得できず、エッジ関数経由でしか読み書きできません。**本デプロイの origin**（例 `https://openlist.example.com`）を入れます。空ならアクセス中のドメインを自動で使うため、アクセス元ドメインがデプロイ先と異なる場合やローカルデバッグ時のみ指定します |
+
+> `JWT_SECRET` を変更すると、保存済みのパスワードやドライブ資格情報を復号できなくなります。複数プラットフォームで同じデータを共有する場合は、すべて同じ値にしてください。
+
+各ベンダーの接続文字列の書き方や対応する変数の別名は、[外部ストレージ設定ガイド](../docs/EXTERNAL_STORAGE.md)を参照してください。
+
+### プラットフォームバインディング（バインドするだけ）
+
+これらはデプロイ時にプラットフォームが注入します。リソースを作成し、バインディング名を以下どおりにすれば OK です。
+
+| 変数名 | 用途 |
 |---|---|
-| Cloudflare Workers | コンソールのプロジェクト Settings → Variables and Secrets、またはターミナルで `wrangler secret put JWT_SECRET` を実行 |
-| 騰訊雲 EdgeOne | コンソールのプロジェクトの「環境変数」。ワンクリックデプロイボタンを押すと、デプロイページで直接入力を求められます |
-| Vercel / Netlify | プロジェクト設定の Environment Variables |
-| Node / Docker | ルートディレクトリの `.env` ファイル |
+| `DB` | Cloudflare D1 データベースのバインディング（`DB_DRIVER=d1`） |
+| `KV` | Cloudflare KV / EdgeOne KV 名前空間のバインディング（`DB_DRIVER=kv`） |
+| `BUCKET` | Cloudflare R2 バケットのバインディング（`DB_DRIVER=r2`、`R2_BUCKET` / `OPENLIST_BUCKET` / `OPENLIST_R2` も可） |
+| `HYPERDRIVE` | Cloudflare Hyperdrive の接続文字列。エッジから MySQL に到達するために使います（`DB_DRIVER=hyperdrive`） |
+| `S3_BUCKET` `S3_REGION` `S3_ENDPOINT` `S3_ACCESS_KEY_ID` `S3_SECRET_ACCESS_KEY` | S3 互換オブジェクトストレージ（R2 / MinIO / B2 など）のバケット名と資格情報（`DB_DRIVER=s3`） |
+| `CF_ACCOUNT` `CF_KV_UUID` `CF_API_KEY` | Cloudflare REST API 経由で KV を読み書き（`DB_DRIVER=cfkv`）。それぞれアカウント ID、名前空間 ID、KV 読み書き権限のある Token |
 
-以下は「変数名 —— 説明 —— 設定が必要か」の順で箇条書きにしています。
+### コマンドライン専用
 
-### 必須の変数
-
-| 変数名 | 説明 | 設定必須か | 設定方法 |
-|---|---|---|---|
-| `JWT_SECRET` | プログラム全体のシークレット。以下の 3 つにすべて使われます：ログインセッションの署名、ドライブ認証情報などのフィールドの暗号化保存、定期タスクの認証 | **必須**。未設定の場合、インストール後にドライブをマウントすると失敗します | ランダムな文字列（16 文字以上）。`openssl rand -hex 32` で生成した文字列を入力 |
-
-> [!IMPORTANT]
-> `JWT_SECRET` を変更したり間違えて入力したりすると、これまでに保存したドライブ認証情報が復号できなくなり、「マウント時に突然再入力を求められる」ようになります。同一のデータを複数のプラットフォームにデプロイする場合、各プラットフォームの `JWT_SECRET` は一致させる必要があります。
-
-### データの保存先
-
-この 2 つの変数が、データをどのストレージに落とすか、どの構成で保存するかを決めます。
-
-| 変数名 | 説明 | 設定必須か | 選択肢 |
-|---|---|---|---|
-| `DB_DRIVER` | データをどのストレージに保存するか | 任意、デフォルトは `auto` | `auto`、`kv`、`d1`、`r2`、`blob`、`cfkv`、`do`、`neon`、`turso`、`pgrest`、`pghttp`、`mysqlhttp`、`upstash`、`s3`、`hyperdrive`、`netlifyblobs`、`mysql` |
-| `DB_FORMAT` | データをどの構成で整理するか | 任意、デフォルトは `map` | `map`、`key`、`sql` |
-
-- `auto` は以下の順で選びます：設定した外部データベース → プラットフォーム標準のストレージ（KV、D1、Blob など）。迷ったら `auto` を使ってください。
-- `map`：ストア全体を 1 つの JSON として保存し、読み書きをそれぞれ 1 回行います。リクエスト回数が最も少なく、KV やオブジェクトストレージに適しています。
-- `key`：エンティティごとに 1 レコード（例：`users_1`）を保存します。エンティティが多い場合は `map` より通信量を抑えられます。
-- `sql`：リレーショナルテーブルで保存します。テーブル構造は Go 版 OpenList と同じで、Go 版と同じデータベースを共有できます。
-- `mysql` は Node / Docker でのみ利用可能です。エッジプラットフォームには生 TCP がないため接続できません。
-
-よく使う組み合わせの例：
-
-```bash
-# Cloudflare Workers + D1
-DB_FORMAT=sql
-DB_DRIVER=d1
-
-# EdgeOne + Blob（データベース作成不要、初回書き込み時に自動作成）
-DB_FORMAT=map
-DB_DRIVER=blob
-
-# 外部データベース（Neon など）
-DB_FORMAT=map
-DB_DRIVER=auto
-DATABASE_URL=postgres://user:pass@ep-xxx.neon.tech/neondb
-```
-
-### 外部データベース（プラットフォーム標準ストレージを使わない場合）
-
-最も簡単な方法は **`DATABASE_URL` を 1 件だけ設定し、`DB_DRIVER` は `auto` のままにしておく** ことです。プログラムがプロトコルとホスト名から自動的にどのベンダーかを判別します。
-
-| 変数名 | 説明 | 設定必須か |
-|---|---|---|
-| `DATABASE_URL` | 汎用のデータベース接続文字列。どのベンダーかを判別するとそのベンダーのドライバーを使用します | 外部データベースを使う場合、この 1 件でたいてい十分 |
-| `SUPABASE_KEY` | Supabase の読み書きキー。接続文字列だけでは不足します | Supabase を使う場合は必須 |
-| `TURSO_AUTH_TOKEN` | Turso のアクセストークン | Turso を使う場合は必須 |
-| `MYSQL_HTTP_URL` | MySQL / MariaDB の HTTP 転送ゲートウェイのアドレス。エッジプラットフォームから MySQL に接続するにはこれ経由しかありません | エッジで MySQL を使う場合は必須 |
-| `PG_HTTP_URL` | 自分で立てた Postgres HTTP ゲートウェイのアドレス | 自前のゲートウェイを使う場合は必須 |
-| `MYSQL_URLS` | MySQL 直接接続の接続文字列。Node / Docker のみ利用可能 | Node で MySQL に直接接続する場合に設定 |
-
-各ベンダーの接続文字列の書き方や、サポートされている変数の別名については[外部ストレージ設定ガイド](../docs/EXTERNAL_STORAGE.md)を参照してください。
-
-### プラットフォームバインディング（手動入力不要、バインドするだけ）
-
-これらはデプロイ時にプラットフォームから環境へ自動で注入されます。コンソールでリソースを作成し、バインド時に名前を以下のようにするだけで済みます。
-
-| 変数名 | 説明 | 設定が必要か |
-|---|---|---|
-| `DB` | Cloudflare D1 データベースのバインディング。`DB_DRIVER=d1` で使用します | D1 を使うならバインドし、名前は `DB` に |
-| `KV` | Cloudflare KV / EdgeOne KV の名前空間バインディング。`DB_DRIVER=kv` で使用します | KV を使うならバインドし、名前は `KV` に |
-| `HYPERDRIVE` | Cloudflare Hyperdrive の接続文字列。エッジから MySQL にアクセスできるようにします。`DB_DRIVER=hyperdrive` で使用します | Hyperdrive を使うならバインド |
-| `S3_BUCKET`、`S3_REGION`、`S3_ENDPOINT`、`S3_ACCESS_KEY_ID`、`S3_SECRET_ACCESS_KEY` | S3 互換オブジェクトストレージ（R2 / MinIO / B2 など）のバケット名とアクセス認証情報。`DB_DRIVER=s3` で使用します | S3 ストレージを使うなら 5 項目すべてを設定 |
-| `CF_ACCOUNT`、`CF_KV_UUID`、`CF_API_KEY` | Cloudflare REST API 経由で KV を読み書きする際の値。`DB_DRIVER=cfkv` で使用します。それぞれアカウント ID、KV 名前空間 ID、KV の読み書き権限を持つ API Token です | `cfkv` を使うなら 3 項目すべてを設定 |
-| `BUCKET` | Cloudflare R2 のバケットバインディング。`DB_DRIVER=r2` で使用します（`R2_BUCKET`／`OPENLIST_BUCKET`／`OPENLIST_R2` も可） | R2 を使うならバインドし、名前を `BUCKET` にする |
-
-### その他の変数（たいていは設定不要）
-
-| 変数名 | 説明 | 設定必須か |
-|---|---|---|
-| `EO_KV_URLS` | EdgeOne 専用。KV バインディングはエッジ関数にのみ注入され、Node クラウド関数からは取得できないため、読み書きは**このデプロイ自身**の `/kv-get` `/kv-put` `/kv-delete` `/kv-list` エッジ関数を経由して転送されます。ここには**このデプロイの origin**（例：`https://openlist.example.com`）を設定します（プロトコル+ホスト+ポートのみ取得され、後続のパスは無視されます） | 通常は空のままにします。空ならアクセス中のドメインが自動使用されます。アクセスするドメインとデプロイ先ドメインが異なる場合（手前に CDN や独自ドメインがある場合）やローカルデバッグの場合にのみ手動設定します |
-| `ADMIN_PASS` | これを設定するとインストールウィザードを経ずに、このパスワードで管理者アカウントを作成します | 任意。未設定ならブラウザのウィザードで設定 |
-| `ALLOW_URLS` | CORS の許可リスト。カンマ区切り。未設定の場合は同一オリジンからのリクエストのみ許可 | フロントエンドとバックエンドが別ドメインの場合に設定 |
-| `ASSET_URLS` | フロントエンドの静的リソースを CDN から読み込むようにします。`$version` で現在のフロントエンドバージョン番号をプレースホルダとして使えます | CDN を使う場合に設定 |
-| `MAX_UPLOAD` | 1 回の全体アップロードのサイズ上限。単位はバイト | 任意。デフォルトは 26214400（25MB） |
-| `MAX_UPPART` | チャンクアップロード時の 1 チャンクのサイズ上限。単位はバイト | 任意。デフォルトは 16777216（16MB） |
-| `ALLOW_SEED` | シードデータのソースとして許可するサイトの許可リスト | シード機能を使う場合に設定 |
-
-### コマンドライン専用（環境変数には入れません）
-
-| 変数名 | 説明 |
+| 変数名 | 用途 |
 |---|---|
-| `EO_PAGES_PROJECT` | EdgeOne Makers CLI がデプロイするプロジェクト |
-| `EO_PAGES_API_TOKEN` | EdgeOne Makers コンソールの API Token。CLI が使用します |
-| `EO_PAGES_URL` | デプロイ後のドメイン。`pnpm run deploy:edgeone` がデプロイ後の確認に使用します |
+| `EO_PAGES_PROJECT` | EdgeOne Makers CLI のデプロイ先プロジェクト |
+| `EO_PAGES_API_TOKEN` | EdgeOne Makers コンソールの API Token（CLI 用） |
+| `EO_PAGES_URL` | デプロイ後のドメイン。`pnpm run deploy:edgeone` がデプロイ後の確認に使用 |
 
-すべての変数は[変数テンプレート](../.dev.vars.example)にコメント付きで列挙されています。
+変数テンプレートは [`.dev.vars.example`](../.dev.vars.example) にあります。
 
 ---
 
@@ -425,7 +361,7 @@ DB_FORMAT=sql
 
 ## デプロイ後の確認
 
-デプロイが成功することと、ストレージが利用可能であることは別の問題です。最悪の場合、ストレージドライバーがこっそりメモリモードに退避してしまいます。サイトは開き、ログインもできますが、再起動するとデータが消えてしまいます。
+デプロイの成功とストレージが使えることは別です —— ドライバーがこっそりメモリモードに退避することがあり、サイトは開いてログインもできますが、再起動でデータが消えます。
 
 ```bash
 curl https://あなたのドメイン/api/public/env_check
@@ -502,10 +438,8 @@ pnpm run format         # prettier でコードをフォーマットする
 
 ## ヘルプとサポート
 
-利用中に問題が発生した場合は、以下のチャネルからヘルプを得ることができます：
-
-- 🐛 **バグ報告や機能リクエスト**：本リポジトリの [_Issues_](https://github.com/LegspCpd/openlist-next/issues) へ
-- 💬 **一般的な質問や議論**：本リポジトリの [_Discussions_](https://github.com/LegspCpd/openlist-next/discussions) 掲示板へ
+- 🐛 **バグ報告・機能リクエスト**：本リポジトリの [_Issues_](https://github.com/LegspCpd/openlist-next/issues)
+- 💬 **質問・議論**：本リポジトリの [_Discussions_](https://github.com/LegspCpd/openlist-next/discussions)
 
 ## オープンソースライセンス
 

@@ -32,9 +32,9 @@
 
 ## 소개
 
-OpenList Next는 여러 클라우드 드라이브, 오브젝트 스토리지, 프로토콜 서비스에 흩어져 있는 파일을 하나의 화면으로 모아서 보고, 미리 보고, 내려받고, 공유하고, 관리할 수 있게 해 줍니다. 백엔드는 TypeScript로 작성되었고 엣지 컴퓨팅 플랫폼에서 실행됩니다.
+OpenList Next는 여러 클라우드 드라이브, 오브젝트 스토리지, 프로토콜 서비스에 흩어져 있는 파일을 하나의 화면으로 모아서 보고, 미리 보고, 내려받고, 공유하고, 관리할 수 있게 해 줍니다.
 
-공식 [OpenList-Worker](https://github.com/OpenListTeam/OpenList-Worker)에서 출발했으며, 여기에 "어떤 엣지 플랫폼에서도 외부 데이터베이스에 직접 연결"이라는 한 가지를 더했습니다. 두 버전의 차이는 아래 [기능 소개](#기능-소개)의 비교표에 정리했습니다.
+공식 [OpenList-Worker](https://github.com/OpenListTeam/OpenList-Worker)에서 출발해 "어떤 엣지 플랫폼에서도 외부 데이터베이스에 직접 연결"이라는 한 가지를 더했습니다. 두 버전의 차이는 [기능 소개](#기능-소개)의 비교표에 있습니다.
 
 순서대로 읽거나, 필요한 부분으로 바로 이동하세요:
 
@@ -64,20 +64,12 @@ OpenList Next는 여러 클라우드 드라이브, 오브젝트 스토리지, �
 
 </div>
 
-배포 완료 후에도 환경 변수를 설정해야 하며, 그중 `JWT_SECRET`은 필수 항목으로 `openssl rand -hex 32`로 생성할 수 있습니다.
+배포 후에는 환경 변수를 설정해야 합니다. `JWT_SECRET`은 필수(`openssl rand -hex 32`로 생성). 각 변수의 의미와 설정 위치는 [환경 변수](#환경-변수)를 참고하세요.
 
 - EdgeOne: [인터내셔널 콘솔](https://console.edgeone.ai/makers) · [중국 콘솔](https://console.cloud.tencent.com/edgeone/makers)
 - Cloudflare: [Worker 백엔드](https://dash.cloudflare.com/)
 - Vercel: 프로젝트 설정 → Environment Variables
 - Netlify: Site configuration → Environment variables
-
-자주 쓰는 변수들:
-
-- `JWT_SECRET`: 세션 서명과 필드 암호화에 사용하는 키, **필수**
-- `ADMIN_PASS`: 선택 사항. 설정하면 설치 마법사를 건너뛰고 이 비밀번호로 관리자 계정을 초기화합니다
-- `DB_FORMAT`: 데이터를 어떻게 구성할지, `map`(기본값) / `key` / `sql`
-- `DB_DRIVER`: 데이터를 어디에 저장할지, `auto`(기본값, 자동 인식) / `kv` / `d1` / `blob` / `neon` / `turso` / …
-- `DATABASE_URL`: 외부 데이터베이스 연결 문자열. 이를 채우고 `DB_DRIVER=auto`로 두면 프로그램이 자동으로 연결됩니다
 
 > [!IMPORTANT]
 > Cloudflare에서 「저장소 콘텐츠를 가져올 수 없음」이 표시되면, 먼저 본 저장소를 [Fork](https://github.com/LegspCpd/openlist-next/fork)한 뒤 「GitHub 저장소 연결」 방식으로 배포하세요.
@@ -86,9 +78,7 @@ OpenList Next는 여러 클라우드 드라이브, 오브젝트 스토리지, �
 
 ## 기능 소개
 
-이 절에서는 네 가지를 다룹니다. 어떤 스토리지를 마운트할 수 있는지, 핵심 기능은 무엇인지, 권한은 어떻게 관리하는지, 어디에 배포할 수 있는지. 마지막 항목에서 공식 버전과의 차이를 정리했습니다.
-
-여기서 설명하는 기능은 공식 [OpenList-Worker](https://github.com/OpenListTeam/OpenList-Worker)에서 온 것입니다. 공식 [OpenListTeam/OpenList](https://github.com/OpenListTeam/OpenList)의 TypeScript + Serverless 이식판이며, 화면과 조작 방식은 양쪽이 같고 차이는 스토리지와 배포 두 가지뿐입니다.
+여기서 설명하는 기능은 공식 [OpenList-Worker](https://github.com/OpenListTeam/OpenList-Worker)(공식 [OpenListTeam/OpenList](https://github.com/OpenListTeam/OpenList)의 TypeScript + Serverless 이식판)에서 온 것입니다. 화면과 조작 방식은 양쪽이 같고 차이는 스토리지와 배포 두 가지뿐입니다.
 
 ### 스토리지 통합
 
@@ -135,7 +125,7 @@ OpenList Next는 여러 클라우드 드라이브, 오브젝트 스토리지, �
 | 네트워크 드라이브 드라이버 | 78개 | 80개, `123_link`, `ilanzou`, `halalcloud` 보완. 로컬 파일 시스템에서만 의미가 있는 `Local` 은 제거 |
 | 배포 플랫폼 | Cloudflare Workers, EdgeOne, ESA, Vercel, Serverless, Node/Docker | Netlify 추가, EdgeOne / ESA / Vercel용 원클릭 배포 스크립트 보완 |
 
-공식 버전의 `mysql` 드라이버는 Node 컨테이너에서만 동작합니다 — Cloudflare Workers에는 raw TCP가 없으므로 엣지에 배포하면 플랫폼 기본 KV만 사용할 수 있습니다. 본 프로젝트가 추가한 10개 중 8개(`neon`, `turso`, `pgrest`, `pghttp`, `mysqlhttp`, `upstash`, `s3`, `netlifyblobs`)는 HTTP를 사용하므로 엣지 런타임에서도 외부 데이터베이스에 연결할 수 있고, `DATABASE_URL` 한 줄만 채우면 됩니다. 나머지 두 개는 방식이 다릅니다. `r2`는 Cloudflare 버킷 바인딩을, `hyperdrive`는 `mysql2`로 TCP에 직접 연결하므로 Node 환경에서만 사용할 수 있습니다.
+본 프로젝트가 추가한 10개 중 8개(`neon` `turso` `pgrest` `pghttp` `mysqlhttp` `upstash` `s3` `netlifyblobs`)는 HTTP를 사용하므로 엣지 런타임에서도 외부 데이터베이스에 연결할 수 있고, `DATABASE_URL` 한 줄만 채우면 됩니다. 나머지 둘은 방식이 다릅니다. `r2`는 Cloudflare 버킷 바인딩을, `hyperdrive`는 `mysql2`로 TCP에 직접 연결하므로 Node 환경에서만 쓸 수 있습니다. 공식 버전의 `mysql`도 같은 이유로 Node 컨테이너 전용입니다.
 
 자세한 설명은 [외부 스토리지 설정 가이드](../docs/EXTERNAL_STORAGE.md)를 참고하세요.
 
@@ -143,109 +133,55 @@ OpenList Next는 여러 클라우드 드라이브, 오브젝트 스토리지, �
 
 ## 환경 변수
 
-### 변수를 어디에 채우는가
+설정 위치: Cloudflare는 Settings → Variables and Secrets, EdgeOne은 프로젝트의 「환경 변수」, Vercel / Netlify는 프로젝트 설정, Node / Docker는 루트의 `.env` 파일입니다.
 
-변수 이름이 같으면 아래 어디에 채우든 효과는 같습니다.
+### 변수 일람
 
-| 배포 방식 | 채우는 위치 |
+| 변수 이름 | 필수 여부 | 설명 |
+|---|---|---|
+| `JWT_SECRET` | **필수** | 세션 서명, 자격 증명 암호화, 정기 작업 인증에 사용. `openssl rand -hex 32`로 생성 |
+| `ADMIN_PASS` | 선택 | 설정하면 설치 마법사를 건너뛰고 이 비밀번호로 관리자 계정을 만듭니다 |
+| `DB_DRIVER` | 선택, 기본 `auto` | 데이터 저장 위치. `auto`는 「외부 데이터베이스 → 플랫폼 기본 스토리지」 순으로 고릅니다. 확실치 않으면 그대로 두세요. 값: `kv` `d1` `r2` `blob` `cfkv` `do` `neon` `turso` `pgrest` `pghttp` `mysqlhttp` `upstash` `s3` `hyperdrive` `netlifyblobs` `mysql`(Node 전용) |
+| `DB_FORMAT` | 선택, 기본 `map` | `map`은 전체를 JSON 하나로 저장해 요청이 가장 적고, `key`는 엔티티마다 한 건이라 엔티티가 많을 때 `map`보다 가볍습니다. `sql`은 관계형 테이블을 쓰며 Go 버전 OpenList와 같은 데이터베이스를 공유할 수 있습니다 |
+| `DATABASE_URL` | 외부 DB를 쓸 때 | 범용 연결 문자열. 프로토콜과 호스트명으로 벤더를 알아냅니다. 보통 이 한 줄이면 충분 |
+| `SUPABASE_KEY` | Supabase를 쓸 때 | Supabase 읽기/쓰기 키 |
+| `TURSO_AUTH_TOKEN` | Turso를 쓸 때 | Turso 액세스 토큰 |
+| `MYSQL_HTTP_URL` | 엣지에서 MySQL을 쓸 때 | MySQL / MariaDB용 HTTP 전달 게이트웨이. 엣지에서는 이 경로로만 연결됩니다 |
+| `PG_HTTP_URL` | 직접 만든 게이트웨이를 쓸 때 | 자체 Postgres HTTP 게이트웨이 주소 |
+| `MYSQL_URLS` | Node에서 MySQL에 직접 연결할 때 | MySQL 직접 연결 문자열, Node / Docker 전용 |
+| `ALLOW_URLS` | 프론트와 백엔드가 다른 도메인일 때 | CORS 허용 목록, 쉼표 구분. 비워두면 동일 출처만 허용 |
+| `ASSET_URLS` | CDN을 쓸 때 | 프론트엔드 정적 자원을 CDN에서 로드. `$version`은 현재 프론트엔드 버전으로 치환됩니다 |
+| `MAX_UPLOAD` | 선택 | 한 번의 전체 업로드 상한(바이트). 기본 26214400(25MB) |
+| `MAX_UPPART` | 선택 | 분할 업로드 한 조각의 상한(바이트). 기본 16777216(16MB) |
+| `ALLOW_SEED` | 시드 기능을 쓸 때 | 시드 데이터 출처로 허용할 사이트 목록 |
+| `EO_KV_URLS` | 보통 비워 둠 | EdgeOne 전용. Node 클라우드 함수는 KV 바인딩을 받지 못해 엣지 함수를 거쳐야 합니다. **이 배포의 origin**을 넣습니다(예: `https://openlist.example.com`). 비워두면 접속 중인 도메인을 쓰므로, 접속 도메인이 배포 도메인과 다르거나 로컬 디버깅일 때만 지정하세요 |
+
+> `JWT_SECRET`을 바꾸면 저장된 비밀번호와 드라이브 자격 증명을 복호화할 수 없습니다. 여러 플랫폼이 같은 데이터를 공유할 때는 값을 똑같이 맞춰야 합니다.
+
+각 벤더의 연결 문자열 작성법과 변수 별칭은 [외부 스토리지 설정 가이드](../docs/EXTERNAL_STORAGE.md)를 참고하세요.
+
+### 플랫폼 바인딩(바인딩만 하면 됩니다)
+
+배포 시 플랫폼이 자동으로 주입합니다. 리소스를 만들고 아래 이름 그대로 바인딩하면 됩니다.
+
+| 변수 이름 | 용도 |
 |---|---|
-| Cloudflare Workers | 콘솔 프로젝트의 Settings → Variables and Secrets, 또는 터미널에서 `wrangler secret put JWT_SECRET` 실행 |
-| 텐센트 클라우드 EdgeOne | 콘솔 프로젝트의 「환경 변수」, 또는 원클릭 배포 버튼을 누르면 배포 페이지에서 직접 입력받음 |
-| Vercel / Netlify | 프로젝트 설정의 Environment Variables |
-| Node / Docker | 루트 디렉터리의 `.env` 파일 |
+| `DB` | Cloudflare D1 데이터베이스 바인딩, `DB_DRIVER=d1` |
+| `KV` | Cloudflare KV / EdgeOne KV 네임스페이스 바인딩, `DB_DRIVER=kv` |
+| `BUCKET` | Cloudflare R2 버킷 바인딩, `DB_DRIVER=r2`(`R2_BUCKET` / `OPENLIST_BUCKET` / `OPENLIST_R2`도 허용) |
+| `HYPERDRIVE` | Cloudflare Hyperdrive 연결 문자열. 엣지에서 MySQL에 접속할 때 사용, `DB_DRIVER=hyperdrive` |
+| `S3_BUCKET` `S3_REGION` `S3_ENDPOINT` `S3_ACCESS_KEY_ID` `S3_SECRET_ACCESS_KEY` | S3 호환 객체 스토리지(R2 / MinIO / B2 등)의 버킷 이름과 자격 증명, `DB_DRIVER=s3` |
+| `CF_ACCOUNT` `CF_KV_UUID` `CF_API_KEY` | Cloudflare REST API로 KV 읽기/쓰기, `DB_DRIVER=cfkv`(계정 ID / 네임스페이스 ID / KV 읽기·쓰기 권한이 있는 Token) |
 
-아래에서는 「변수 이름 —— 무슨 일을 하는지 —— 채워야 하는지」 순으로 하나씩 적어둡니다.
+### 명령줄에서만 사용
 
-### 필수 항목
-
-| 변수 이름 | 무슨 일을 하는지 | 채워야 하는지 | 채우는 방법 |
-|---|---|---|---|
-| `JWT_SECRET` | 프로그램 전체의 비밀 키. 로그인 세션 서명, 클라우드 드라이브 자격 증명 같은 필드의 암호화 저장, 정기 작업 인증 이 세 가지에 모두 사용됩니다 | **필수**. 비워두면 설치 후 클라우드 드라이브 마운트가 실패합니다 | 16자 이상의 무작위 문자열. `openssl rand -hex 32`로 문자열을 만들어 채웁니다 |
-
-> [!IMPORTANT]
-> `JWT_SECRET`을 바꾸거나 잘못 입력하면 이전에 저장된 클라우드 드라이브 자격 증명을 복호화할 수 없게 되며, 「마운트가 갑자기 다시 입력을 요구함」으로 나타납니다. 같은 데이터를 여러 플랫폼에 배포할 때는 각 플랫폼의 `JWT_SECRET`이 일치해야 합니다.
-
-### 데이터 저장 위치
-
-이 두 변수가 데이터가 어떤 스토리지에, 어떤 구조로 저장되는지 결정합니다.
-
-| 변수 이름 | 무슨 일을 하는지 | 채워야 하는지 | 선택 가능한 값 |
-|---|---|---|---|
-| `DB_DRIVER` | 데이터를 어떤 스토리지에 저장할지 | 선택 사항, 기본값 `auto` | `auto`, `kv`, `d1`, `r2`, `blob`, `cfkv`, `do`, `neon`, `turso`, `pgrest`, `pghttp`, `mysqlhttp`, `upstash`, `s3`, `hyperdrive`, `netlifyblobs`, `mysql` |
-| `DB_FORMAT` | 데이터를 어떤 구조로 구성할지 | 선택 사항, 기본값 `map` | `map`, `key`, `sql` |
-
-- `auto`는 이 순서로 선택합니다. 설정한 외부 데이터베이스 → 플랫폼 기본 스토리지(KV, D1, Blob 등). 확실치 않으면 `auto`를 쓰세요.
-- `map`: 전체 데이터베이스를 하나의 JSON으로 저장, 읽기/쓰기 각 1회로 요청 횟수가 가장 적어 KV와 객체 스토리지에 적합합니다.
-- `key`: 엔티티마다 하나의 레코드, 예: `users_1`. 엔티티가 많을 때 `map`보다 트래픽을 절약합니다.
-- `sql`: 관계형 테이블로 저장하며, 테이블 구조는 Go 버전 OpenList와 같아 Go 버전과 같은 데이터베이스를 공유할 수 있습니다.
-- `mysql`은 Node / Docker에서만 사용할 수 있습니다. 엣지 플랫폼은 raw TCP 연결을 지원하지 않아 접속할 수 없습니다.
-
-자주 쓰는 조합:
-
-```bash
-# Cloudflare Workers + D1
-DB_FORMAT=sql
-DB_DRIVER=d1
-
-# EdgeOne + Blob(데이터베이스 생성 불필요, 첫 쓰기 시 자동 생성)
-DB_FORMAT=map
-DB_DRIVER=blob
-
-# 외부 데이터베이스, 예: Neon
-DB_FORMAT=map
-DB_DRIVER=auto
-DATABASE_URL=postgres://user:pass@ep-xxx.neon.tech/neondb
-```
-
-### 외부 데이터베이스(플랫폼 기본 스토리지를 쓰지 않으려면 채우세요)
-
-가장 간단한 방법은 **`DATABASE_URL` 한 줄만 채우고 `DB_DRIVER`는 `auto`로 두는 것**입니다. 프로그램이 프로토콜과 호스트명만 보고 드라이버를 스스로 알아냅니다.
-
-| 변수 이름 | 무슨 일을 하는지 | 채워야 하는지 |
-|---|---|---|
-| `DATABASE_URL` | 범용 데이터베이스 연결 문자열, 드라이버는 알아낸 벤더에 맞춰 사용됩니다 | 외부 데이터베이스를 쓸 때 보통 이 한 줄만 채우면 됩니다 |
-| `SUPABASE_KEY` | Supabase의 읽기/쓰기 키, 연결 문자열 한 줄로는 부족합니다 | Supabase를 쓸 때 필수 |
-| `TURSO_AUTH_TOKEN` | Turso의 액세스 토큰 | Turso를 쓸 때 필수 |
-| `MYSQL_HTTP_URL` | MySQL / MariaDB의 HTTP 전달 게이트웨이 주소. 엣지 플랫폼에서 MySQL에 접속하려면 이 경로로만 가능합니다 | 엣지에서 MySQL을 쓸 때 필수 |
-| `PG_HTTP_URL` | 직접 구축한 Postgres HTTP 게이트웨이 주소 | 직접 구축한 게이트웨이를 쓸 때 필수 |
-| `MYSQL_URLS` | MySQL 직접 연결 문자열, Node / Docker에서만 사용 가능 | Node에서 MySQL에 직접 연결할 때 채웁니다 |
-
-각 벤더의 연결 문자열 작성법과 지원하는 변수 별칭은 [외부 스토리지 설정 가이드](../docs/EXTERNAL_STORAGE.md)를 참고하세요.
-
-### 플랫폼 바인딩(직접 채우지 않아도 됨, 바인딩만 하면 됩니다)
-
-이들은 배포 시 플랫폼이 환경에 자동으로 주입합니다. 콘솔에서 리소스를 만들고, 바인딩할 때 이름을 아래와 같이 지정하기만 하면 됩니다.
-
-| 변수 이름 | 무슨 일을 하는지 | 신경 쓸 필요가 있나요 |
-|---|---|---|
-| `DB` | Cloudflare D1 데이터베이스 바인딩, `DB_DRIVER=d1`에서 사용됩니다 | D1을 쓰려면 바인딩하고 이름을 `DB`로 지정하세요 |
-| `KV` | Cloudflare KV / EdgeOne KV의 네임스페이스 바인딩, `DB_DRIVER=kv`에서 사용됩니다 | KV를 쓰려면 바인딩하고 이름을 `KV`로 지정하세요 |
-| `HYPERDRIVE` | Cloudflare Hyperdrive 연결 문자열, 엣지에서 MySQL에 접속할 수 있게 합니다, `DB_DRIVER=hyperdrive`에서 사용됩니다 | Hyperdrive를 쓰려면 바인딩하세요 |
-| `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | S3 호환 객체 스토리지(R2 / MinIO / B2 등)의 버킷 이름과 액세스 자격 증명, `DB_DRIVER=s3`에서 사용됩니다 | S3 스토리지를 쓰려면 다섯 항목을 모두 채우세요 |
-| `CF_ACCOUNT`, `CF_KV_UUID`, `CF_API_KEY` | Cloudflare REST API로 KV를 읽고 씁니다, `DB_DRIVER=cfkv`에서 사용됩니다. 각각 계정 ID, KV 네임스페이스 ID, KV 읽기/쓰기 권한이 있는 API Token입니다 | `cfkv`를 쓰려면 세 항목을 모두 채우세요 |
-| `BUCKET` | Cloudflare R2 버킷 바인딩. `DB_DRIVER=r2`에서 사용합니다(`R2_BUCKET` / `OPENLIST_BUCKET` / `OPENLIST_R2`도 허용) | R2를 쓰려면 바인딩하고 이름을 `BUCKET`으로 지정하세요 |
-
-### 기타 변수(대부분 신경 쓰지 않아도 됩니다)
-
-| 변수 이름 | 무슨 일을 하는지 | 채워야 하는지 |
-|---|---|---|
-| `EO_KV_URLS` | EdgeOne 전용. KV 바인딩은 엣지 함수에만 주입되고 Node 클라우드 함수는 가져올 수 없어, 읽기/쓰기는 **이 배포 자체**의 `/kv-get` `/kv-put` `/kv-delete` `/kv-list` 엣지 함수를 거쳐 전달됩니다. 여기에는 **이 배포의 origin**(예: `https://openlist.example.com`)을 입력합니다(프로토콜+호스트+포트만 사용되며 뒤에 붙은 경로는 무시됩니다) | 보통 비워 둡니다. 비워두면 현재 접속한 도메인이 자동 사용됩니다. 접속 도메인과 배포 도메인이 다르거나(앞단에 CDN/커스텀 도메인) 로컬 디버깅 시에만 직접 입력합니다 |
-| `ADMIN_PASS` | 설정하면 설치 마법사를 거치지 않고 이 비밀번호로 관리자 계정을 생성합니다 | 선택 사항, 비워두면 브라우저 마법사에서 설정합니다 |
-| `ALLOW_URLS` | CORS 허용 목록, 쉼표로 구분. 비워두면 동일 출처 요청만 허용합니다 | 프론트엔드와 백엔드가 같은 도메인이 아닐 때 채웁니다 |
-| `ASSET_URLS` | 프론트엔드 정적 자원을 CDN에서 로드하며, `$version`으로 현재 프론트엔드 버전 번호 자리를 채울 수 있습니다 | CDN을 쓸 때 채웁니다 |
-| `MAX_UPLOAD` | 한 번의 전체 업로드 크기 상한, 단위는 바이트 | 선택 사항, 기본값 26214400(25MB) |
-| `MAX_UPPART` | 분할 업로드 시 한 조각의 크기 상한, 단위는 바이트 | 선택 사항, 기본값 16777216(16MB) |
-| `ALLOW_SEED` | 시드 데이터 출처로 허용할 사이트 허용 목록 | 시드 기능을 쓸 때 채웁니다 |
-
-### 명령줄에서만 사용(환경 변수에 채우지 않아도 됩니다)
-
-| 변수 이름 | 무슨 일을 하는지 |
+| 변수 이름 | 용도 |
 |---|---|
 | `EO_PAGES_PROJECT` | EdgeOne Makers CLI가 배포할 프로젝트 |
-| `EO_PAGES_API_TOKEN` | EdgeOne Makers 콘솔의 API Token, CLI에서 사용됩니다 |
-| `EO_PAGES_URL` | 배포 후 도메인, `pnpm run deploy:edgeone`에서 배포 후 확인에 사용됩니다 |
+| `EO_PAGES_API_TOKEN` | EdgeOne Makers 콘솔의 API Token, CLI용 |
+| `EO_PAGES_URL` | 배포 후 도메인. `pnpm run deploy:edgeone`이 배포 후 확인에 사용 |
 
-모든 변수는 [변수 템플릿](../.dev.vars.example)에 주석과 함께 정리되어 있습니다.
+변수 템플릿은 [`.dev.vars.example`](../.dev.vars.example)에 있습니다.
 
 ---
 
@@ -425,7 +361,7 @@ DB_FORMAT=sql
 
 ## 배포 후 확인
 
-배포 성공과 스토리지 사용 가능은 별개의 문제입니다. 최악의 경우 스토리지 드라이버가 조용히 메모리 모드로 후퇴합니다: 사이트는 열리고 로그인도 되지만, 재시작하면 데이터가 사라집니다.
+배포 성공이 스토리지 사용 가능을 뜻하지는 않습니다 —— 드라이버가 조용히 메모리 모드로 후퇴할 수 있어, 사이트는 열리고 로그인도 되지만 재시작하면 데이터가 사라집니다.
 
 ```bash
 curl https://your-domain/api/public/env_check
@@ -502,10 +438,8 @@ pnpm run format         # prettier로 코드 포맷
 
 ## 도움말 및 지원
 
-사용 중 문제가 발생하면 아래 채널로 도움을 받을 수 있습니다:
-
-- 🐛 **버그 또는 기능 요청 제출**: 본 저장소 [_Issues_](https://github.com/LegspCpd/openlist-next/issues)
-- 💬 **일반 문의 및 교류**: 본 저장소 [_Discussions_](https://github.com/LegspCpd/openlist-next/discussions) 토론 영역
+- 🐛 **버그·기능 요청**: 본 저장소 [_Issues_](https://github.com/LegspCpd/openlist-next/issues)
+- 💬 **질문·토론**: 본 저장소 [_Discussions_](https://github.com/LegspCpd/openlist-next/discussions)
 
 ## 오픈소스 라이선스
 
