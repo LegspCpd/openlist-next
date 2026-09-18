@@ -74,7 +74,7 @@ OpenList-Worker는 공식 [OpenListTeam/OpenList](https://github.com/OpenListTea
 
 ### 스토리지 통합
 
-내장된 **81개의 스토리지 드라이버**로 다양한 스토리지 백엔드를 즉시 마운트할 수 있습니다:
+내장된 **80개의 스토리지 드라이버**로 다양한 스토리지 백엔드를 즉시 마운트할 수 있습니다:
 
 - **국내 네트워크 드라이브**: 알리바바 클라우드 드라이브(오픈 플랫폼/공유), 콰르크 네트워크 드라이브(오픈 플랫폼/UC TV 버전), 바이두 네트워크 드라이브(앨범), 115 네트워크 드라이브(오픈 플랫폼/공유), 123 클라우드 드라이브(오픈 플랫폼/공유), 티안이 클라우드 드라이브(189/PC/TV), 차이나 모바일 클라우드 드라이브(139/허차이윈), 워자 클라우드 드라이브, 선더 네트워크 드라이브, 텐센트 Weiyun, 란조우윈, PikPak(공유), 더우바오 네트워크 드라이브, 광야 디스크, 차오싱 그룹 네트워크 드라이브, 레노버 NAS 공유, Teambition 네트워크 드라이브, WPS 네트워크 드라이브, 알리바바 문서, HalalCloud, MediaTrack 등
 - **해외 네트워크 드라이브**: Google Drive(앨범), OneDrive(앱/공유 링크), Dropbox, MEGA, MediaFire, Proton Drive, Yandex Disk, Degoo, Bunny Storage, TeraBox 등
@@ -116,7 +116,7 @@ OpenList-Worker는 공식 [OpenListTeam/OpenList](https://github.com/OpenListTea
 |---|---|---|
 | 스토리지 드라이버 | 6개 | 16개, 10개 추가(`neon`, `turso`, `pgrest`, `pghttp`, `mysqlhttp`, `upstash`, `s3`, `r2`, `netlifyblobs`, `hyperdrive`) |
 | SQL 방언 | SQLite, MySQL | PostgreSQL 추가( `$n` 플레이스홀더 포함) |
-| 네트워크 드라이브 드라이버 | 78개 | 81개, `123_link`, `ilanzou`, `halalcloud` 보완 |
+| 네트워크 드라이브 드라이버 | 78개 | 80개, `123_link`, `ilanzou`, `halalcloud` 보완. 로컬 파일 시스템에서만 의미가 있는 `Local` 은 제거 |
 | 배포 플랫폼 | Cloudflare Workers, EdgeOne, ESA, Vercel, Serverless, Node/Docker | Netlify 추가, EdgeOne / ESA / Vercel용 원클릭 배포 스크립트 보완 |
 
 공식 버전의 `mysql` 드라이버는 Node 컨테이너에서만 동작합니다 — Cloudflare Workers에는 raw TCP가 없으므로 엣지에 배포하면 플랫폼 기본 KV만 사용할 수 있습니다. 본 프로젝트가 추가한 10개 중 8개(`neon`, `turso`, `pgrest`, `pghttp`, `mysqlhttp`, `upstash`, `s3`, `netlifyblobs`)는 HTTP를 사용하므로 엣지 런타임에서도 외부 데이터베이스에 연결할 수 있고, `DATABASE_URL` 한 줄만 채우면 됩니다. 나머지 두 개는 방식이 다릅니다. `r2`는 Cloudflare 버킷 바인딩을, `hyperdrive`는 `mysql2`로 TCP에 직접 연결하므로 Node 환경에서만 사용할 수 있습니다.

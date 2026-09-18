@@ -11,6 +11,7 @@ import { search } from "../internal/op/search"
 import { checkAdminAuth } from "../pkg/utils"
 import { safeErrorMessage } from "../pkg/errs"
 import { validateHide } from "../pkg/meta"
+import { COMMON_FIELDS, EXTRA_DRIVER_CONFIGS } from "./driver-configs.extra"
 
 export const adminRouter = new Hono()
 
@@ -117,7 +118,36 @@ export const normalizeDriver = (driverName: string): string => {
   )
   if (matched) return matched
   // Common OpenList aliases
-  if (norm.startsWith("115")) return "115Open"
+  // 注意：这里返回的必须是 driverConfigs 里真实存在的键 ——
+  // 返回别的名字，/driver/info 只会拿到兜底配置，编辑已有存储时会把 addition 覆盖掉。
+  if (norm === "123link" || norm === "123panlink") return "123PanLink"
+  if (norm === "123share" || norm === "123panshare") return "123PanShare"
+  if (norm === "115share" || norm === "115sharelink") return "115 Share"
+  if (norm.startsWith("115open")) return "115 Open"
+  if (norm.startsWith("123open")) return "123 Open"
+  if (norm === "aliyundriveshare" || norm === "aliyunshare" || norm === "alishare")
+    return "AliyundriveShare"
+  if (norm.startsWith("baiduphoto")) return "BaiduPhoto"
+  if (norm.startsWith("googlephoto") || norm === "gphoto") return "GooglePhoto"
+  if (norm === "189pc" || norm.startsWith("189cloudpc")) return "189CloudPC"
+  if (
+    norm === "189tv" ||
+    norm === "189tvcloud" ||
+    norm === "cloud189tv" ||
+    norm.startsWith("189cloudtv")
+  )
+    return "189CloudTV"
+  if (
+    norm === "onedrivesharelink" ||
+    norm === "onedriveshare" ||
+    norm === "sharepointshare"
+  )
+    return "Onedrive Sharelink"
+  if (norm.startsWith("pikpakshare")) return "PikPakShare"
+  if (norm.startsWith("githubreleases")) return "GitHub Releases"
+  if (norm.startsWith("azureblob")) return "Azure Blob Storage"
+  if (norm.startsWith("doubao")) return "Doubao"
+  if (norm.startsWith("115")) return "115 Open"
   if (norm.startsWith("123")) return "123Pan"
   if (norm.includes("aliyun")) return "AliyundriveOpen"
   if (norm.startsWith("baidu")) return "BaiduNetdisk"
@@ -126,7 +156,7 @@ export const normalizeDriver = (driverName: string): string => {
     norm.includes("cloud189") ||
     norm.includes("ctyun")
   )
-    return "Cloud189"
+    return "189Cloud"
   if (norm === "onedriveapp") return "OnedriveAPP"
   if (norm.startsWith("onedrive")) return "Onedrive"
   if (norm.startsWith("google") || norm.includes("gdrive")) return "GoogleDrive"
@@ -156,7 +186,9 @@ export const normalizeDriver = (driverName: string): string => {
     ].includes(norm)
   )
     return "S3"
-  if (norm.startsWith("github")) return "Github"
+  if (norm.startsWith("github")) return "GitHub API"
+  // 「本地目录」驱动已从本项目移除：部署目标都是没有文件系统的边缘/无服务器平台。
+  // 这里保留名字是为了让 /storage/create 能明确拒绝，而不是悄悄存成空驱动。
   if (norm === "local") return "Local"
   if (norm.includes("pikpak")) return "PikPak"
   if (norm.includes("seafile")) return "Seafile"
@@ -258,6 +290,17 @@ adminRouter.post("/storage/create", async (c) => {
   }
 
   const normalizedDriver = normalizeDriver(body.driver)
+  if (!driverConfigs[normalizedDriver]) {
+    // 别让「下拉里没有、驱动也跑不起来」的名字存进库：说清楚是哪一个不支持。
+    return c.json(
+      {
+        code: 400,
+        message: `Unsupported storage driver: ${body.driver}`,
+        data: null,
+      },
+      400,
+    )
+  }
   const newAddition = ensureStorageAdditionDeviceId(
     normalizedDriver,
     body.addition || "{}",
@@ -467,114 +510,10 @@ adminRouter.get("/driver/names", (c) => {
   return c.json({
     code: 200,
     message: "success",
-    data: [
-      "AliyundriveOpen",
-      "GoogleDrive",
-      "Onedrive",
-      "OnedriveAPP",
-      "Quark",
-      "123Pan",
-      "BaiduNetdisk",
-      "115Open",
-      "GitHub API",
-      "Thunder",
-      "ThunderExpert",
-      "189Cloud",
-      "WoPan",
-      "Lanzou",
-      "WebDav",
-      "S3",
-      "Doge",
-      "PikPak",
-      "Seafile",
-      "YandexDisk",
-      "Terabox",
-      "MediaTrack",
-      "Alias",
-      "Dropbox",
-      "WPS",
-      "139Yun",
-      "Mega_nz",
-      "115Share",
-      "123PanShare",
-      "AliyundriveShare",
-      "OnedriveSharelink",
-      "PikPakShare",
-      "SMB",
-      "Crypt",
-      "Virtual",
-      "AListV3",
-      "UrlTree",
-      "Strm",
-      "AzureBlob",
-      "USS",
-      "Alidoc",
-      "Emby",
-      "BunnyStorage",
-      "CloudflareImgbed",
-      "GuangYaPan",
-      "AutoIndex",
-      "ProtonDrive",
-      "123Link",
-      "ILanZou",
-      "HalalCloud",
-    ],
+    data: Object.keys(selectableDriverConfigs()),
   })
 })
 
-const COMMON_FIELDS = [
-  {
-    name: "mount_path",
-    type: "string",
-    default: "",
-    required: true,
-  },
-  {
-    name: "order",
-    type: "number",
-    default: "0",
-    required: false,
-  },
-  {
-    name: "remark",
-    type: "string",
-    default: "",
-    required: false,
-  },
-  {
-    name: "cache_expiration",
-    type: "number",
-    default: "30",
-    required: false,
-  },
-  {
-    name: "web_proxy",
-    type: "bool",
-    default: "false",
-    required: false,
-  },
-  {
-    name: "webdav_policy",
-    type: "select",
-    options: "302_redirect,use_proxy_url,native_proxy",
-    default: "302_redirect",
-    required: false,
-  },
-  {
-    name: "down_proxy_url",
-    type: "string",
-    default: "",
-    required: false,
-  },
-  {
-    name: "seed_policy",
-    type: "select",
-    options: "inherit,on,off",
-    default: "inherit",
-    required: true,
-    help: "Override automatic transfer-seed generation for this storage",
-  },
-]
 
 const driverConfigs: Record<string, any> = {
   AliyundriveOpen: {
@@ -587,7 +526,6 @@ const driverConfigs: Record<string, any> = {
         type: "text",
         default: "",
         required: true,
-        help: "true",
       },
       {
         name: "drive_type",
@@ -622,7 +560,6 @@ const driverConfigs: Record<string, any> = {
         type: "string",
         default: "https://api.oplist.org/alicloud/renewapi",
         required: false,
-        help: "true",
       },
       {
         name: "alipan_type",
@@ -640,6 +577,8 @@ const driverConfigs: Record<string, any> = {
         default: "trash",
         required: false,
       },
+          { name: "chunk_size", type: "number", default: "0", required: false },
+      { name: "use_online_api", type: "bool", default: "true", required: false },
     ],
     config: {
       name: "AliyundriveOpen",
@@ -711,7 +650,6 @@ const driverConfigs: Record<string, any> = {
         type: "bool",
         default: "false",
         required: false,
-        help: "true",
       },
       {
         name: "enable_direct_upload",
@@ -781,7 +719,6 @@ const driverConfigs: Record<string, any> = {
         type: "bool",
         default: "false",
         required: false,
-        help: "true",
       },
       {
         name: "enable_direct_upload",
@@ -826,7 +763,6 @@ const driverConfigs: Record<string, any> = {
         type: "text",
         default: "",
         required: true,
-        help: "true",
       },
       {
         name: "root_folder_id",
@@ -853,7 +789,6 @@ const driverConfigs: Record<string, any> = {
         type: "string",
         default: "https://api.alist.nn.ci/googledrive/token",
         required: false,
-        help: "true",
       },
       {
         name: "use_online_api",
@@ -893,7 +828,6 @@ const driverConfigs: Record<string, any> = {
         type: "text",
         default: "",
         required: true,
-        help: "true",
       },
       {
         name: "root_folder_id",
@@ -1026,7 +960,6 @@ const driverConfigs: Record<string, any> = {
         type: "text",
         default: "",
         required: true,
-        help: "true",
       },
       {
         name: "access_token",
@@ -1145,8 +1078,8 @@ const driverConfigs: Record<string, any> = {
       default_root: "/",
     },
   },
-  "115Open": {
-    name: "115Open",
+  "115 Open": {
+    name: "115 Open",
     default_mount_path: "/115",
     common: COMMON_FIELDS,
     additional: [
@@ -1201,7 +1134,7 @@ const driverConfigs: Record<string, any> = {
       },
     ],
     config: {
-      name: "115Open",
+      name: "115 Open",
       local_sort: true,
       only_local: false,
       only_proxy: true,
@@ -1298,6 +1231,8 @@ const driverConfigs: Record<string, any> = {
         default: "asc",
         required: false,
       },
+          { name: "gpg_private_key", type: "string", default: "", required: false },
+      { name: "gpg_key_passphrase", type: "string", default: "", required: false },
     ],
     config: {
       name: "GitHub API",
@@ -1354,6 +1289,8 @@ const driverConfigs: Record<string, any> = {
         default: "asc",
         required: false,
       },
+          { name: "client_id", type: "string", default: "", required: false },
+      { name: "client_secret", type: "string", default: "", required: false },
     ],
     config: {
       name: "Thunder",
@@ -2325,6 +2262,8 @@ const driverConfigs: Record<string, any> = {
         default: "asc",
         required: false,
       },
+          { name: "client_id", type: "string", default: "", required: false },
+      { name: "client_secret", type: "string", default: "", required: false },
     ],
     config: {
       name: "PikPak",
@@ -2624,6 +2563,38 @@ const driverConfigs: Record<string, any> = {
         default: "asc",
         required: false,
       },
+          {
+        name: "file_consistency_check",
+        type: "bool",
+        default: "false",
+        required: false,
+      },
+      {
+        name: "download_concurrency",
+        type: "number",
+        default: "0",
+        required: false,
+        help: "true",
+      },
+      {
+        name: "download_part_size",
+        type: "number",
+        default: "0",
+        required: false,
+        help: "true",
+      },
+      {
+        name: "provider_pass_through",
+        type: "bool",
+        default: "false",
+        required: false,
+      },
+      {
+        name: "details_pass_through",
+        type: "bool",
+        default: "false",
+        required: false,
+      },
     ],
     config: {
       name: "Alias",
@@ -2697,6 +2668,7 @@ const driverConfigs: Record<string, any> = {
         default: "asc",
         required: false,
       },
+          { name: "access_token", type: "string", default: "", required: false },
     ],
     config: {
       name: "Dropbox",
@@ -2815,6 +2787,62 @@ const driverConfigs: Record<string, any> = {
         default: "asc",
         required: false,
       },
+          {
+        name: "username",
+        type: "string",
+        default: "",
+        required: false,
+        help: "true",
+      },
+      {
+        name: "password",
+        type: "string",
+        default: "",
+        required: false,
+        help: "true",
+      },
+      {
+        name: "mail_cookies",
+        type: "string",
+        default: "",
+        required: false,
+        help: "true",
+      },
+      {
+        name: "user_domain_id",
+        type: "string",
+        default: "",
+        required: false,
+        help: "true",
+      },
+      {
+        name: "custom_upload_part_size",
+        type: "number",
+        default: "0",
+        required: false,
+        help: "true",
+      },
+      {
+        name: "report_real_size",
+        type: "bool",
+        default: "true",
+        required: false,
+        help: "true",
+      },
+      {
+        name: "use_large_thumbnail",
+        type: "bool",
+        default: "false",
+        required: false,
+        help: "true",
+      },
+      {
+        name: "use_old_stream_upload",
+        type: "bool",
+        default: "false",
+        required: false,
+        help: "true",
+      },
     ],
     config: {
       name: "139Yun",
@@ -2876,6 +2904,7 @@ const driverConfigs: Record<string, any> = {
         default: "asc",
         required: false,
       },
+          { name: "root_folder_id", type: "string", default: "", required: false },
     ],
     config: {
       name: "Mega_nz",
@@ -2888,8 +2917,8 @@ const driverConfigs: Record<string, any> = {
       default_root: "/",
     },
   },
-  "115Share": {
-    name: "115Share",
+  "115 Share": {
+    name: "115 Share",
     default_mount_path: "/115_share",
     common: COMMON_FIELDS,
     additional: [
@@ -2937,9 +2966,24 @@ const driverConfigs: Record<string, any> = {
         default: "asc",
         required: false,
       },
+          {
+        name: "qrcode_token",
+        type: "string",
+        default: "",
+        required: false,
+        help: "true",
+      },
+      {
+        name: "qrcode_source",
+        type: "select",
+        options: "alipaymini,android,ios,qandroid,tv,web,wechatmini",
+        default: "alipaymini",
+        required: false,
+        help: "true",
+      },
     ],
     config: {
-      name: "115Share",
+      name: "115 Share",
       local_sort: true,
       only_local: false,
       only_proxy: false,
@@ -3041,6 +3085,7 @@ const driverConfigs: Record<string, any> = {
         default: "ASC",
         required: false,
       },
+          { name: "refresh_token", type: "string", default: "", required: true },
     ],
     config: {
       name: "AliyundriveShare",
@@ -3053,8 +3098,8 @@ const driverConfigs: Record<string, any> = {
       default_root: "root",
     },
   },
-  OnedriveSharelink: {
-    name: "OnedriveSharelink",
+  "Onedrive Sharelink": {
+    name: "Onedrive Sharelink",
     default_mount_path: "/onedrive_share",
     common: COMMON_FIELDS,
     additional: [
@@ -3084,9 +3129,23 @@ const driverConfigs: Record<string, any> = {
         default: "asc",
         required: false,
       },
+          {
+        name: "disable_disk_usage",
+        type: "bool",
+        default: "false",
+        required: false,
+      },
+      {
+        name: "enable_direct_upload",
+        type: "bool",
+        default: "false",
+        required: false,
+        help: "true",
+      },
+      { name: "root_folder_path", type: "string", default: "", required: false },
     ],
     config: {
-      name: "OnedriveSharelink",
+      name: "Onedrive Sharelink",
       local_sort: true,
       only_local: false,
       only_proxy: false,
@@ -3139,6 +3198,13 @@ const driverConfigs: Record<string, any> = {
         options: "asc,desc",
         default: "asc",
         required: false,
+      },
+          { name: "device_id", type: "string", default: "", required: false },
+      {
+        name: "use_transcoding_address",
+        type: "bool",
+        default: "false",
+        required: true,
       },
     ],
     config: {
@@ -3207,6 +3273,7 @@ const driverConfigs: Record<string, any> = {
         default: "asc",
         required: false,
       },
+          { name: "domain", type: "string", default: "", required: false },
     ],
     config: {
       name: "SMB",
@@ -3336,8 +3403,8 @@ const driverConfigs: Record<string, any> = {
       no_link_url: true,
     },
   },
-  AListV3: {
-    name: "AListV3",
+  "AList V3": {
+    name: "AList V3",
     default_mount_path: "/alist",
     common: COMMON_FIELDS,
     additional: [
@@ -3376,9 +3443,10 @@ const driverConfigs: Record<string, any> = {
         default: "true",
         required: false,
       },
+          { name: "root_folder_path", type: "string", default: "", required: false },
     ],
     config: {
-      name: "AListV3",
+      name: "AList V3",
       local_sort: true,
       only_local: false,
       only_proxy: false,
@@ -3414,6 +3482,7 @@ const driverConfigs: Record<string, any> = {
         required: false,
         help: "允许增删改文件树（会持久化回 url_structure）",
       },
+          { name: "root_folder_path", type: "string", default: "", required: false },
     ],
     config: {
       name: "UrlTree",
@@ -3471,6 +3540,7 @@ const driverConfigs: Record<string, any> = {
       { name: "encodePath", type: "bool", default: "true", required: false },
       { name: "withoutUrl", type: "bool", default: "false", required: false },
       { name: "withSign", type: "bool", default: "false", required: false },
+          { name: "root_folder_path", type: "string", default: "", required: false },
     ],
     config: {
       name: "Strm",
@@ -3484,8 +3554,8 @@ const driverConfigs: Record<string, any> = {
       no_link_url: true,
     },
   },
-  AzureBlob: {
-    name: "AzureBlob",
+  "Azure Blob Storage": {
+    name: "Azure Blob Storage",
     default_mount_path: "/azure",
     common: COMMON_FIELDS,
     additional: [
@@ -3517,9 +3587,10 @@ const driverConfigs: Record<string, any> = {
         required: false,
         help: "SAS URL 有效期（小时）",
       },
+          { name: "root_folder_path", type: "string", default: "", required: false },
     ],
     config: {
-      name: "AzureBlob",
+      name: "Azure Blob Storage",
       local_sort: true,
       only_local: false,
       only_proxy: false,
@@ -3564,6 +3635,7 @@ const driverConfigs: Record<string, any> = {
         required: false,
         help: "链接有效期（小时）",
       },
+          { name: "root_folder_path", type: "string", default: "", required: false },
     ],
     config: {
       name: "USS",
@@ -3576,8 +3648,8 @@ const driverConfigs: Record<string, any> = {
       default_root: "/",
     },
   },
-  Alidoc: {
-    name: "Alidoc",
+  "AliDoc": {
+    name: "AliDoc",
     default_mount_path: "/alidoc",
     common: COMMON_FIELDS,
     additional: [
@@ -3597,7 +3669,7 @@ const driverConfigs: Record<string, any> = {
       },
     ],
     config: {
-      name: "Alidoc",
+      name: "AliDoc",
       local_sort: true,
       only_local: false,
       only_proxy: false,
@@ -3649,8 +3721,8 @@ const driverConfigs: Record<string, any> = {
       default_root: "1",
     },
   },
-  BunnyStorage: {
-    name: "BunnyStorage",
+  "Bunny Storage": {
+    name: "Bunny Storage",
     default_mount_path: "/bunny",
     common: COMMON_FIELDS,
     additional: [
@@ -3703,7 +3775,7 @@ const driverConfigs: Record<string, any> = {
       },
     ],
     config: {
-      name: "BunnyStorage",
+      name: "Bunny Storage",
       local_sort: true,
       only_local: false,
       only_proxy: false,
@@ -3713,8 +3785,8 @@ const driverConfigs: Record<string, any> = {
       default_root: "/",
     },
   },
-  CloudflareImgbed: {
-    name: "CloudflareImgbed",
+  "cloudflare_imgbed": {
+    name: "cloudflare_imgbed",
     default_mount_path: "/cfimgbed",
     common: COMMON_FIELDS,
     additional: [
@@ -3753,7 +3825,7 @@ const driverConfigs: Record<string, any> = {
       },
     ],
     config: {
-      name: "CloudflareImgbed",
+      name: "cloudflare_imgbed",
       local_sort: true,
       only_local: false,
       only_proxy: false,
@@ -3789,6 +3861,27 @@ const driverConfigs: Record<string, any> = {
         type: "string",
         default: "/",
         required: true,
+      },
+          {
+        name: "captcha_token",
+        type: "string",
+        default: "",
+        required: false,
+        help: "true",
+      },
+      {
+        name: "send_code",
+        type: "bool",
+        default: "false",
+        required: false,
+        help: "true",
+      },
+      {
+        name: "verification_id",
+        type: "string",
+        default: "",
+        required: false,
+        help: "true",
       },
     ],
     config: {
@@ -3903,6 +3996,7 @@ const driverConfigs: Record<string, any> = {
         default: "true",
         required: false,
       },
+          { name: "reusable_credential", type: "string", default: "", required: false },
     ],
     config: {
       name: "ProtonDrive",
@@ -3915,8 +4009,8 @@ const driverConfigs: Record<string, any> = {
       default_root: "root",
     },
   },
-  "123Link": {
-    name: "123Link",
+  "123PanLink": {
+    name: "123PanLink",
     default_mount_path: "/123link",
     common: COMMON_FIELDS,
     additional: [
@@ -3950,7 +4044,7 @@ const driverConfigs: Record<string, any> = {
       },
     ],
     config: {
-      name: "123Link",
+      name: "123PanLink",
       local_sort: true,
       only_local: false,
       only_proxy: false,
@@ -4028,6 +4122,7 @@ const driverConfigs: Record<string, any> = {
         default: "bR4SJwOkvnG5WvVJ",
         required: true,
       },
+          { name: "root_folder_path", type: "string", default: "", required: false },
     ],
     config: {
       name: "HalalCloud",
@@ -4041,6 +4136,16 @@ const driverConfigs: Record<string, any> = {
     },
   },
 }
+
+/**
+ * 合并 driver-configs.extra.ts 里补齐的驱动。
+ *
+ * 上面那份是早期手写的，只覆盖了一部分驱动；仓库里实现了、前端却选不到的驱动
+ * 都在补充文件里（键名与官方前端语言包的驱动命名空间一致，字段取自
+ * drivers/<目录>/types.ts 的 Addition 声明）。两处都写了的键以补充文件为准 ——
+ * 它带校验脚本，不容易再漏。
+ */
+Object.assign(driverConfigs, EXTRA_DRIVER_CONFIGS)
 
 /**
  * 只在 Node / Docker 里跑得起来的驱动，边缘运行时不下发：
@@ -4058,29 +4163,36 @@ function isNodeRuntime(): boolean {
   return typeof process !== "undefined" && process.release?.name === "node"
 }
 
-adminRouter.get("/driver/list", (c) => {
-  if (isNodeRuntime()) {
-    return c.json({
-      code: 200,
-      message: "success",
-      data: driverConfigs,
-    })
-  }
-  const edgeSafeDriverConfigs = Object.fromEntries(
+/**
+ * 前端能看到的驱动清单。`/driver/list` 的返回键就是「新增存储」的下拉项，
+ * `/driver/names` 的返回值是存储列表页的驱动筛选框 —— 两处都从这里取，
+ * 这样「实现里有、界面上选不到」或「界面上有、跑不了」都不会再出现。
+ */
+function selectableDriverConfigs(): Record<string, any> {
+  if (isNodeRuntime()) return driverConfigs
+  return Object.fromEntries(
     Object.entries(driverConfigs).filter(
       ([driverName]) => !NODE_ONLY_DRIVERS.includes(driverName),
     ),
   )
+}
+
+adminRouter.get("/driver/list", (c) => {
   return c.json({
     code: 200,
     message: "success",
-    data: edgeSafeDriverConfigs,
+    data: selectableDriverConfigs(),
   })
 })
 
 adminRouter.get("/driver/info", (c) => {
   const driverName = c.req.query("driver") || ""
-  const info = driverConfigs[driverName] || driverConfigs["AliyundriveOpen"]
+  // 走一遍 normalizeDriver：历史数据里的驱动名（如 123Link、AListV3）也能落到当前配置上，
+  // 否则编辑已有存储会拿到兜底配置、把 addition 覆盖掉。
+  const info =
+    driverConfigs[driverName] ||
+    driverConfigs[normalizeDriver(driverName)] ||
+    driverConfigs["AliyundriveOpen"]
   return c.json({
     code: 200,
     message: "success",

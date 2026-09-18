@@ -74,7 +74,7 @@ OpenList-Worker は公式の [OpenListTeam/OpenList](https://github.com/OpenList
 
 ### ストレージ集約
 
-**81 個のストレージドライバー**を内蔵しており、さまざまなストレージバックエンドをそのままマウントできます：
+**80 個のストレージドライバー**を内蔵しており、さまざまなストレージバックエンドをそのままマウントできます：
 
 - **国内クラウドストレージ**：Alibaba Cloud Drive（オープンプラットフォーム／共有）、Quark クラウドドライブ（オープンプラットフォーム／UC TV 版）、Baidu クラウドドライブ（アルバム）、115 クラウドドライブ（オープンプラットフォーム／共有）、123 クラウドドライブ（オープンプラットフォーム／共有）、Tianyi クラウドドライブ（189／PC／TV）、China Mobile クラウドドライブ（139／Hecaiyun）、Woja クラウドドライブ、Xunlei クラウドドライブ、Tencent Weiyun、Lanzou、PikPak（共有）、Doubao クラウドドライブ、Guangya ドライブ、Chaoxing グループクラウドドライブ、Lenovo NAS 共有、Teambition クラウドドライブ、WPS クラウドドライブ、Ali ドキュメント、HalalCloud、MediaTrack など
 - **海外クラウドストレージ**：Google Drive（アルバム）、OneDrive（アプリ／共有リンク）、Dropbox、MEGA、MediaFire、Proton Drive、Yandex Disk、Degoo、Bunny Storage、TeraBox など
@@ -116,7 +116,7 @@ OpenList-Worker は公式の [OpenListTeam/OpenList](https://github.com/OpenList
 |---|---|---|
 | ストレージドライバー | 6 個 | 16 個、10 個を新規追加（`neon`、`turso`、`pgrest`、`pghttp`、`mysqlhttp`、`upstash`、`s3`、`r2`、`netlifyblobs`、`hyperdrive`）|
 | SQL 方言 | SQLite、MySQL | PostgreSQL を追加（$n プレースホルダーを含む） |
-| クラウドドライブドライバー | 78 個 | 81 個、`123_link`、`ilanzou`、`halalcloud` を補完 |
+| クラウドドライブドライバー | 78 個 | 80 個、`123_link`、`ilanzou`、`halalcloud` を補完。ローカルファイルシステムでしか意味のない `Local` は削除 |
 | デプロイプラットフォーム | Cloudflare Workers、EdgeOne、ESA、Vercel、Serverless、Node／Docker | Netlify を追加し、EdgeOne / ESA / Vercel 向けのワンコマンドデプロイスクリプトも補完 |
 
 公式バージョンの `mysql` ドライバーは Node コンテナでのみ動作します——Cloudflare Workers には生 TCP がないため、エッジにデプロイするとプラットフォーム標準の KV しか使えません。本プロジェクトが追加した 10 個のうち 8 個（`neon`、`turso`、`pgrest`、`pghttp`、`mysqlhttp`、`upstash`、`s3`、`netlifyblobs`）は HTTP 経由なので、エッジランタイムでも外部データベースに接続でき、`DATABASE_URL` を 1 行入力するだけで済みます。残り 2 つの方式は異なり、`r2` は Cloudflare のバケットバインディングを、`hyperdrive` は `mysql2` による TCP 直結を使うため Node 環境でのみ利用できます。

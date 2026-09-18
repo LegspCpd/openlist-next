@@ -88,17 +88,6 @@ import { GuangYaPanDriver } from "../../drivers/guangyapan/driver"
 import { AutoIndexDriver } from "../../drivers/autoindex/driver"
 import { ProtonDriveDriver } from "../../drivers/proton_drive/driver"
 
-// LocalDriver is not available in Cloudflare Workers (no fs module).
-// When running in Node.js container mode, import dynamically on first use.
-let _localDriver: StorageDriver | null = null
-async function getLocalDriver(): Promise<StorageDriver> {
-  if (!_localDriver) {
-    const { LocalDriver } = await import("../../drivers/local")
-    _localDriver = new LocalDriver()
-  }
-  return _localDriver
-}
-
 async function getSFTPDriver(storageConfig: any): Promise<StorageDriver> {
   if (typeof process !== "undefined" && process.release?.name === "node") {
     const { SFTPDriver } = await import("../../drivers/sftp")
@@ -175,15 +164,6 @@ async function createDriver(
   storageConfig?: any,
 ): Promise<StorageDriver> {
   const normDriver = (driverName || "").toLowerCase().replace(/[^a-z0-9]/g, "")
-  if (normDriver === "local") {
-    // Only available in Node.js container — not in Cloudflare Workers
-    if (typeof process !== "undefined" && process.release?.name === "node") {
-      return getLocalDriver()
-    }
-    throw new Error(
-      "Local storage driver requires Node.js runtime (not available in Cloudflare Workers)",
-    )
-  }
   if (normDriver === "sftp") {
     return getSFTPDriver(storageConfig)
   }
@@ -211,7 +191,9 @@ async function createDriver(
     normDriver === "onedrivesb" ||
     normDriver === "onedrivebusiness" ||
     normDriver === "onedrivesharepoint" ||
-    (normDriver.startsWith("onedrive") && normDriver !== "onedriveapp")
+    (normDriver.startsWith("onedrive") &&
+      normDriver !== "onedriveapp" &&
+      !normDriver.includes("share"))
   ) {
     driver = new Onedrive(
       parseAddition(storageConfig),
@@ -243,11 +225,10 @@ async function createDriver(
   } else if (
     normDriver === "aliyundrive" ||
     normDriver === "aliyundriveopen" ||
-    normDriver === "aliyundriveshare" ||
     normDriver === "aliyun" ||
     normDriver === "aliyundriveshare2open" ||
     normDriver === "aliyundriveoauth2" ||
-    normDriver.includes("aliyun")
+    (normDriver.includes("aliyun") && !normDriver.includes("share"))
   ) {
     // 统一只保留阿里云盘 OAuth2 (AliyundriveOpen)
     driver = new AliyundriveOpen(parseAddition(storageConfig))
@@ -504,8 +485,10 @@ async function createDriver(
   } else if (
     normDriver === "123pan" ||
     normDriver === "123" ||
-    normDriver === "123panshare" ||
-    normDriver.startsWith("123")
+    (normDriver.startsWith("123") &&
+      !normDriver.includes("share") &&
+      normDriver !== "123link" &&
+      normDriver !== "123panlink")
   ) {
     const addition = parseAddition(storageConfig)
     driver = new Pan123Driver(addition, async (token: string) => {
@@ -729,6 +712,7 @@ async function createDriver(
   } else if (
     normDriver === "189tv" ||
     normDriver === "cloud189tv" ||
+    normDriver === "189cloudtv" ||
     normDriver === "189tvcloud" ||
     normDriver === "189_tv"
   ) {
@@ -754,6 +738,7 @@ async function createDriver(
     await driver.init?.()
   } else if (
     normDriver === "189pc" ||
+    normDriver === "189cloudpc" ||
     normDriver.startsWith("189pc")
   ) {
     const addition = parseAddition(storageConfig)
@@ -784,9 +769,8 @@ async function createDriver(
     normDriver === "cloud189" ||
     normDriver === "ctyun" ||
     normDriver === "189pan" ||
-    normDriver === "189cloudpc" ||
     normDriver === "189cloudapp" ||
-    normDriver.startsWith("189") ||
+    (normDriver.startsWith("189") && normDriver !== "189cloudpc") ||
     normDriver.includes("cloud189")
   ) {
     const addition = parseAddition(storageConfig)
@@ -868,8 +852,7 @@ async function createDriver(
     await driver.init?.()
   } else if (
     normDriver === "pikpak" ||
-    normDriver === "pikpakshare" ||
-    normDriver.includes("pikpak")
+    (normDriver.includes("pikpak") && !normDriver.includes("share"))
   ) {
     const addition = parseAddition(storageConfig)
     driver = new PikPakDriver(addition, async (tokens) => {
@@ -1047,7 +1030,7 @@ async function createDriver(
     const addition = parseAddition(storageConfig)
     driver = new Pan115ShareDriver(addition)
     await driver.init?.()
-  } else if (normDriver === "123link") {
+  } else if (normDriver === "123link" || normDriver === "123panlink") {
     // 123 云盘直链 / 秒传链接解析驱动（只读，文本 URL 树 + auth_key 签名）
     const addition = parseAddition(storageConfig)
     driver = new Link123Driver(addition)
@@ -1157,6 +1140,7 @@ async function createDriver(
     await driver.init?.()
   } else if (
     normDriver === "azureblob" ||
+    normDriver === "azureblobstorage" ||
     normDriver === "azure" ||
     normDriver === "azblob"
   ) {
@@ -1234,11 +1218,6 @@ export async function getDriver(
   driverName: string,
   storageConfig?: any,
 ): Promise<StorageDriver> {
-  const normDriver = (driverName || "").toLowerCase().replace(/[^a-z0-9]/g, "")
-  if (normDriver === "local") {
-    return createDriver(driverName, storageConfig)
-  }
-
   if (!storageConfig) {
     throw new Error(
       "failed get driver: storage config not found for driver " + driverName,

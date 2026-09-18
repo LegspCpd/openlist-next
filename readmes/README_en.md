@@ -74,7 +74,7 @@ OpenList-Worker is the TypeScript + Serverless port of the official [OpenListTea
 
 ### Storage Aggregation
 
-It ships with **81 storage drivers** and mounts various storage backends out of the box:
+It ships with **80 storage drivers** and mounts various storage backends out of the box:
 
 - **Domestic cloud drives**: Alibaba Cloud Drive (Open Platform / Share), Quark Cloud Drive (Open Platform / UC TV), Baidu Netdisk (Albums), 115 Cloud Drive (Open Platform / Share), 123 Cloud Drive (Open Platform / Share), Tianyi Cloud (189 / PC / TV), China Mobile Cloud (139 / Hecaiyun), Wo Home Cloud, Xunlei Cloud Drive, Tencent Weiyun, Lanzo Cloud, PikPak (Share), Doubao Cloud Drive, Guangya Cloud, Chaoxing Group Cloud, Lenovo NAS Share, Teambition Cloud, WPS Cloud, Alibaba Docs, HalalCloud, MediaTrack, etc.
 - **International cloud drives**: Google Drive (Albums), OneDrive (App / Share Link), Dropbox, MEGA, MediaFire, Proton Drive, Yandex Disk, Degoo, Bunny Storage, TeraBox, etc.
@@ -116,7 +116,7 @@ In addition to the real storages above, it also provides virtual/functional driv
 |---|---|---|
 | Storage drivers | 6 | 16, with 10 newly added (`neon`, `turso`, `pgrest`, `pghttp`, `mysqlhttp`, `upstash`, `s3`, `r2`, `netlifyblobs`, `hyperdrive`) |
 | SQL dialects | SQLite, MySQL | added PostgreSQL (including `$n` placeholders) |
-| Cloud drive drivers | 78 | 81, with `123_link`, `ilanzou`, `halalcloud` added |
+| Cloud drive drivers | 78 | 80, with `123_link`, `ilanzou`, `halalcloud` added; `Local` removed (it only makes sense on a local filesystem) |
 | Deployment platforms | Cloudflare Workers, EdgeOne, ESA, Vercel, Serverless, Node/Docker | added Netlify, plus one-command deploy scripts for EdgeOne / ESA / Vercel |
 
 The official version's `mysql` driver only runs in a Node container — Cloudflare Workers has no raw TCP, so on the edge you can only use the platform-native KV. Of the 10 drivers this project adds, 8 go over HTTP (`neon`, `turso`, `pgrest`, `pghttp`, `mysqlhttp`, `upstash`, `s3`, `netlifyblobs`), so they can reach an external database even on edge runtimes — just fill in one `DATABASE_URL`. The other two work differently: `r2` uses a Cloudflare bucket binding, and `hyperdrive` connects over raw TCP via `mysql2`, so it only works on Node.
