@@ -30,6 +30,24 @@
 
 ---
 
+## Introduction
+
+OpenList Next rassemble dans une seule interface les fichiers dispersés entre plusieurs cloud drives, stockages objet et services à protocole, pour les parcourir, les prévisualiser, les télécharger, les partager et les gérer. Le back-end est écrit en TypeScript et s'exécute sur des plateformes d'edge computing.
+
+Il dérive de la version officielle [OpenList-Worker](https://github.com/OpenListTeam/OpenList-Worker) et y ajoute une chose : se connecter à une base de données externe depuis n'importe quelle plateforme edge. Le tableau comparatif figure dans la [Présentation des fonctionnalités](#présentation-des-fonctionnalités) ci-dessous.
+
+Lisez dans l'ordre, ou allez directement à ce qui vous intéresse :
+
+- [Déploiement en un clic](#déploiement-en-un-clic) — déployer sur EdgeOne, Cloudflare Workers, Vercel ou Netlify en un clic
+- [Présentation des fonctionnalités](#présentation-des-fonctionnalités) — quels cloud drives sont pris en charge, ce que le projet sait faire, et ses différences avec la version officielle
+- [Variables d'environnement](#variables-denvironnement) — ce que fait chaque variable, si elle est nécessaire, et quoi y mettre
+- [Déploiement manuel](#déploiement-manuel) — le lancer en local, ou déployer en ligne de commande
+- [Vérifications après déploiement](#vérifications-après-déploiement) — confirmer que le stockage est réellement connecté, et non retombé silencieusement en mémoire
+- [Architecture technique](#architecture-technique) — les frameworks et outils de build utilisés
+- [Questions fréquentes](#questions-fréquentes) — causes et solutions des erreurs courantes
+
+---
+
 ## Déploiement en un clic
 
 Cliquez sur les boutons ci-dessous pour déployer ce projet sur la plateforme correspondante :
@@ -62,15 +80,15 @@ Quelques variables courantes :
 - `DATABASE_URL` : chaîne de connexion à la base de données externe. Si vous la renseignez tout en gardant `DB_DRIVER=auto`, le programme s'y connectera automatiquement
 
 > [!IMPORTANT]
-> Si Cloudflare indique « 无法获取存储库内容 », effectuez d'abord un [Fork](https://github.com/LegspCpd/openlist-next/fork) de ce dépôt, puis déployez en utilisant la méthode « Connexion au dépôt GitHub ».
+> Si Cloudflare indique « Impossible de récupérer le contenu du dépôt », effectuez d'abord un [Fork](https://github.com/LegspCpd/openlist-next/fork) de ce dépôt, puis déployez en utilisant la méthode « Connexion au dépôt GitHub ».
 
 ---
 
 ## Présentation des fonctionnalités
 
-OpenList est un système de liste et de gestion de fichiers multi-stockage agrégé, fonctionnant sur les plateformes de calcul en edge, qui permet de unifier dans une seule interface les fichiers dispersés sur différents disques cloud, stockages d'objets et services de protocole, afin de les parcourir, les prévisualiser, les télécharger et les gérer.
+Cette section couvre quatre points : les stockages que l'on peut monter, les capacités principales, la gestion des permissions, et les plateformes de déploiement. La dernière partie liste les différences avec la version officielle.
 
-OpenList-Worker est un portage TypeScript + Serverless du projet officiel [OpenListTeam/OpenList](https://github.com/OpenListTeam/OpenList), dont le back-end a été réécrit en TypeScript (à partir de Go) pour s'exécuter sur Workers, tout en conservant la même interface et la même expérience d'interaction côté front-end.
+Ces capacités proviennent de la version officielle [OpenList-Worker](https://github.com/OpenListTeam/OpenList-Worker), portage TypeScript + Serverless de [OpenListTeam/OpenList](https://github.com/OpenListTeam/OpenList). L'interface et les interactions sont identiques des deux côtés ; les différences se limitent au stockage et au déploiement.
 
 ### Agrégation de stockage
 
@@ -108,9 +126,7 @@ Outre les stockages réels ci-dessus, des pilotes virtuels/fonctionnels tels que
 - **Stockage des données** : stockage intégré à la plateforme (KV / D1 / Blob …) ou toute base de données externe.
 - **Déploiement en un clic** : prend en charge les boutons de déploiement en un clic pour EdgeOne, Cloudflare Workers, Vercel et Netlify.
 
----
-
-## Différences avec la version officielle
+### Différences avec la version officielle
 
 | | OpenList-Worker officiel | Ce projet |
 |---|---|---|
@@ -122,6 +138,114 @@ Outre les stockages réels ci-dessus, des pilotes virtuels/fonctionnels tels que
 Le pilote `mysql` de la version officielle ne peut s'exécuter que dans un conteneur Node — Cloudflare Workers n'ayant pas de TCP brut, le déploiement en edge ne peut utiliser que le KV intégré à la plateforme. Sur les 10 pilotes ajoutés par ce projet, 8 passent par HTTP (`neon`, `turso`, `pgrest`, `pghttp`, `mysqlhttp`, `upstash`, `s3`, `netlifyblobs`) et peuvent donc joindre une base externe même en edge : il suffit de renseigner une `DATABASE_URL`. Les deux autres diffèrent : `r2` utilise un binding de bucket Cloudflare, et `hyperdrive` se connecte en TCP via `mysql2`, donc uniquement sur Node.
 
 Pour plus de détails, voir [le guide de configuration du stockage externe](../docs/EXTERNAL_STORAGE.md).
+
+---
+
+## Variables d'environnement
+
+### Où renseigner les variables
+
+Un même nom de variable produit le même effet où que vous le saisissiez.
+
+| Méthode de déploiement | Où renseigner |
+|---|---|
+| Cloudflare Workers | Variables et secrets du projet dans Settings de la console ; ou exécutez `wrangler secret put JWT_SECRET` dans le terminal |
+| Tencent EdgeOne | Variables d'environnement du projet dans la console ; si vous utilisez le bouton de déploiement en un clic, la page le demandera directement |
+| Vercel / Netlify | Environment Variables dans les paramètres du projet |
+| Node / Docker | Fichier `.env` à la racine |
+
+Ci-dessous, chaque variable est décrite une par une : nom — à quoi elle sert — si elle est obligatoire.
+
+### Obligatoires
+
+| Nom de variable | À quoi ça sert | Obligatoire ? | Comment renseigner |
+|---|---|---|---|
+| `JWT_SECRET` | La clé secrète de tout le programme. Elle sert à trois choses : la signature des sessions de connexion, le chiffrement des champs comme les identifiants de cloud, et l'authentification des tâches planifiées | **Obligatoire**. Sans elle, le montage de cloud échoue après l'installation | Une chaîne aléatoire d'au moins 16 caractères. Générez-en une avec `openssl rand -hex 32` et renseignez-la |
+
+> [!IMPORTANT]
+> Si `JWT_SECRET` change ou est mal renseigné, les identifiants de cloud déjà stockés ne peuvent plus être déchiffrés, ce qui se traduit par « le montage demande soudainement de tout ressaisir ». Lorsque les mêmes données sont déployées sur plusieurs plateformes, le `JWT_SECRET` doit être identique sur chacune.
+
+### Où sont stockées les données
+
+Ces deux variables déterminent dans quel stockage les données sont placées et selon quelle structure elles sont organisées.
+
+| Nom de variable | À quoi ça sert | Obligatoire ? | Valeurs possibles |
+|---|---|---|---|
+| `DB_DRIVER` | Dans quel stockage les données sont enregistrées | Optionnel, `auto` par défaut | `auto`, `kv`, `d1`, `r2`, `blob`, `cfkv`, `do`, `neon`, `turso`, `pgrest`, `pghttp`, `mysqlhttp`, `upstash`, `s3`, `hyperdrive`, `netlifyblobs`, `mysql` |
+| `DB_FORMAT` | Selon quelle structure les données sont organisées | Optionnel, `map` par défaut | `map`, `key`, `sql` |
+
+- `auto` choisit dans cet ordre : la base de données externe que vous avez configurée → le stockage intégré à la plateforme (KV, D1, Blob, etc.). En cas de doute, utilisez `auto`.
+- `map` : toute la base est stockée en un seul JSON, une lecture et une écriture chacune, ce qui minimise le nombre de requêtes ; adapté au KV et au stockage d'objets.
+- `key` : un enregistrement par entité, par exemple `users_1`. Plus économique en trafic que `map` lorsqu'il y a beaucoup d'entités.
+- `sql` : stockage dans des tables relationnelles, dont la structure est identique à la version Go d'OpenList, ce qui permet de partager la même base avec la version Go.
+- `mysql` ne fonctionne que dans Node / Docker. Les plateformes en périphérie n'ont pas de TCP brut et ne peuvent pas se connecter.
+
+Combinaisons courantes :
+
+```bash
+# Cloudflare Workers + D1
+DB_FORMAT=sql
+DB_DRIVER=d1
+
+# EdgeOne + Blob (zéro configuration)
+DB_FORMAT=map
+DB_DRIVER=blob
+
+# Base de données externe, par exemple Neon
+DB_FORMAT=map
+DB_DRIVER=auto
+DATABASE_URL=postgres://user:pass@ep-xxx.neon.tech/neondb
+```
+
+### Base de données externe (à renseigner si vous ne voulez pas utiliser le stockage intégré à la plateforme)
+
+La solution la plus simple est de **renseigner une seule chaîne `DATABASE_URL` et de garder `DB_DRIVER=auto`** : le programme reconnaît le fournisseur lui-même à partir du protocole et du nom d'hôte.
+
+| Nom de variable | À quoi ça sert | Obligatoire ? |
+|---|---|---|
+| `DATABASE_URL` | Chaîne de connexion de base de données générique ; le pilote utilisé dépend du fournisseur reconnu | Renseignez-la en général, c'est suffisant si vous utilisez une base externe |
+| `SUPABASE_KEY` | Clé de lecture/écriture Supabase, nécessaire lorsqu'une seule chaîne ne suffit pas | Obligatoire avec Supabase |
+| `TURSO_AUTH_TOKEN` | Jeton d'accès Turso | Obligatoire avec Turso |
+| `MYSQL_HTTP_URL` | Adresse de la passerelle de transfert HTTP MySQL / MariaDB. En périphérie, la connexion à MySQL ne peut se faire que par celle-ci | Obligatoire si vous utilisez MySQL en périphérie |
+| `PG_HTTP_URL` | Adresse de votre propre passerelle HTTP Postgres | Obligatoire si vous utilisez une passerelle auto-hébergée |
+| `MYSQL_URLS` | Chaîne de connexion MySQL directe, utilisable uniquement dans Node / Docker | À renseigner pour une connexion MySQL directe dans Node |
+
+Pour savoir comment écrire la chaîne de chaque fournisseur et quels autres alias de variable sont pris en charge, voir [le guide de configuration du stockage externe](../docs/EXTERNAL_STORAGE.md).
+
+### Liaisons de plateforme (à ne pas saisir à la main, il suffit de les lier)
+
+Ces variables sont injectées automatiquement dans l'environnement par la plateforme au déploiement ; vous n'avez qu'à créer la ressource dans la console et à utiliser les noms ci-dessous lors de la liaison.
+
+| Nom de variable | À quoi ça sert | À gérer ? |
+|---|---|---|
+| `DB` | Liaison de la base de données Cloudflare D1, utilisée par `DB_DRIVER=d1` | À lier si vous voulez D1, avec le nom `DB` |
+| `KV` | Liaison de l'espace de noms Cloudflare KV / EdgeOne KV, utilisée par `DB_DRIVER=kv` | À lier si vous voulez KV, avec le nom `KV` |
+| `HYPERDRIVE` | Chaîne de connexion Cloudflare Hyperdrive, permettant au périphérique d'accéder à MySQL, utilisée par `DB_DRIVER=hyperdrive` | À lier si vous voulez Hyperdrive |
+| `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Nom du bucket et identifiants d'accès du stockage d'objets compatible S3 (R2 / MinIO / B2, etc.), utilisés par `DB_DRIVER=s3` | À renseigner tous les cinq si vous utilisez le stockage S3 |
+| `CF_ACCOUNT`, `CF_KV_UUID`, `CF_API_KEY` | Lecture/écriture du KV via l'API REST Cloudflare, utilisés par `DB_DRIVER=cfkv`. Il s'agit respectivement de l'ID de compte, de l'ID d'espace de noms KV et d'un jeton d'API avec droit de lecture/écriture KV | À renseigner tous les trois si vous utilisez `cfkv` |
+| `BUCKET` | Binding de bucket Cloudflare R2, utilisé par `DB_DRIVER=r2` (accepte aussi `R2_BUCKET` / `OPENLIST_BUCKET` / `OPENLIST_R2`) | Associez-le si vous voulez R2, en le nommant `BUCKET` |
+
+### Autres variables (la plupart peuvent être ignorées)
+
+| Nom de variable | À quoi ça sert | Obligatoire ? |
+|---|---|---|
+| `EO_KV_URLS` | Propre à EdgeOne. La liaison KV n'est injectée que dans les fonctions en périphérie ; les fonctions cloud Node ne peuvent pas l'obtenir et ne peuvent lire/écrire le KV qu'en passant par les fonctions en périphérie `/kv-get` `/kv-put` `/kv-delete` `/kv-list` de **ce déploiement**. Renseignez ici **l'origine de ce déploiement**, par ex. `https://openlist.example.com` (seuls le protocole, l'hôte et le port sont pris ; tout chemin qui suit est ignoré) | Généralement inutile — si vide, le domaine que vous consultez est utilisé automatiquement ; à renseigner uniquement si le domaine consulté diffère du domaine de déploiement (CDN ou domaine personnalisé devant) ou pour un débogage local |
+| `ADMIN_PASS` | Si défini, l'assistant d'installation est ignoré et le compte administrateur est créé directement avec ce mot de passe | Optionnel ; sinon, configurez-le dans l'assistant du navigateur |
+| `ALLOW_URLS` | Liste blanche multi-origines, séparée par des virgules. Si non renseignée, seules les requêtes de même origine sont autorisées | À renseigner si le front-end et le back-end ne sont pas sur le même domaine |
+| `ASSET_URLS` | Charge les ressources statiques du front-end depuis le CDN, prend en charge le placeholder `$version` pour la version courante du front-end | À renseigner si vous utilisez un CDN |
+| `MAX_UPLOAD` | Taille maximale d'un téléversement global, en octets | Optionnel, 26 214 400 (25 Mo) par défaut |
+| `MAX_UPPART` | Taille maximale d'une tranche en téléversement par fragments, en octets | Optionnel, 16 777 216 (16 Mo) par défaut |
+| `ALLOW_SEED` | Liste blanche des sites autorisés comme source de données initiales | À renseigner si vous utilisez la fonction de seed |
+
+### Utilisées uniquement en ligne de commande (à ne pas renseigner dans les variables d'environnement)
+
+| Nom de variable | À quoi ça sert |
+|---|---|
+| `EO_PAGES_PROJECT` | Projet vers lequel l'CLI EdgeOne Makers doit déployer |
+| `EO_PAGES_API_TOKEN` | Jeton d'API dans la console EdgeOne Makers, utilisé par l'CLI |
+| `EO_PAGES_URL` | Domaine après déploiement, utilisé par `pnpm run deploy:edgeone` pour la vérification post-déploiement |
+
+Chaque variable est listée avec un commentaire dans [le modèle de variables](../.dev.vars.example).
 
 ---
 
@@ -342,114 +466,6 @@ Le code de sortie `0` signifie que le stockage est prêt, `2` qu'il ne l'est pas
 - **Outils de build** : Vite
 
 > Le front-end ne se trouve pas dans ce dépôt ; il est récupéré depuis le dépôt officiel par `scripts/fetch-frontend.mjs` au moment du build.
-
----
-
-## Configuration
-
-### Où renseigner les variables
-
-Un même nom de variable produit le même effet où que vous le saisissiez.
-
-| Méthode de déploiement | Où renseigner |
-|---|---|
-| Cloudflare Workers | Variables et secrets du projet dans Settings de la console ; ou exécutez `wrangler secret put JWT_SECRET` dans le terminal |
-| Tencent EdgeOne | Variables d'environnement du projet dans la console ; si vous utilisez le bouton de déploiement en un clic, la page le demandera directement |
-| Vercel / Netlify | Environment Variables dans les paramètres du projet |
-| Node / Docker | Fichier `.env` à la racine |
-
-Ci-dessous, chaque variable est décrite une par une : nom — à quoi elle sert — si elle est obligatoire.
-
-### Obligatoires
-
-| Nom de variable | À quoi ça sert | Obligatoire ? | Comment renseigner |
-|---|---|---|---|
-| `JWT_SECRET` | La clé secrète de tout le programme. Elle sert à trois choses : la signature des sessions de connexion, le chiffrement des champs comme les identifiants de cloud, et l'authentification des tâches planifiées | **Obligatoire**. Sans elle, le montage de cloud échoue après l'installation | Une chaîne aléatoire d'au moins 16 caractères. Générez-en une avec `openssl rand -hex 32` et renseignez-la |
-
-> [!IMPORTANT]
-> Si `JWT_SECRET` change ou est mal renseigné, les identifiants de cloud déjà stockés ne peuvent plus être déchiffrés, ce qui se traduit par « le montage demande soudainement de tout ressaisir ». Lorsque les mêmes données sont déployées sur plusieurs plateformes, le `JWT_SECRET` doit être identique sur chacune.
-
-### Où sont stockées les données
-
-Ces deux variables déterminent dans quel stockage les données sont placées et selon quelle structure elles sont organisées.
-
-| Nom de variable | À quoi ça sert | Obligatoire ? | Valeurs possibles |
-|---|---|---|---|
-| `DB_DRIVER` | Dans quel stockage les données sont enregistrées | Optionnel, `auto` par défaut | `auto`, `kv`, `d1`, `r2`, `blob`, `cfkv`, `do`, `neon`, `turso`, `pgrest`, `pghttp`, `mysqlhttp`, `upstash`, `s3`, `hyperdrive`, `netlifyblobs`, `mysql` |
-| `DB_FORMAT` | Selon quelle structure les données sont organisées | Optionnel, `map` par défaut | `map`, `key`, `sql` |
-
-- `auto` choisit dans cet ordre : la base de données externe que vous avez configurée → le stockage intégré à la plateforme (KV, D1, Blob, etc.). En cas de doute, utilisez `auto`.
-- `map` : toute la base est stockée en un seul JSON, une lecture et une écriture chacune, ce qui minimise le nombre de requêtes ; adapté au KV et au stockage d'objets.
-- `key` : un enregistrement par entité, par exemple `users_1`. Plus économique en trafic que `map` lorsqu'il y a beaucoup d'entités.
-- `sql` : stockage dans des tables relationnelles, dont la structure est identique à la version Go d'OpenList, ce qui permet de partager la même base avec la version Go.
-- `mysql` ne fonctionne que dans Node / Docker. Les plateformes en périphérie n'ont pas de TCP brut et ne peuvent pas se connecter.
-
-Combinaisons courantes :
-
-```bash
-# Cloudflare Workers + D1
-DB_FORMAT=sql
-DB_DRIVER=d1
-
-# EdgeOne + Blob (zéro configuration)
-DB_FORMAT=map
-DB_DRIVER=blob
-
-# Base de données externe, par exemple Neon
-DB_FORMAT=map
-DB_DRIVER=auto
-DATABASE_URL=postgres://user:pass@ep-xxx.neon.tech/neondb
-```
-
-### Base de données externe (à renseigner si vous ne voulez pas utiliser le stockage intégré à la plateforme)
-
-La solution la plus simple est de **renseigner une seule chaîne `DATABASE_URL` et de garder `DB_DRIVER=auto`** : le programme reconnaît le fournisseur lui-même à partir du protocole et du nom d'hôte.
-
-| Nom de variable | À quoi ça sert | Obligatoire ? |
-|---|---|---|
-| `DATABASE_URL` | Chaîne de connexion de base de données générique ; le pilote utilisé dépend du fournisseur reconnu | Renseignez-la en général, c'est suffisant si vous utilisez une base externe |
-| `SUPABASE_KEY` | Clé de lecture/écriture Supabase, nécessaire lorsqu'une seule chaîne ne suffit pas | Obligatoire avec Supabase |
-| `TURSO_AUTH_TOKEN` | Jeton d'accès Turso | Obligatoire avec Turso |
-| `MYSQL_HTTP_URL` | Adresse de la passerelle de transfert HTTP MySQL / MariaDB. En périphérie, la connexion à MySQL ne peut se faire que par celle-ci | Obligatoire si vous utilisez MySQL en périphérie |
-| `PG_HTTP_URL` | Adresse de votre propre passerelle HTTP Postgres | Obligatoire si vous utilisez une passerelle auto-hébergée |
-| `MYSQL_URLS` | Chaîne de connexion MySQL directe, utilisable uniquement dans Node / Docker | À renseigner pour une connexion MySQL directe dans Node |
-
-Pour savoir comment écrire la chaîne de chaque fournisseur et quels autres alias de variable sont pris en charge, voir [le guide de configuration du stockage externe](../docs/EXTERNAL_STORAGE.md).
-
-### Liaisons de plateforme (à ne pas saisir à la main, il suffit de les lier)
-
-Ces variables sont injectées automatiquement dans l'environnement par la plateforme au déploiement ; vous n'avez qu'à créer la ressource dans la console et à utiliser les noms ci-dessous lors de la liaison.
-
-| Nom de variable | À quoi ça sert | À gérer ? |
-|---|---|---|
-| `DB` | Liaison de la base de données Cloudflare D1, utilisée par `DB_DRIVER=d1` | À lier si vous voulez D1, avec le nom `DB` |
-| `KV` | Liaison de l'espace de noms Cloudflare KV / EdgeOne KV, utilisée par `DB_DRIVER=kv` | À lier si vous voulez KV, avec le nom `KV` |
-| `HYPERDRIVE` | Chaîne de connexion Cloudflare Hyperdrive, permettant au périphérique d'accéder à MySQL, utilisée par `DB_DRIVER=hyperdrive` | À lier si vous voulez Hyperdrive |
-| `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Nom du bucket et identifiants d'accès du stockage d'objets compatible S3 (R2 / MinIO / B2, etc.), utilisés par `DB_DRIVER=s3` | À renseigner tous les cinq si vous utilisez le stockage S3 |
-| `CF_ACCOUNT`, `CF_KV_UUID`, `CF_API_KEY` | Lecture/écriture du KV via l'API REST Cloudflare, utilisés par `DB_DRIVER=cfkv`. Il s'agit respectivement de l'ID de compte, de l'ID d'espace de noms KV et d'un jeton d'API avec droit de lecture/écriture KV | À renseigner tous les trois si vous utilisez `cfkv` |
-| `BUCKET` | Binding de bucket Cloudflare R2, utilisé par `DB_DRIVER=r2` (accepte aussi `R2_BUCKET` / `OPENLIST_BUCKET` / `OPENLIST_R2`) | Associez-le si vous voulez R2, en le nommant `BUCKET` |
-
-### Autres variables (la plupart peuvent être ignorées)
-
-| Nom de variable | À quoi ça sert | Obligatoire ? |
-|---|---|---|
-| `EO_KV_URLS` | Propre à EdgeOne. La liaison KV n'est injectée que dans les fonctions en périphérie ; les fonctions cloud Node ne peuvent pas l'obtenir et ne peuvent lire/écrire le KV qu'en passant par les fonctions en périphérie `/kv-get` `/kv-put` `/kv-delete` `/kv-list` de **ce déploiement**. Renseignez ici **l'origine de ce déploiement**, par ex. `https://openlist.example.com` (seuls le protocole, l'hôte et le port sont pris ; tout chemin qui suit est ignoré) | Généralement inutile — si vide, le domaine que vous consultez est utilisé automatiquement ; à renseigner uniquement si le domaine consulté diffère du domaine de déploiement (CDN ou domaine personnalisé devant) ou pour un débogage local |
-| `ADMIN_PASS` | Si défini, l'assistant d'installation est ignoré et le compte administrateur est créé directement avec ce mot de passe | Optionnel ; sinon, configurez-le dans l'assistant du navigateur |
-| `ALLOW_URLS` | Liste blanche multi-origines, séparée par des virgules. Si non renseignée, seules les requêtes de même origine sont autorisées | À renseigner si le front-end et le back-end ne sont pas sur le même domaine |
-| `ASSET_URLS` | Charge les ressources statiques du front-end depuis le CDN, prend en charge le placeholder `$version` pour la version courante du front-end | À renseigner si vous utilisez un CDN |
-| `MAX_UPLOAD` | Taille maximale d'un téléversement global, en octets | Optionnel, 26 214 400 (25 Mo) par défaut |
-| `MAX_UPPART` | Taille maximale d'une tranche en téléversement par fragments, en octets | Optionnel, 16 777 216 (16 Mo) par défaut |
-| `ALLOW_SEED` | Liste blanche des sites autorisés comme source de données initiales | À renseigner si vous utilisez la fonction de seed |
-
-### Utilisées uniquement en ligne de commande (à ne pas renseigner dans les variables d'environnement)
-
-| Nom de variable | À quoi ça sert |
-|---|---|
-| `EO_PAGES_PROJECT` | Projet vers lequel l'CLI EdgeOne Makers doit déployer |
-| `EO_PAGES_API_TOKEN` | Jeton d'API dans la console EdgeOne Makers, utilisé par l'CLI |
-| `EO_PAGES_URL` | Domaine après déploiement, utilisé par `pnpm run deploy:edgeone` pour la vérification post-déploiement |
-
-Chaque variable est listée avec un commentaire dans [le modèle de variables](../.dev.vars.example).
 
 ---
 

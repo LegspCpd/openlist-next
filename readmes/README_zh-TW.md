@@ -11,7 +11,7 @@
 <a href="https://github.com/LegspCpd/openlist-next/issues"><img src="https://img.shields.io/github/issues/LegspCpd/openlist-next" alt="Issues" /></a>
 <a href="https://github.com/LegspCpd/openlist-next/discussions"><img src="https://img.shields.io/github/discussions/LegspCpd/openlist-next?color=%23ED8936" alt="Discussions" /></a>
 
-📖 [多平台部署指南](../docs/DEPLOYMENT.md) · 🗄️ [外部存储配置](../docs/EXTERNAL_STORAGE.md) · 🔌 [一键连接数据库](../docs/ONE_CLICK_DATABASE.md)
+📖 [多平台部署指南](../docs/DEPLOYMENT.md) · 🗄️ [外部儲存設定](../docs/EXTERNAL_STORAGE.md) · 🔌 [一鍵連接資料庫](../docs/ONE_CLICK_DATABASE.md)
 
 </div>
 
@@ -27,6 +27,24 @@
 > 本專案**不是** OpenList 官方發布物，與 OpenListTeam 沒有任何隸屬、授權或背書關係。
 > 使用中遇到問題，請在本倉庫提 Issue，不要到官方倉庫回饋。
 > 程式碼來源、版權與許可證說明見 [NOTICE.md](../NOTICE.md)。
+
+---
+
+## 介紹
+
+OpenList Next 把分散在多個網盤、物件儲存和協定服務裡的文件集中到一個介面，可以瀏覽、預覽、下載、分享和管理。後端用 TypeScript 撰寫，執行在邊緣運算平台上。
+
+本專案源自官方 [OpenList-Worker](https://github.com/OpenListTeam/OpenList-Worker)，在官方版本的基礎上補上了「在任何邊緣平台上直連外部資料庫」這件事。兩個版本的差別見下方[功能介紹](#功能介紹)裡的對照表。
+
+按順序往下讀，或者直接跳到你要看的部分：
+
+- [一鍵部署](#一鍵部署) —— 點按鈕把專案部署到 EdgeOne、Cloudflare Workers、Vercel 或 Netlify
+- [功能介紹](#功能介紹) —— 支援哪些網盤、有哪些能力、和官方版本差在哪
+- [環境變數](#環境變數) —— 每個變數是幹什麼的、要不要填、怎麼填
+- [手動部署](#手動部署) —— 在本機跑起來，或者用命令列部署到各個平台
+- [部署後檢查](#部署後檢查) —— 確認儲存真的接上了，而不是悄悄退回記憶體
+- [技術架構](#技術架構) —— 用到的框架和建置工具
+- [常見問題](#常見問題) —— 常見報錯的原因和處理辦法
 
 ---
 
@@ -66,11 +84,11 @@
 
 ---
 
-## 功能簡介
+## 功能介紹
 
-OpenList 是一個運行於邊緣運算平台的多儲存聚合檔案列表與管理系統，可將分散在不同網盤、物件儲存與協定服務中的檔案統一到一個介面，進行瀏覽、預覽、下載與管理。
+本節分四塊：能掛哪些儲存、有哪些核心能力、權限怎麼管理、能部署到哪裡，最後一塊列了和官方版本的差異。
 
-OpenList-Worker 是官方 [OpenListTeam/OpenList](https://github.com/OpenListTeam/OpenList) 專案的 TypeScript + Serverless 移植版，後端由 Go 重寫為運行於 Workers 的 TypeScript 服務，前端保持一致的介面與互動體驗。
+這些能力來自官方 [OpenList-Worker](https://github.com/OpenListTeam/OpenList-Worker) —— 官方 [OpenListTeam/OpenList](https://github.com/OpenListTeam/OpenList) 的 TypeScript + Serverless 移植版。介面與互動兩邊一致，差別只在儲存與部署。
 
 ### 儲存聚合
 
@@ -108,9 +126,7 @@ OpenList-Worker 是官方 [OpenListTeam/OpenList](https://github.com/OpenListTea
 - **資料儲存**：平台自帶儲存（KV / D1 / Blob …）或任意外部資料庫。
 - **一鍵部署**：支援 EdgeOne、Cloudflare Workers、Vercel、Netlify 的一鍵部署按鈕。
 
----
-
-## 和官方版本有哪些不同
+### 和官方版本有哪些不同
 
 | | 官方 OpenList-Worker | 本專案 |
 |---|---|---|
@@ -122,6 +138,114 @@ OpenList-Worker 是官方 [OpenListTeam/OpenList](https://github.com/OpenListTea
 官方版本裡的 `mysql` 驅動只能跑在 Node 容器中——Cloudflare Workers 沒有裸 TCP，部署到邊緣就只能使用平台自帶的 KV。本專案新增的 10 個驅動裡，`neon`、`turso`、`pgrest`、`pghttp`、`mysqlhttp`、`upstash`、`s3`、`netlifyblobs` 這 8 個走 HTTP，所以在邊緣執行時也能連外部資料庫，填一條 `DATABASE_URL` 就行；另外兩個裡 `r2` 用的是 Cloudflare 的儲存桶綁定，`hyperdrive` 靠 `mysql2` 直連 TCP，只在 Node 環境可用。
 
 詳細說明見 [外部儲存配置指南](../docs/EXTERNAL_STORAGE.md)。
+
+---
+
+## 環境變數
+
+### 變數填在哪裡
+
+同一個變數名，填在下面任何一處效果都一樣。
+
+| 部署方式 | 填在哪 |
+|---|---|
+| Cloudflare Workers | 控制台專案的 Settings → Variables and Secrets；或在終端執行 `wrangler secret put JWT_SECRET` |
+| 騰訊雲 EdgeOne | 控制台專案的「環境變數」；點一鍵部署按鈕時，部署頁會直接問你要 |
+| Vercel / Netlify | 專案設定的 Environment Variables |
+| Node / Docker | 根目錄的 `.env` 檔案 |
+
+下面按「變數名 —— 它是幹什麼的 —— 要不要填」逐條寫清楚。
+
+### 必填的
+
+| 變數名 | 它是幹什麼的 | 要不要填 | 怎麼填 |
+|---|---|---|---|
+| `JWT_SECRET` | 整個程式的密鑰。三件事都靠它：登入會話的簽章、網盤憑據這類欄位的加密儲存、定時任務的鑑權 | **必填**。不填的話裝完之後掛載網盤會失敗 | 隨機字串，至少 16 位。用 `openssl rand -hex 32` 生成一串填進去 |
+
+> [!IMPORTANT]
+> `JWT_SECRET` 換了或者填錯了，之前存進去的網盤憑據就解不開了，表現為「掛載突然要求重新填寫」。同一份資料部署在多個平台時，各平台的 `JWT_SECRET` 必須保持一致。
+
+### 資料存在哪裡
+
+這兩個變數決定資料落在哪種儲存、按什麼結構存。
+
+| 變數名 | 它是幹什麼的 | 要不要填 | 可選值 |
+|---|---|---|---|
+| `DB_DRIVER` | 資料存到哪種儲存裡 | 選填，預設 `auto` | `auto`、`kv`、`d1`、`r2`、`blob`、`cfkv`、`do`、`neon`、`turso`、`pgrest`、`pghttp`、`mysqlhttp`、`upstash`、`s3`、`hyperdrive`、`netlifyblobs`、`mysql` |
+| `DB_FORMAT` | 資料按什麼結構組織 | 選填，預設 `map` | `map`、`key`、`sql` |
+
+- `auto` 會按這個順序挑：你配的外部資料庫 → 平台自帶的儲存（KV、D1、Blob 之類）。拿不準就用 `auto`。
+- `map`：整個庫存成一個 JSON，讀一次寫一次，最省請求次數，適合 KV 和物件儲存。
+- `key`：每個實體存一條記錄，比如 `users_1`。實體多的時候比 `map` 省流量。
+- `sql`：用關聯表存，表結構和 Go 版 OpenList 一樣，可以和 Go 版共用同一個資料庫。
+- `mysql` 只能在 Node / Docker 裡用。邊緣平台沒有裸 TCP，連不上。
+
+常用的幾種組合：
+
+```bash
+# Cloudflare Workers + D1
+DB_FORMAT=sql
+DB_DRIVER=d1
+
+# EdgeOne + Blob（不用建庫，第一次寫入自動建立）
+DB_FORMAT=map
+DB_DRIVER=blob
+
+# 外部資料庫，以 Neon 為例
+DB_FORMAT=map
+DB_DRIVER=auto
+DATABASE_URL=postgres://user:pass@ep-xxx.neon.tech/neondb
+```
+
+### 外部資料庫（不想用平台自帶儲存時填）
+
+最省事的做法是**只填一條 `DATABASE_URL`，`DB_DRIVER` 保持 `auto`**，程式自己看協定和主機名就能認出是哪家。
+
+| 變數名 | 它是幹什麼的 | 要不要填 |
+|---|---|---|
+| `DATABASE_URL` | 通用的資料庫連線串，認出哪家就用哪家的驅動 | 用外部資料庫時填這一條通常就夠 |
+| `SUPABASE_KEY` | Supabase 的讀寫 key，只有一條連線串不夠 | 用 Supabase 時必填 |
+| `TURSO_AUTH_TOKEN` | Turso 的存取令牌 | 用 Turso 時必填 |
+| `MYSQL_HTTP_URL` | MySQL / MariaDB 的 HTTP 轉發閘道地址。邊緣平台連 MySQL 只能走它 | 在邊緣用 MySQL 時必填 |
+| `PG_HTTP_URL` | 自己架的 Postgres HTTP 閘道地址 | 用自建閘道時必填 |
+| `MYSQL_URLS` | MySQL 直連連線串，僅 Node / Docker 可用 | 在 Node 裡直連 MySQL 時填 |
+
+各家連線串怎麼寫、還支援哪些變數別名，見[外部儲存配置指南](../docs/EXTERNAL_STORAGE.md)。
+
+### 平台綁定（不用手填，綁定好就行）
+
+這些由平台在部署時自動注入到環境裡，你只需要在控制台建好資源、綁定時把名字寫成下面這樣。
+
+| 變數名 | 它是幹什麼的 | 要不要管 |
+|---|---|---|
+| `DB` | Cloudflare D1 資料庫綁定，`DB_DRIVER=d1` 用它 | 想用 D1 就綁，名字填 `DB` |
+| `KV` | Cloudflare KV / EdgeOne KV 的命名空間綁定，`DB_DRIVER=kv` 用它 | 想用 KV 就綁，名字填 `KV` |
+| `HYPERDRIVE` | Cloudflare Hyperdrive 連線串，讓邊緣能存取 MySQL，`DB_DRIVER=hyperdrive` 用它 | 想用 Hyperdrive 就綁 |
+| `S3_BUCKET`、`S3_REGION`、`S3_ENDPOINT`、`S3_ACCESS_KEY_ID`、`S3_SECRET_ACCESS_KEY` | S3 相容物件儲存的桶名與存取憑據，`DB_DRIVER=s3` 用它們 | 用 S3 儲存就五項都填 |
+| `CF_ACCOUNT`、`CF_KV_UUID`、`CF_API_KEY` | 走 Cloudflare REST API 讀寫 KV，`DB_DRIVER=cfkv` 用它們。分別是帳戶 ID、KV 命名空間 ID、有 KV 讀寫權限的 API Token | 用 `cfkv` 就三項都填 |
+| `BUCKET` | Cloudflare R2 的儲存桶綁定，`DB_DRIVER=r2` 用它（也接受 `R2_BUCKET` / `OPENLIST_BUCKET` / `OPENLIST_R2`） | 想用 R2 就綁，名字填 `BUCKET` |
+
+### 其他變數（大多可以不管）
+
+| 變數名 | 它是幹什麼的 | 要不要填 |
+|---|---|---|
+| `EO_KV_URLS` | EdgeOne 專用。KV 綁定只注入邊緣函式，Node 雲函式拿不到，讀寫只能經**本部署**的 `/kv-get` `/kv-put` `/kv-delete` `/kv-list` 邊緣函式轉發；這裡填**本部署的 origin**，如 `https://openlist.example.com`（只取協定+網域+連接埠，後面接的路徑會被忽略） | 一般留空——留空會自動取你當前造訪的網域；只有造訪網域≠部署網域（前面套了 CDN 或自訂網域）或本機除錯才手填 |
+| `ADMIN_PASS` | 設了它就不用走安裝精靈，直接用這個密碼建立管理員帳號 | 選填，不填就在瀏覽器精靈裡設定 |
+| `ALLOW_URLS` | 跨域白名單，逗號分隔。不填只允許同源請求 | 前端和後端不在同一個域名時填 |
+| `ASSET_URLS` | 讓前端靜態資源從 CDN 載入，支援用 `$version` 占位目前的版本號 | 用 CDN 時填 |
+| `MAX_UPLOAD` | 單次整體上傳的大小上限，單位位元組 | 選填，預設 26214400（25MB） |
+| `MAX_UPPART` | 分片上傳時單片的大小上限，單位位元組 | 選填，預設 16777216（16MB） |
+| `ALLOW_SEED` | 允許當作種子資料來源的站點白名單 | 用種子功能時填 |
+
+### 只在命令列裡用（不用填進環境變數）
+
+| 變數名 | 它是幹什麼的 |
+|---|---|
+| `EO_PAGES_PROJECT` | EdgeOne Makers CLI 要部署到哪個專案 |
+| `EO_PAGES_API_TOKEN` | EdgeOne Makers 控制台裡的 API Token，給 CLI 用 |
+| `EO_PAGES_URL` | 部署後的域名，`pnpm run deploy:edgeone` 用它做部署後的檢查 |
+
+每個變數都在[變數模板](../.dev.vars.example)裡帶註解列了一遍。
 
 ---
 
@@ -342,114 +466,6 @@ pnpm run deploy:vercel  -- --no-deploy --url https://你的網域
 - **建構工具**：Vite
 
 > 前端不在本倉庫裡，建構時由 `scripts/fetch-frontend.mjs` 從官方倉庫拉取。
-
----
-
-## 配置
-
-### 變數填在哪裡
-
-同一個變數名，填在下面任何一處效果都一樣。
-
-| 部署方式 | 填在哪 |
-|---|---|
-| Cloudflare Workers | 控制台專案的 Settings → Variables and Secrets；或在終端執行 `wrangler secret put JWT_SECRET` |
-| 騰訊雲 EdgeOne | 控制台專案的「環境變數」；點一鍵部署按鈕時，部署頁會直接問你要 |
-| Vercel / Netlify | 專案設定的 Environment Variables |
-| Node / Docker | 根目錄的 `.env` 檔案 |
-
-下面按「變數名 —— 它是幹什麼的 —— 要不要填」逐條寫清楚。
-
-### 必填的
-
-| 變數名 | 它是幹什麼的 | 要不要填 | 怎麼填 |
-|---|---|---|---|
-| `JWT_SECRET` | 整個程式的密鑰。三件事都靠它：登入會話的簽章、網盤憑據這類欄位的加密儲存、定時任務的鑑權 | **必填**。不填的話裝完之後掛載網盤會失敗 | 隨機字串，至少 16 位。用 `openssl rand -hex 32` 生成一串填進去 |
-
-> [!IMPORTANT]
-> `JWT_SECRET` 換了或者填錯了，之前存進去的網盤憑據就解不開了，表現為「掛載突然要求重新填寫」。同一份資料部署在多個平台時，各平台的 `JWT_SECRET` 必須保持一致。
-
-### 資料存在哪裡
-
-這兩個變數決定資料落在哪種儲存、按什麼結構存。
-
-| 變數名 | 它是幹什麼的 | 要不要填 | 可選值 |
-|---|---|---|---|
-| `DB_DRIVER` | 資料存到哪種儲存裡 | 選填，預設 `auto` | `auto`、`kv`、`d1`、`r2`、`blob`、`cfkv`、`do`、`neon`、`turso`、`pgrest`、`pghttp`、`mysqlhttp`、`upstash`、`s3`、`hyperdrive`、`netlifyblobs`、`mysql` |
-| `DB_FORMAT` | 資料按什麼結構組織 | 選填，預設 `map` | `map`、`key`、`sql` |
-
-- `auto` 會按這個順序挑：你配的外部資料庫 → 平台自帶的儲存（KV、D1、Blob 之類）。拿不準就用 `auto`。
-- `map`：整個庫存成一個 JSON，讀一次寫一次，最省請求次數，適合 KV 和物件儲存。
-- `key`：每個實體存一條記錄，比如 `users_1`。實體多的時候比 `map` 省流量。
-- `sql`：用關聯表存，表結構和 Go 版 OpenList 一樣，可以和 Go 版共用同一個資料庫。
-- `mysql` 只能在 Node / Docker 裡用。邊緣平台沒有裸 TCP，連不上。
-
-常用的幾種組合：
-
-```bash
-# Cloudflare Workers + D1
-DB_FORMAT=sql
-DB_DRIVER=d1
-
-# EdgeOne + Blob（不用建库，第一次写入自动创建）
-DB_FORMAT=map
-DB_DRIVER=blob
-
-# 外部数据库，以 Neon 为例
-DB_FORMAT=map
-DB_DRIVER=auto
-DATABASE_URL=postgres://user:pass@ep-xxx.neon.tech/neondb
-```
-
-### 外部資料庫（不想用平台自帶儲存時填）
-
-最省事的做法是**只填一條 `DATABASE_URL`，`DB_DRIVER` 保持 `auto`**，程式自己看協定和主機名就能認出是哪家。
-
-| 變數名 | 它是幹什麼的 | 要不要填 |
-|---|---|---|
-| `DATABASE_URL` | 通用的資料庫連線串，認出哪家就用哪家的驅動 | 用外部資料庫時填這一條通常就夠 |
-| `SUPABASE_KEY` | Supabase 的讀寫 key，只有一條連線串不夠 | 用 Supabase 時必填 |
-| `TURSO_AUTH_TOKEN` | Turso 的存取令牌 | 用 Turso 時必填 |
-| `MYSQL_HTTP_URL` | MySQL / MariaDB 的 HTTP 轉發閘道地址。邊緣平台連 MySQL 只能走它 | 在邊緣用 MySQL 時必填 |
-| `PG_HTTP_URL` | 自己架的 Postgres HTTP 閘道地址 | 用自建閘道時必填 |
-| `MYSQL_URLS` | MySQL 直連連線串，僅 Node / Docker 可用 | 在 Node 裡直連 MySQL 時填 |
-
-各家連線串怎麼寫、還支援哪些變數別名，見[外部儲存配置指南](../docs/EXTERNAL_STORAGE.md)。
-
-### 平台綁定（不用手填，綁定好就行）
-
-這些由平台在部署時自動注入到環境裡，你只需要在控制台建好資源、綁定時把名字寫成下面這樣。
-
-| 變數名 | 它是幹什麼的 | 要不要管 |
-|---|---|---|
-| `DB` | Cloudflare D1 資料庫綁定，`DB_DRIVER=d1` 用它 | 想用 D1 就綁，名字填 `DB` |
-| `KV` | Cloudflare KV / EdgeOne KV 的命名空間綁定，`DB_DRIVER=kv` 用它 | 想用 KV 就綁，名字填 `KV` |
-| `HYPERDRIVE` | Cloudflare Hyperdrive 連線串，讓邊緣能存取 MySQL，`DB_DRIVER=hyperdrive` 用它 | 想用 Hyperdrive 就綁 |
-| `S3_BUCKET`、`S3_REGION`、`S3_ENDPOINT`、`S3_ACCESS_KEY_ID`、`S3_SECRET_ACCESS_KEY` | S3 相容物件儲存的桶名與存取憑據，`DB_DRIVER=s3` 用它們 | 用 S3 儲存就五項都填 |
-| `CF_ACCOUNT`、`CF_KV_UUID`、`CF_API_KEY` | 走 Cloudflare REST API 讀寫 KV，`DB_DRIVER=cfkv` 用它們。分別是帳戶 ID、KV 命名空間 ID、有 KV 讀寫權限的 API Token | 用 `cfkv` 就三項都填 |
-| `BUCKET` | Cloudflare R2 的儲存桶綁定，`DB_DRIVER=r2` 用它（也接受 `R2_BUCKET` / `OPENLIST_BUCKET` / `OPENLIST_R2`） | 想用 R2 就綁，名字填 `BUCKET` |
-
-### 其他變數（大多可以不管）
-
-| 變數名 | 它是幹什麼的 | 要不要填 |
-|---|---|---|
-| `EO_KV_URLS` | EdgeOne 專用。KV 綁定只注入邊緣函式，Node 雲函式拿不到，讀寫只能經**本部署**的 `/kv-get` `/kv-put` `/kv-delete` `/kv-list` 邊緣函式轉發；這裡填**本部署的 origin**，如 `https://openlist.example.com`（只取協定+網域+連接埠，後面接的路徑會被忽略） | 一般留空——留空會自動取你當前造訪的網域；只有造訪網域≠部署網域（前面套了 CDN 或自訂網域）或本機除錯才手填 |
-| `ADMIN_PASS` | 設了它就不用走安裝精靈，直接用這個密碼建立管理員帳號 | 選填，不填就在瀏覽器精靈裡設定 |
-| `ALLOW_URLS` | 跨域白名單，逗號分隔。不填只允許同源請求 | 前端和後端不在同一個域名時填 |
-| `ASSET_URLS` | 讓前端靜態資源從 CDN 載入，支援用 `$version` 占位目前的版本號 | 用 CDN 時填 |
-| `MAX_UPLOAD` | 單次整體上傳的大小上限，單位位元組 | 選填，預設 26214400（25MB） |
-| `MAX_UPPART` | 分片上傳時單片的大小上限，單位位元組 | 選填，預設 16777216（16MB） |
-| `ALLOW_SEED` | 允許當作種子資料來源的站點白名單 | 用種子功能時填 |
-
-### 只在命令列裡用（不用填進環境變數）
-
-| 變數名 | 它是幹什麼的 |
-|---|---|
-| `EO_PAGES_PROJECT` | EdgeOne Makers CLI 要部署到哪個專案 |
-| `EO_PAGES_API_TOKEN` | EdgeOne Makers 控制台裡的 API Token，給 CLI 用 |
-| `EO_PAGES_URL` | 部署後的域名，`pnpm run deploy:edgeone` 用它做部署後的檢查 |
-
-每個變數都在[變數模板](../.dev.vars.example)裡帶註解列了一遍。
 
 ---
 
