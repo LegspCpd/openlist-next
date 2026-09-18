@@ -224,9 +224,7 @@ description = "Twilio API Key SID（SK 开头 + 32 位十六进制）"
 regex = '''SK[0-9a-fA-F]{32}'''
 tags = ["twilio", "api-key"]
 
-[[rules]]
-id = "olv-generic-credential"
-description = "通用兜底：KEY/TOKEN/SECRET/PASSWORD 等赋值且熵值偏高（捕捉默认规则未覆盖的未知提供商）"
-regex = '''(?i)(?:api[_-]?key|secret|token|password|passwd|access[_-]?key|private[_-]?key)["'\s:=]+[0-9a-zA-Z\/\+]{16,}'''
-entropy = 4.0
-tags = ["generic", "api-key", "secret"]
+# 注：通用兜底（KEY/TOKEN/SECRET/PASSWORD 赋值 + 高熵）**故意不写**。
+# 实测它会把源码里的 `generateSecureToken` / `ThunderTokenResp` / `overrideClientSecret`
+# 这类变量名、函数名、测试常量当成泄露报出来（误报），直接让 CI 红。通用密钥的
+# 兜底由 gitleaks 官方默认规则集（useDefault=true）负责，比这条更准，不必重复造。
