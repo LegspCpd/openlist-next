@@ -1,0 +1,203 @@
+name: Deploy Checks
+
+# 部署平台的官方检查
+#
+# 为什么用各平台官方 CLI，而不是自己写检查脚本：
+#   自己写就得复刻平台的打包规则（复刻不准会自己报错，甚至误报），要么退化成
+#   「文件存在即通过」的假检查。这里直接跑**线上部署时真正执行的那套工具**：
+#
+#   - Cloudflare：wrangler deploy --dry-run
+#       官方 CLI 按 workerd 条件真打包 Worker，不联网、不上传、不需要凭据。
+#   - Netlify：netlify build --offline
+#       官方 CLI 的本地构建：读 netlify.toml，跑里面声明的同一条构建命令，
+#       再真实打包 netlify/functions 下的函数。免登录（--offline）。
+#   - Vercel：vercel build
+#       官方 CLI 的本地构建：读 vercel.json，跑声明的 installCommand /
+#       buildCommand，按声明的 Node runtime 产出 Serverless Function。
+#       需要仓库 Secret（见下方 vercel 任务）。
+#   - 凭据泄露：gitleaks 官方 Action（规则集由安全社区维护）。
+#
+# 为什么这几条算「真检查」：三条 build 都会完整跑一遍 `pnpm run build`
+#   （拉取官方前端产物 + esbuild 打包后端入口），也就是线上构建时执行的同一条
+#   链路。线上「部署成功但打不开」最常见的成因就是这条链路本身断了（依赖装不上、
+#   包管理器版本不对、入口引用了该运行时没有的模块），只有真跑才查得出来。
+#
+# 与 edgeone-artifact-guard 的分工：那条负责 EdgeOne 产物的重建与同步，
+# 这条负责其余平台的构建校验和凭据扫描。两者互不替代。
+
+on:
+  push:
+    branches:
+      - main
+    paths: &watch
+      # 源码与各平台入口
+      - "src/**"
+      - "api/**"
+      - "netlify/**"
+      - "functions/**"
+      - "cloud-functions/**"
+      # 平台配置
+      - "wrangler.jsonc"
+      - "vercel.json"
+      - "netlify.toml"
+      - "edgeone.json"
+      - "serverless.yml"
+      # 构建链路本身：改了这些地方的任何一个，线上构建结果都会变，
+      # 所以必须一并触发（漏一个就会出现「改了构建脚本但检查没跑」）。
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "tsconfig.json"
+      - "scripts/fetch-frontend.mjs"
+      - "scripts/build-edge.mjs"
+      - "scripts/i18n-patch.mjs"
+      - "scripts/i18n-overrides/**"
+      # 检查自身
+      - ".gitleaks.toml"
+      - ".github/workflows/deploy-checks.yml"
+  pull_request:
+    paths: *watch
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── 凭据泄露扫描 ────────────────────────────────────────────────────────
+  secrets:
+    name: gitleaks（凭据泄露扫描）
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write # 扫描到泄露时在 PR 上留评论，说明命中了什么
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # gitleaks 需要完整历史才能取到本次改动的提交区间
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 显式指定配置路径，不依赖自动探测：`.gitleaks.toml` 里在官方默认规则
+          # 之上登记了本仓库已确认的误报，每一条都写了理由。
+          GITLEAKS_CONFIG: .gitleaks.toml
+          GITLEAKS_ENABLE_SUMMARY: "true"
+
+  # ── Cloudflare Workers / Pages ─────────────────────────────────────────
+  cloudflare:
+    name: Cloudflare Workers（wrangler deploy --dry-run）
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # 与 wrangler.jsonc / vercel.json / edgeone.json 里声明的安装命令一致，
+      # 这样这里装到的依赖就是线上装到的依赖。
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      # wrangler.jsonc 的 assets.directory 指向 ./dist，而该目录被 .gitignore
+      # 忽略、在 CI 里不存在；wrangler 会因目录缺失在校验配置阶段直接报错中止。
+      # 放一个占位 index.html 只是为了过这道校验 —— 本任务要验的是
+      # **Worker 入口能不能按 workerd 条件打包**，静态资源不参与这件事
+      # （真正的前端产物由 netlify / vercel 两个任务各自完整构建一次）。
+      - name: Provide a placeholder assets directory
+        run: |
+          mkdir -p dist
+          printf '<!doctype html><title>deploy-check placeholder</title>' > dist/index.html
+
+      - name: wrangler deploy --dry-run
+        run: pnpm exec wrangler deploy --dry-run --outdir "$RUNNER_TEMP/wrangler-dry-run"
+
+  # ── Netlify ────────────────────────────────────────────────────────────
+  netlify:
+    name: Netlify（netlify build --offline）
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      # --offline：不依赖登录态、不请求 Netlify 服务端配置，完全按仓库里的
+      # netlify.toml 构建。跑的就是文件里声明的那条命令（npm run build），
+      # 之后 Netlify 会把 netlify/functions 下的函数真实打包一遍。
+      - name: netlify build --offline
+        run: npx --yes netlify-cli@27 build --offline
+
+  # ── Vercel ─────────────────────────────────────────────────────────────
+  vercel:
+    name: Vercel（vercel build）
+    runs-on: ubuntu-latest
+    env:
+      # vercel build 需要知道构建的是哪个项目（拉取项目设置与环境变量），
+      # 这一步必须有凭据。三个 Secret 缺一不可，缺了本任务的检查就是没跑，
+      # 所以下面会显式提示、而不是静静通过。
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Report that this check is not enabled
+        if: env.VERCEL_TOKEN == '' || env.VERCEL_ORG_ID == '' || env.VERCEL_PROJECT_ID == ''
+        run: |
+          echo "::notice title=Vercel 检查未启用::缺少仓库 Secret：VERCEL_TOKEN / VERCEL_ORG_ID / VERCEL_PROJECT_ID"
+          {
+            echo "### ⚠️ Vercel 检查未启用（本次没有执行）"
+            echo ""
+            echo "缺少下面三个仓库 Secret，因此 \`vercel build\` 这一次**没有跑**："
+            echo ""
+            echo '```'
+            echo "VERCEL_TOKEN        Vercel 控制台 → Account Settings → Tokens 生成"
+            echo "VERCEL_ORG_ID       在本地执行 vercel link 后，读取 .vercel/project.json 的 orgId"
+            echo "VERCEL_PROJECT_ID   同一个文件里的 projectId"
+            echo '```'
+            echo ""
+            echo "补齐后本任务会自动开始真实执行 \`vercel pull\` + \`vercel build\`。"
+            echo "在此之前，Vercel 这条链路处于未校验状态。"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # installCommand 由 vercel.json 声明（pnpm install --no-frozen-lockfile），
+      # vercel build 会自己执行，因此这里不再单独装一次依赖。
+      - name: vercel pull
+        if: env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != ''
+        run: npx --yes vercel@59 pull --yes --environment=preview --token "$VERCEL_TOKEN"
+
+      - name: vercel build
+        if: env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != ''
+        run: npx --yes vercel@59 build --yes --token "$VERCEL_TOKEN"
