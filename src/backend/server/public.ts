@@ -13,6 +13,9 @@ import {
   readFormat,
 } from "../internal/model/store/backend"
 import { setUserPassword } from "../pkg/password"
+// 脱敏/截断规则与 503 中间件共用一份实现（见 server/storage-error.ts）。
+// 本接口免鉴权，绝不能原样回显内部 DSN、主机名或凭据。
+import { redact } from "./storage-error"
 
 export const publicRouter = new Hono()
 
@@ -20,31 +23,6 @@ export const publicRouter = new Hono()
 const DOC_BASE = "https://doc.oplist.org"
 const DOC_STORAGE = `${DOC_BASE}/ecosystem/official_worker/guide_env`
 const DOC_DRIVER = `${DOC_BASE}/ecosystem/official_worker/guide`
-
-/**
- * 对错误文本做脱敏，供免鉴权接口使用。
- *
- * 目标：保留「问题类别」的可操作性，同时抹掉可能泄漏实现细节的部分：
- *   - 只取第一行（去掉多行堆栈）
- *   - 抹除形如 `scheme://user:pass@host` 的连接串凭据
- *   - 截断长度，避免回显大段内部信息
- */
-function redact(raw: any): string {
-  if (raw === null || raw === undefined) return "unknown error"
-  let s = String(raw)
-  // 仅保留首行
-  s = s.split("\n")[0].trim()
-  // 抹除连接串中的凭据（如 mysql://user:pass@host）
-  s = s.replace(/(\w+:\/\/)[^/@\s]+@/g, "$1***@")
-  // 抹除常见的 key=value 形式的令牌
-  s = s.replace(
-    /\b(token|secret|password|passwd|pwd|api[_-]?key)\s*[=:]\s*\S+/gi,
-    "$1=***",
-  )
-  // 截断
-  const MAX = 160
-  return s.length > MAX ? s.slice(0, MAX) + "…" : s
-}
 
 /**
  * 初始化前的环境自检。

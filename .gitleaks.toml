@@ -1,0 +1,80 @@
+# gitleaks 配置
+#
+# 为什么用官方工具而不是自己写扫描脚本：
+#   gitleaks 是这类扫描的事实标准，规则集（700+ 条）由安全社区持续维护；
+#   自己写正则只能覆盖自己想到的那几种，而且每加一条规则都要自己维护
+#   误报豁免逻辑。本文件只做一件事：在官方默认规则之上，登记本项目里
+#   **已确认不是泄露**的项。
+#
+# 登记要求（照做）：
+#   每条豁免都必须写清「这是什么、为什么不是泄露」。一条不说理由、
+#   永远生效的暗豁免，会在以后悄悄放过真的泄露。
+#
+# 刻意采用**按值豁免**而不是按文件豁免：豁免的是那几个具体字符串，
+# 因此将来在同一个文件里新写进去的真密钥仍然会被抓出来。
+#
+# 本地复现：
+#   gitleaks dir .     # 扫当前工作区文件
+#   gitleaks git .     # 扫提交历史
+#
+# ⚠️ 版本要求（这条踩过，别删）：
+#   下面用的是复数写法 `[[allowlists]]`，**8.24.3 不认它**：会静默忽略整段豁免，
+#   既报错也不警告，结果是本仓库已确认的误报全部被当成泄露报出来。同一份配置在
+#   8.30.1 上零命中。GitHub Actions 里的 gitleaks-action 默认就装 8.24.3，因此
+#   工作流里用 `GITLEAKS_VERSION: "8.30.1"` 钉住了版本。
+#   如果要换版本，请用小仓库或本仓库实测一遍「已豁免的项确实不再被报」再改。
+#   失败方向是安全的：忽略豁免只会多报、不会漏报。
+
+# 继承官方默认规则集。不要删 —— 删掉之后本文件就只剩豁免、没有规则了。
+[extend]
+useDefault = true
+
+# ── 1. 构建产物 ────────────────────────────────────────────────────────────
+# cloud-functions/[[default]].js 是 scripts/build-edge.mjs 打包出来的单文件产物，
+# 由 CI（edgeone-artifact-guard）在源码变更后自动重建。它会把下面第 2 条里的
+# 那些常量、以及 openpgp 之类依赖库内部的 PEM 头字符串常量一起内联进来，
+# 扫它只会得到源码命中的重复项和库常量误报，因此整目录豁免。
+# 真正要审的源码在 src/** 和 api/**，不在产物里。
+[[allowlists]]
+description = "构建产物：由 src/** 打包生成，内容可由源码复核（src/** 本身仍会被扫描）"
+# 不锚定开头：`gitleaks dir <绝对路径>` 时给出的是绝对路径，锚定 `^` 会匹配不上。
+paths = ['''/cloud-functions/|^cloud-functions/''']
+
+# ── 2. 上游驱动内置的第三方 App 客户端标识 ─────────────────────────────────
+# 这几个字符串来自上游驱动实现，是各网盘**官方客户端里公开的** App id/secret
+# 与已知的公开加密常量，不是本项目或使用者的账号凭据：
+#   - XFmi9GS2hzk98jGX                  网易云盘/沃盘（wopan）App 客户端 secret
+#   - kw2dvtd7p4t3pjl2d9ed9yc8yej8kw2d  夸克/UC TV 客户端 signKey（TV 端）
+#   - l3srvtd7p42l0d0x1u8d7yc8ye9kki4d  夸克/UC TV 客户端 signKey（手机端）
+#   - da2-vs6twz5vnjdavpqndtbzg3prra    Dego 客户端 API key
+#   - bR4SJwOkvnG5WvVJ                  HalahCloud 客户端 app_secret
+#   - 0CoJUm6Qyw8W8jud                  网易云音乐网页端公开的 AES 预设密钥
+# 它们随公开仓库一起分发、任何人都拿得到，删除会让对应驱动直接不可用；
+# 要与上游保持功能一致就不能删。使用者自己的 token/cookie 走配置项，不在这里。
+[[allowlists]]
+description = "上游驱动内置的官方 App 客户端标识（公开常量，非使用者凭据）"
+regexes = [
+  '''XFmi9GS2hzk98jGX''',
+  '''kw2dvtd7p4t3pjl2d9ed9yc8yej8kw2d''',
+  '''l3srvtd7p42l0d0x1u8d7yc8ye9kki4d''',
+  '''da2-vs6twz5vnjdavpqndtbzg3prra''',
+  '''bR4SJwOkvnG5WvVJ''',
+  '''0CoJUm6Qyw8W8jud''',
+]
+
+# ── 3. 测试与本地检查脚本里的占位值 ────────────────────────────────────────
+# 都是明显的假值：单元测试里的固定假密钥、假 token，以及本地环境检查脚本里
+# 用来占位的 JWT_SECRET。它们不指向任何真实服务，改成随机值也不影响语义，
+# 保留是为了让测试可复现。
+#   - my-test-secret-key-123456          单元测试假密钥
+#   - 0123456789abcdef0123456789abcdef   测试/本地脚本里的占位 JWT_SECRET
+#   - 91d4b94689012345abcdef6789012345   test-wopan 里的假 access token
+#   - AKIAIOSFODNN7EXAMPLE               AWS 官方文档的示例 Access Key
+[[allowlists]]
+description = "测试与本地检查脚本中的占位假值，不指向真实服务"
+regexes = [
+  '''my-test-secret-key-123456''',
+  '''0123456789abcdef0123456789abcdef''',
+  '''91d4b94689012345abcdef6789012345''',
+  '''AKIAIOSFODNN7EXAMPLE''',
+]

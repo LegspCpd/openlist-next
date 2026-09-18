@@ -804,6 +804,71 @@ let memoryDb: any = null
 let globalEnvCtx: any = null
 
 /**
+ * 写前守卫用的状态。
+ *
+ * - `dbLastLoadError`: 最近一次读取持久化存储失败的原因（成功或读到空都保持
+ *   null）。空壳守卫的错误信息据此区分「读取失败」与「写方给了个空壳」。
+ * - `dbWriteBlocked`: 是否拦截过「疑似空数据写回」，供诊断与回归测试使用。
+ */
+let dbWriteBlocked = false
+let dbLastLoadError: string | null = null
+
+/** 是否曾经拦截过一次「疑似空数据写回」。 */
+export function isDbWriteBlocked(): boolean {
+  return dbWriteBlocked
+}
+
+/** 最近一次读取持久化存储失败的错误信息（无错误时为 null）。 */
+export function getDbLoadError(): string | null {
+  return dbLastLoadError
+}
+
+/**
+ * 判断一份数据是否为「疑似空库/空壳」。
+ *
+ * 判定顺序：
+ *  1) 有任何存储/分享/元数据/插件 → 不是空壳；
+ *  2) 有任一「已设置密码」的用户 → 不是空壳（说明已初始化）；
+ *     注意 defaultDb 自带的 admin/guest 占位用户密码为空，不算数；
+ *  3) 所有设置都等于默认值 → 是空壳。
+ *
+ * 空壳判定用于 saveDb 的写前守卫：读取失败后得到的默认库不会被写回。
+ */
+export function isDbShell(data: any): boolean {
+  if (!data || typeof data !== "object") return true
+
+  const countStorages = Array.isArray(data.storages) ? data.storages.length : 0
+  const countShares = Array.isArray(data.shares) ? data.shares.length : 0
+  const countMetas = Array.isArray(data.metas) ? data.metas.length : 0
+  const countPlugins = Array.isArray(data.plugins) ? data.plugins.length : 0
+
+  if (countStorages + countShares + countMetas + countPlugins > 0) {
+    return false
+  }
+
+  // 注意：不能以「是否存在用户」判断是否为真实库。
+  // defaultDb 自带 admin/guest 两个占位用户（密码为空），所以空壳里也有用户。
+  // 只有当存在「设置了密码的用户」时，才说明这是一份被初始化过的真实库。
+  const users = Array.isArray(data.users) ? data.users : []
+  const hasInitializedUser = users.some(
+    (u: any) => String(u?.password || "").trim() !== "",
+  )
+  if (hasInitializedUser) {
+    return false
+  }
+
+  // 没有任何实体时，只有当设置也全部停留在默认值时，才视作空壳。
+  const settings = Array.isArray(data.settings) ? data.settings : []
+  const defaults = Array.isArray(defaultDb.settings) ? defaultDb.settings : []
+  const defaultMap = new Map(defaults.map((s: any) => [String(s.key), s.value]))
+  return settings.every(
+    (s: any) =>
+      defaultMap.has(String(s.key)) &&
+      defaultMap.get(String(s.key)) === s.value,
+  )
+}
+
+/**
  * 在请求处理开始时注入当前环境的持久化后端上下文。
  * CF Workers 每个实例的模块级 globalEnvCtx 初始为 null，且请求会被负载均衡到
  * 不同实例——若不设置，getDb()/saveDb() 会退回内存模式，导致配置
@@ -985,6 +1050,7 @@ const loadDb = async (envCtx?: any) => {
     if (persisted) {
       await unsealDb(persisted, await getEncryptionKey(activeEnv))
       memoryDb = persisted
+      dbLastLoadError = null
       ensureDefaultSettings(memoryDb)
       ensureDefaultStorages(memoryDb)
       ensureDefaultShares(memoryDb)
@@ -992,7 +1058,9 @@ const loadDb = async (envCtx?: any) => {
       ensureDefaultMetas(memoryDb)
       return memoryDb
     }
-  } catch (err) {
+  } catch (err: any) {
+    // 记下失败原因：saveDb 的空壳守卫据此区分「读取失败」与「写方给了个空壳」。
+    dbLastLoadError = err?.message || String(err)
     console.error(`[DB] Error reading config from ${backend.name}:`, err)
   }
 
@@ -1420,16 +1488,47 @@ async function unsealDb(data: any, key: string | null): Promise<void> {
   }
 }
 
-export const saveDb = async (data: any, envCtx?: any): Promise<boolean> => {
+export const saveDb = async (
+  data: any,
+  envCtx?: any,
+  options?: { force?: boolean },
+): Promise<boolean> => {
   if (envCtx) {
     globalEnvCtx = envCtx
   }
+  const activeEnv = envCtx || globalEnvCtx
+
+  // ============ 写前守卫：不得以「空数据」覆盖持久化配置 ============
+  //
+  // 缺陷链路：读取失败被吞掉 → 回退到默认（空）库 → 后续任意写操作把它落盘，
+  // 真实配置被空壳覆盖，系统随后被判为「未初始化」，用户看到的就是「配置被
+  // 清空 / 部署后一直停在初始化」。
+  //
+  // 核心不变量（务必长期保持）：**默认拒绝写入空壳。**
+  // 空壳 = 没有任何存储/分享/元数据/插件，没有设置密码的用户，且所有设置都还是
+  // 默认值。只要 payload 是空壳，就必须显式传 force 才允许落盘。
+  //
+  // 正常路径不受影响：setup 会先写入带密码的管理员（→ 非空壳）；
+  // 建挂载、改设置等操作必然带来实体（→ 非空壳）。
+  const shell = isDbShell(data)
+  if (shell && !options?.force) {
+    dbWriteBlocked = true
+    const reason = dbLastLoadError
+      ? `last load failed: ${dbLastLoadError}`
+      : "payload is an empty/shell database"
+    console.error(
+      `[DB] saveDb BLOCKED: refusing to persist an empty/shell database (${reason}). ` +
+        `This guard prevents an empty payload from wiping real config. ` +
+        `Pass saveDb(db, env, { force: true }) to override intentionally.`,
+    )
+    return false
+  }
+
   memoryDb = data
+  dbWriteBlocked = false
   // Refresh the request cache so any getDb() later in this request observes
   // the write rather than a pre-write snapshot.
   if (envCtx) dbCache.set(envCtx, { ts: Date.now(), db: data })
-
-  const activeEnv = envCtx || globalEnvCtx
   const backend = await getStoreBackend(activeEnv)
   const configured = backend.isConfigured
     ? await backend.isConfigured(activeEnv)
