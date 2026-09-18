@@ -13,7 +13,10 @@ name: Deploy Checks
 #       再真实打包 netlify/functions 下的函数。免登录（--offline）。
 #   - Vercel：vercel build
 #       官方 CLI 的本地构建：读 vercel.json，跑声明的 installCommand /
-#       buildCommand，按声明的 Node runtime 产出 Serverless Function。
+#       buildCommand，产出 Serverless Function。Node 版本由 package.json 的
+#       engines.node 决定 —— vercel.json 的 functions.runtime 不能写内置版本号
+#       （那里只接受 npm 包名@semver 形式的社区运行时），写错会让构建在上传前
+#       就整体中止，正是这条检查存在的意义。
 #       需要仓库 Secret（见下方 vercel 任务）。
 #   - 凭据泄露：gitleaks 官方 Action（规则集由安全社区维护）。
 #
