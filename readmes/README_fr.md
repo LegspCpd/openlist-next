@@ -60,16 +60,11 @@ Cliquez sur les boutons ci-dessous pour déployer ce projet sur la plateforme co
 
 | Vercel | Netlify |
 | :---: | :---: |
-| [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/LegspCpd/openlist-next) | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/LegspCpd/openlist-next) |
+| [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FLegspCpd%2Fopenlist-next&project-name=openlist-next&env=JWT_SECRET,ADMIN_PASS&envDescription=Only%20these%20two%20are%20needed.%20JWT_SECRET%3A%20run%20%60openssl%20rand%20-hex%2032%60.%20ADMIN_PASS%3A%20your%20admin%20password%2C%20it%20skips%20the%20setup%20wizard.&envLink=https%3A%2F%2Fgithub.com%2FLegspCpd%2Fopenlist-next%2Fblob%2Fmain%2Freadmes%2FREADME_fr.md%23variables-denvironnement | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/LegspCpd/openlist-next) |
 
 </div>
 
-Après le déploiement, il reste à configurer les variables d'environnement ; `JWT_SECRET` est obligatoire (`openssl rand -hex 32`). Voir [Variables d'environnement](#variables-denvironnement) pour la signification et l'emplacement de chacune.
-
-- EdgeOne : [Console internationale](https://console.edgeone.ai/makers) · [Console Chine](https://console.cloud.tencent.com/edgeone/makers)
-- Cloudflare : [Tableau de bord Worker](https://dash.cloudflare.com/)
-- Vercel : Paramètres du projet → Variables d'environnement
-- Netlify : Site configuration → Variables d'environnement
+La page de déploiement Vercel ne demande que deux variables : `JWT_SECRET` (à générer avec `openssl rand -hex 32`) et `ADMIN_PASS` (mot de passe administrateur ; le définir évite l'assistant d'installation à la première visite). Toutes les autres peuvent rester vides jusqu'à ce que vous utilisiez la fonctionnalité correspondante - voir [Variables d'environnement](#variables-denvironnement).
 
 > [!IMPORTANT]
 > Si Cloudflare indique « Impossible de récupérer le contenu du dépôt », effectuez d'abord un [Fork](https://github.com/LegspCpd/openlist-next/fork) de ce dépôt, puis déployez en utilisant la méthode « Connexion au dépôt GitHub ».
@@ -135,12 +130,19 @@ Pour plus de détails, voir [le guide de configuration du stockage externe](../d
 
 Où les renseigner : Cloudflare dans Settings → Variables and Secrets, EdgeOne dans les variables d'environnement du projet, Vercel / Netlify dans les paramètres du projet, Node / Docker dans le fichier `.env` à la racine.
 
-### Liste des variables
+### Ces deux variables suffisent
 
 | Nom de variable | Obligatoire ? | Description |
 |---|---|---|
 | `JWT_SECRET` | **Obligatoire** | Signature des sessions, chiffrement des identifiants, authentification des tâches planifiées. À générer avec `openssl rand -hex 32` |
 | `ADMIN_PASS` | Optionnel | S'il est défini, l'assistant d'installation est ignoré et le compte administrateur est créé avec ce mot de passe |
+
+Aucune des autres n'est nécessaire. Ne définissez une variable que si vous utilisez la fonctionnalité correspondante.
+
+### À remplir selon vos besoins
+
+| Nom de variable | Quand la remplir | Description |
+|---|---|---|
 | `DB_DRIVER` | Optionnel, `auto` | Où sont stockées les données. `auto` essaie d'abord la base externe, puis le stockage intégré à la plateforme. Valeurs : `kv` `d1` `r2` `blob` `cfkv` `do` `neon` `turso` `pgrest` `pghttp` `mysqlhttp` `upstash` `s3` `hyperdrive` `netlifyblobs` `mysql` (Node uniquement) |
 | `DB_FORMAT` | Optionnel, `map` | `map` stocke tout en un seul JSON — le moins de requêtes ; `key` stocke un enregistrement par entité, plus léger que `map` quand il y en a beaucoup ; `sql` utilise des tables relationnelles et peut partager une base avec la version Go d'OpenList |
 | `DATABASE_URL` | Avec une base externe | Chaîne de connexion générique ; le fournisseur est déduit du protocole et du nom d'hôte. En général celle-ci suffit |

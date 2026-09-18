@@ -60,16 +60,11 @@ OpenList Next 把分散在多個網盤、物件儲存和協定服務裡的文件
 
 | Vercel | Netlify |
 | :---: | :---: |
-| [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/LegspCpd/openlist-next) | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/LegspCpd/openlist-next) |
+| [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FLegspCpd%2Fopenlist-next&project-name=openlist-next&env=JWT_SECRET,ADMIN_PASS&envDescription=Only%20these%20two%20are%20needed.%20JWT_SECRET%3A%20run%20%60openssl%20rand%20-hex%2032%60.%20ADMIN_PASS%3A%20your%20admin%20password%2C%20it%20skips%20the%20setup%20wizard.&envLink=https%3A%2F%2Fgithub.com%2FLegspCpd%2Fopenlist-next%2Fblob%2Fmain%2Freadmes%2FREADME_zh-TW.md%23%25E7%2592%25B0%25E5%25A2%2583%25E8%25AE%258A%25E6%2595%25B8 | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/LegspCpd/openlist-next) |
 
 </div>
 
-部署完成後還要設定環境變數，`JWT_SECRET` 必填（`openssl rand -hex 32` 產生）。每個變數是什麼、填在哪，見[環境變數](#環境變數)。
-
-- EdgeOne：[國際站控制台](https://console.edgeone.ai/makers) · [中國站控制台](https://console.cloud.tencent.com/edgeone/makers)
-- Cloudflare：[Worker 後台](https://dash.cloudflare.com/)
-- Vercel：專案設定 → Environment Variables
-- Netlify：Site configuration → Environment variables
+部署完還要設定環境變數。Vercel 的部署頁只會問兩個變數：`JWT_SECRET`（用 `openssl rand -hex 32` 產生）和 `ADMIN_PASS`（管理員密碼，填了就跳過第一次開啟時的安裝精靈）。其餘變數都留空即可，用到哪個功能再填哪個，見[環境變數](#環境變數)。
 
 > [!IMPORTANT]
 > 如果 Cloudflare 提示「無法取得儲存庫內容」，先 [Fork](https://github.com/LegspCpd/openlist-next/fork) 本倉庫，再用「連線到 GitHub 倉庫」的方式部署。
@@ -135,12 +130,19 @@ OpenList Next 把分散在多個網盤、物件儲存和協定服務裡的文件
 
 填在哪：Cloudflare 在 Settings → Variables and Secrets；EdgeOne 在專案的「環境變數」；Vercel / Netlify 在專案設定；Node / Docker 寫在根目錄 `.env`。
 
-### 變數一覽
+### 就填這兩個
 
 | 變數名 | 填不填 | 說明 |
 |---|---|---|
 | `JWT_SECRET` | **必填** | 工作階段簽章、憑證加密、排程工作驗證都用它。用 `openssl rand -hex 32` 產生 |
 | `ADMIN_PASS` | 選填 | 設了就跳過安裝精靈，直接用它建立管理員帳號 |
+
+其餘變數都不用填。用到哪個功能，再填它對應的變數。
+
+### 用到再填
+
+| 變數名 | 什麼時候填 | 說明 |
+|---|---|---|
 | `DB_DRIVER` | 選填，預設 `auto` | 資料存到哪。`auto` 按「外部資料庫 → 平台自帶儲存」的順序挑，拿不準就用它。可選：`kv` `d1` `r2` `blob` `cfkv` `do` `neon` `turso` `pgrest` `pghttp` `mysqlhttp` `upstash` `s3` `hyperdrive` `netlifyblobs` `mysql`（僅 Node） |
 | `DB_FORMAT` | 選填，預設 `map` | `map` 整庫存成一條 JSON，最省請求；`key` 一個實體一條，實體多時比 `map` 省流量；`sql` 用關聯表，可以和 Go 版 OpenList 共用同一個庫 |
 | `DATABASE_URL` | 用外部庫時填 | 通用連線字串，程式按協定和主機名認廠家。通常填這一條就夠 |

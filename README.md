@@ -60,12 +60,11 @@ OpenList Next 把分散在多个网盘、对象存储和协议服务里的文件
 
 | Vercel | Netlify |
 | :---: | :---: |
-| [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/LegspCpd/openlist-next) | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/LegspCpd/openlist-next) |
+| [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FLegspCpd%2Fopenlist-next&project-name=openlist-next&env=JWT_SECRET,ADMIN_PASS&envDescription=Only%20these%20two%20are%20needed.%20JWT_SECRET%3A%20run%20%60openssl%20rand%20-hex%2032%60.%20ADMIN_PASS%3A%20your%20admin%20password%2C%20it%20skips%20the%20setup%20wizard.&envLink=https%3A%2F%2Fgithub.com%2FLegspCpd%2Fopenlist-next%23%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/LegspCpd/openlist-next) |
 
 </div>
 
-部署完成后还要配环境变量，`JWT_SECRET` 必填（`openssl rand -hex 32` 生成）。每个变量是什么、填在哪，见[环境变量](#环境变量)。
-
+部署完还要配环境变量。Vercel 的部署页只会问两个变量：`JWT_SECRET`（用 `openssl rand -hex 32` 生成）和 `ADMIN_PASS`（管理员密码，填了就跳过第一次打开时的安装向导）。其余变量都留空即可，用到哪个功能再填哪个，见[环境变量](#环境变量)。
 
 > [!IMPORTANT]
 > 如果 Cloudflare 提示「无法获取存储库内容」，先 [Fork](https://github.com/LegspCpd/openlist-next/fork) 本仓库，再用「连接到 GitHub 仓库」的方式部署。
@@ -131,12 +130,19 @@ OpenList Next 把分散在多个网盘、对象存储和协议服务里的文件
 
 填在哪：Cloudflare 在 Settings → Variables and Secrets；EdgeOne 在项目的「环境变量」；Vercel / Netlify 在项目设置；Node / Docker 写在根目录 `.env`。
 
-### 变量一览
+### 就填这两个
 
 | 变量名 | 填不填 | 说明 |
 |---|---|---|
 | `JWT_SECRET` | **必填** | 会话签名、凭据加密、定时任务鉴权都用它。用 `openssl rand -hex 32` 生成 |
 | `ADMIN_PASS` | 选填 | 设了就跳过安装向导，直接用它建管理员账号 |
+
+其余变量都不用填。用到哪个功能，再填它对应的变量。
+
+### 用到再填
+
+| 变量名 | 什么时候填 | 说明 |
+|---|---|---|
 | `DB_DRIVER` | 选填，默认 `auto` | 数据存到哪。`auto` 按「外部数据库 → 平台自带存储」的顺序挑，拿不准就用它。可选：`kv` `d1` `r2` `blob` `cfkv` `do` `neon` `turso` `pgrest` `pghttp` `mysqlhttp` `upstash` `s3` `hyperdrive` `netlifyblobs` `mysql`（仅 Node） |
 | `DB_FORMAT` | 选填，默认 `map` | `map` 整库存一条 JSON，最省请求；`key` 一个实体一条，实体多时比 `map` 省流量；`sql` 用关系表，可以和 Go 版 OpenList 共用同一个库 |
 | `DATABASE_URL` | 用外部库时填 | 通用连接串，程序按协议和主机名认厂家。通常填这一条就够 |

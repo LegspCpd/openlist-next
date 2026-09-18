@@ -1,10 +1,14 @@
 # =============================================================================
-# OpenList-TSWorker · 需要配置的 Secret（模板）
+# OpenList Next · 需要配置的 Secret（模板）
 # =============================================================================
 #
 # 用途：Cloudflare「Deploy to Cloudflare」按钮会读取本文件，识别出部署时需要
 #       用户填写的 Secret，并在部署页生成对应的输入项。用户填入真实值后，
 #       Cloudflare 会把它保存为该 Worker 的 Secret（加密环境变量）。
+#
+# 重要：按钮会为**每一个未注释的变量**生成一个输入框。所以本文件默认只留两个 ——
+#       必填的 JWT_SECRET，和选填的 ADMIN_PASS。其余全部注释掉：用到哪个功能，
+#       再去掉行首的 `#`。注释掉的行不会被读取，本地 `cp` 成 `.dev.vars` 后同样不生效。
 #
 # 为什么值留空：本文件会提交到公开仓库，绝不能包含真实密钥。
 # 更新 Worker 时：Secrets 不会被 wrangler deploy 覆盖或删除，
@@ -15,8 +19,7 @@
 # 本项目新增的外部存储（Neon / Turso / Supabase / Postgres 网关 / MySQL 网关 / Upstash / S3）
 #（R2 和 Hyperdrive 走平台绑定，不在这里填）
 #   见：./docs/EXTERNAL_STORAGE.md
-# 上游通用环境变量的权威说明（非本项目文档）：
-#   https://doc.oplist.org/ecosystem/official_worker/guide_env
+# 各变量是干什么的、要不要填：见 README 的「环境变量」章。
 # =============================================================================
 
 # ── 必填 ────────────────────────────────────────────────────────────────────
@@ -30,13 +33,15 @@ JWT_SECRET=
 # 跳过安装向导，直接用此密码初始化 admin 账号。留空则由浏览器向导设置。
 ADMIN_PASS=
 
+# ── 以下都用不到就别管（取消注释即生效）───────────────────────────────────────
+
 # CORS 允许来源白名单，逗号分隔，如 https://yourdomain.com,https://www.yourdomain.com
 # 留空表示仅允许同源请求。
-ALLOW_URLS=
+#ALLOW_URLS=
 
 # MySQL 连接串（DB_DRIVER=mysql 时必填），如 mysql://user:pass@host:3306/db
 # 也可改用 wrangler.jsonc 中注释的 MYSQL_HOST / MYSQL_PORT / MYSQL_USER / MYSQL_PASS / MYSQL_NAME 分项。
-MYSQL_URLS=
+#MYSQL_URLS=
 
 # EdgeOne Node 云函数专用：KV 代理地址，只影响「DB_DRIVER=kv 且跑在 EdgeOne Node 云函数」的情况。
 # EdgeOne 的 KV 绑定只注入 Edge Functions，不注入 Node 云函数，所以云函数读写 KV 实际是调用
@@ -46,7 +51,7 @@ MYSQL_URLS=
 # 一般留空：留空时自动使用当前请求的 origin（同一部署自调用）；只有访问域名≠部署域名
 # （前面挂了 CDN 或自定义域名）或本地调试才需要显式设置。
 # 注意：Node 云函数与边缘函数两侧的 JWT_SECRET 必须相同且 >=16 字符，否则 KV 代理返回 401。
-EO_KV_URLS=
+#EO_KV_URLS=
 
 # ── 外部数据库（推荐，任意平台通用）─────────────────────────────────────────
 #
@@ -62,42 +67,42 @@ EO_KV_URLS=
 #   https://xxx.supabase.co                        → Supabase / PostgREST
 #   mysql://user:pass@host:3306/db                 → MySQL（配合 MYSQL_HTTP_URL 网关，
 #                                                    或仅在 Node 容器下直连）
-DATABASE_URL=
+#DATABASE_URL=
 
 # Neon Serverless Postgres
-NEON_DATABASE_URL=
+#NEON_DATABASE_URL=
 
 # Turso / libSQL
-TURSO_DATABASE_URL=
-TURSO_AUTH_TOKEN=
+#TURSO_DATABASE_URL=
+#TURSO_AUTH_TOKEN=
 
 # Supabase / PostgREST
-SUPABASE_URL=
-SUPABASE_KEY=
+#SUPABASE_URL=
+#SUPABASE_KEY=
 
 # 自建 Postgres HTTP 网关
-PG_HTTP_URL=
-PG_HTTP_TOKEN=
+#PG_HTTP_URL=
+#PG_HTTP_TOKEN=
 
 # MySQL / MariaDB 的 HTTP 转发网关（边缘访问外部 MySQL 的唯一途径）
-MYSQL_HTTP_URL=
-MYSQL_HTTP_TOKEN=
+#MYSQL_HTTP_URL=
+#MYSQL_HTTP_TOKEN=
 
 # Upstash Redis
-UPSTASH_REDIS_REST_URL=
-UPSTASH_REDIS_REST_TOKEN=
+#UPSTASH_REDIS_REST_URL=
+#UPSTASH_REDIS_REST_TOKEN=
 
 # S3 兼容对象存储（含 R2 / MinIO / B2 等）
-S3_BUCKET=
-S3_REGION=
-S3_ENDPOINT=
-S3_ACCESS_KEY_ID=
-S3_SECRET_ACCESS_KEY=
+#S3_BUCKET=
+#S3_REGION=
+#S3_ENDPOINT=
+#S3_ACCESS_KEY_ID=
+#S3_SECRET_ACCESS_KEY=
 
 # Cloudflare KV REST API 凭据（DB_DRIVER=cfkv 时三项均必填）。
 # 账户 ID
-CF_ACCOUNT=
+#CF_ACCOUNT=
 # KV namespace ID
-CF_KV_UUID=
+#CF_KV_UUID=
 # 具有 KV 读写权限的 API Token
-CF_API_KEY=
+#CF_API_KEY=

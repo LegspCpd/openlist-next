@@ -13,15 +13,6 @@
       },
       "ADMIN_PASS": {
         "description": "Optional. If set, skips the setup wizard and initializes the admin account with this password."
-      },
-      "ALLOW_URLS": {
-        "description": "Optional. Comma-separated CORS allowlist, e.g. `https://yourdomain.com`. Leave empty to allow same-origin only."
-      },
-      "DB_FORMAT": {
-        "description": "Storage format: `map` (whole JSON), `key` (per-key), `sql` (relational, Go-compatible). Defaults to `map`."
-      },
-      "DB_DRIVER": {
-        "description": "Storage driver: `auto` (default), `blob`, `cfkv`, `kv`, `d1`, `do`, `mysql`. Leave as `auto` unless you need to force one."
       }
     }
   },
