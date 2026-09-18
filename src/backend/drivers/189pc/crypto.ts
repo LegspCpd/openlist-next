@@ -39,12 +39,24 @@ export function generateDeviceId(): string {
 export function encryptAES(data: string, key: string): string {
   const iv = CryptoJS.lib.WordArray.random(16)
   // 与 Node 端 `Buffer.from(key, "utf8").slice(0, 16)` 对齐：取 UTF-8 编码后的前 16 字节。
-  const keyWA = CryptoJS.enc.Utf8.parse(key).slice(0, 4) // 4 words = 16 bytes
+  // 注意 crypto-js 的 WordArray 没有 `slice`（对 WordArray 调用会抛 TypeError），
+  // 截断只能落到它的 `words` 数组上 —— 每个 word 是 4 字节，取前 4 个即 16 字节。
+  const parsedKey = CryptoJS.enc.Utf8.parse(key)
+  if (parsedKey.sigBytes < 16) {
+    // 与重构前 node:crypto 的 createCipheriv 一致：密钥短于 16 字节直接失败，不要静默降级。
+    throw new Error(
+      `[189pc] AES-128-CBC requires a 16-byte key, got ${parsedKey.sigBytes}`,
+    )
+  }
+  const keyWA = CryptoJS.lib.WordArray.create(parsedKey.words.slice(0, 4))
   const cipher = CryptoJS.AES.encrypt(CryptoJS.enc.Utf8.parse(data), keyWA, {
     iv,
     mode: CryptoJS.mode.CBC,
     padding: CryptoJS.pad.Pkcs7,
   })
   // 输出格式保持与 Node 一致：iv(hex) + ciphertext(hex)。
-  return iv.toString() + cipher.ciphertext.toString()
+  return (
+    iv.toString(CryptoJS.enc.Hex) +
+    cipher.ciphertext.toString(CryptoJS.enc.Hex)
+  )
 }

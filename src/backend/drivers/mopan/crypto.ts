@@ -1,5 +1,27 @@
 import CryptoJS from "crypto-js"
 
+const ZERO_IV = "00000000000000000000000000000000"
+
+/**
+ * 取 key 的前 16 字节作为 AES-128 密钥。
+ *
+ * 注意 crypto-js 的 `WordArray` **没有** `slice`（对它调用会抛
+ * `TypeError: ...slice is not a function`），截断只能落到它的 `words` 数组上 ——
+ * 每个 word 是 4 字节，取前 4 个即前 16 字节。
+ *
+ * 密钥短于 16 字节时直接抛错，与重构前 node:crypto 的 `createCipheriv` 行为一致，
+ * 避免静默用一个短密钥算出错误结果。
+ */
+function aesKey(key: Buffer): CryptoJS.lib.WordArray {
+  const full = CryptoJS.lib.WordArray.create(key as any)
+  if (full.sigBytes < 16) {
+    throw new Error(
+      `[MoPan] AES-128-CBC requires a 16-byte key, got ${full.sigBytes}`,
+    )
+  }
+  return CryptoJS.lib.WordArray.create(full.words.slice(0, 4))
+}
+
 /**
  * AES-128-CBC encryption (zero IV)
  *
@@ -7,8 +29,8 @@ import CryptoJS from "crypto-js"
  * （原实现依赖 Node 内置 `crypto`，在边缘环境无法加载）。
  */
 export function aesEncrypt(data: Buffer, key: Buffer): Buffer {
-  const iv = CryptoJS.enc.Hex.parse("00000000000000000000000000000000")
-  const keyWA = CryptoJS.lib.WordArray.create(key as any).slice(0, 4) // 前 16 字节
+  const iv = CryptoJS.enc.Hex.parse(ZERO_IV)
+  const keyWA = aesKey(key)
   const dataWA = CryptoJS.lib.WordArray.create(data as any)
   const cipher = CryptoJS.AES.encrypt(dataWA, keyWA, {
     iv,
@@ -23,14 +45,20 @@ export function aesEncrypt(data: Buffer, key: Buffer): Buffer {
  * AES-128-CBC decryption (zero IV)
  */
 export function aesDecrypt(data: Buffer, key: Buffer): Buffer {
-  const iv = CryptoJS.enc.Hex.parse("00000000000000000000000000000000")
-  const keyWA = CryptoJS.lib.WordArray.create(key as any).slice(0, 4)
+  const iv = CryptoJS.enc.Hex.parse(ZERO_IV)
+  const keyWA = aesKey(key)
   const dataWA = CryptoJS.lib.WordArray.create(data as any)
-  const plain = CryptoJS.AES.decrypt(dataWA, keyWA, {
-    iv,
-    mode: CryptoJS.mode.CBC,
-    padding: CryptoJS.pad.Pkcs7,
-  })
+  // crypto-js 的 AES.decrypt 只认「字符串」或 CipherParams；直接丢一个裸 WordArray 进去，
+  // _parse 会原样返回它，随后取 `.ciphertext` 得到 undefined，静默解出空串。
+  const plain = CryptoJS.AES.decrypt(
+    CryptoJS.lib.CipherParams.create({ ciphertext: dataWA }),
+    keyWA,
+    {
+      iv,
+      mode: CryptoJS.mode.CBC,
+      padding: CryptoJS.pad.Pkcs7,
+    },
+  )
   // 移动云设备信息为 UTF-8 JSON，按 UTF-8 还原为字符串再转 Buffer。
   return Buffer.from(plain.toString(CryptoJS.enc.Utf8), "utf-8")
 }
