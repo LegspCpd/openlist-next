@@ -46,6 +46,27 @@ function run(cmd, opts = {}) {
   execSync(cmd, { stdio: "inherit", shell: true, ...opts })
 }
 
+/**
+ * 跑包管理器时统一注入的环境变量。
+ *
+ * ⚠️ 必须关掉 npm 的 `manage-package-manager-versions`（npm >= 10.9 默认开启）。
+ * 它会让 `npx` 读**当前目录 package.json 的 `packageManager` 字段**，并用该版本
+ * 覆盖命令里写死的版本号：
+ *
+ *   npx -y pnpm@10.34.5   →   实际执行 pnpm@11.25.0   （被前端仓库 pin 的版本顶掉）
+ *
+ * 后果是 Node 低于 22.13 的构建环境（EdgeOne 实测为 22.11.0）会直接报
+ * "This version of pnpm requires at least Node.js v22.13"，整个构建卡在拉前端
+ * 这一步。关掉之后，命令行上写的 `@版本` 才真正生效。
+ *
+ * 实测：`npm_config_manage_package_manager_versions=false` 有效（解析到 10.34.5）；
+ * 而 `npx --no-manage-package-manager-versions` 这个 CLI 写法无效（仍是 11.25.0）。
+ */
+const PM_ENV = {
+  ...process.env,
+  npm_config_manage_package_manager_versions: "false",
+}
+
 function detectPackageManager(dir) {
   return fs.existsSync(path.join(dir, "pnpm-lock.yaml")) ? "pnpm" : "npm"
 }
@@ -173,7 +194,7 @@ function buildLocalRepo(repo) {
   const pm = detectPackageManager(abs)
   const cmd = resolvePmCommand(abs, pm)
   const install = (extra = "") =>
-    run(`${cmd} install${extra}`, { cwd: abs })
+    run(`${cmd} install${extra}`, { cwd: abs, env: PM_ENV })
   try {
     install()
   } catch {
@@ -192,7 +213,7 @@ function buildLocalRepo(repo) {
   // 这里构建前端时强制覆盖为 "/"，杜绝外部污染。
   run(`${cmd} run build`, {
     cwd: abs,
-    env: { ...process.env, VITE_API_URL: "/" },
+    env: { ...PM_ENV, VITE_API_URL: "/" },
   })
   replaceDist(path.join(abs, "dist"))
 }

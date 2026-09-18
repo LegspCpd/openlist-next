@@ -332,7 +332,16 @@ export async function getOrInitUsers(envCtx: any) {
       // 未初始化：仅创建 guest，admin 由 Web 安装向导（POST /api/public/init/setup）创建
       db.users = [guest]
     }
-    await saveDb(db, envCtx)
+    // 只有配置了 ADMIN_PASS（或已存在真实管理员）时，这份库才不是空壳，才应该
+    // 落盘。未配置时应等待 init/setup 完成初始化，而不是抢先写入一个未初始化的
+    // 占位库 —— 那会被 saveDb 的写前守卫拦下。被拦下是**预期行为**，不是错误。
+    const persisted = await saveDb(db, envCtx)
+    if (!persisted) {
+      console.warn(
+        "[Auth] getOrInitUsers: skipped persisting an uninitialized placeholder DB " +
+          "(expected until POST /api/public/init/setup completes).",
+      )
+    }
   } else {
     const adminUser = db.users.find((u: any) => u.role === 2)
     // FIX(F-11): the old logic silently reset any non-64-hex password (e.g. a
