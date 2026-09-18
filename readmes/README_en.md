@@ -60,16 +60,11 @@ Click the buttons below to deploy this project to the corresponding platform:
 
 | Vercel | Netlify |
 | :---: | :---: |
-| [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/LegspCpd/openlist-next) | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/LegspCpd/openlist-next) |
+| [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FLegspCpd%2Fopenlist-next&project-name=openlist-next&env=JWT_SECRET,ADMIN_PASS&envDescription=Only%20these%20two%20are%20needed.%20JWT_SECRET%3A%20run%20%60openssl%20rand%20-hex%2032%60.%20ADMIN_PASS%3A%20your%20admin%20password%2C%20it%20skips%20the%20setup%20wizard.&envLink=https%3A%2F%2Fgithub.com%2FLegspCpd%2Fopenlist-next%2Fblob%2Fmain%2Freadmes%2FREADME_en.md%23environment-variables | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/LegspCpd/openlist-next) |
 
 </div>
 
-After deployment you still need to set environment variables; `JWT_SECRET` is required (`openssl rand -hex 32`). See [Environment Variables](#environment-variables) for what each one does and where to put it.
-
-- EdgeOne: [Global Console](https://console.edgeone.ai/makers) · [China Console](https://console.cloud.tencent.com/edgeone/makers)
-- Cloudflare: [Worker Dashboard](https://dash.cloudflare.com/)
-- Vercel: Project Settings → Environment Variables
-- Netlify: Site configuration → Environment variables
+Vercel's deploy page asks for exactly two variables: `JWT_SECRET` (generate with `openssl rand -hex 32`) and `ADMIN_PASS` (the admin password; setting it skips the setup wizard on first visit). Everything else can stay empty until you use the feature it belongs to - see [Environment Variables](#environment-variables).
 
 > [!IMPORTANT]
 > If Cloudflare shows "cannot fetch repository content", first [Fork](https://github.com/LegspCpd/openlist-next/fork) this repository, then deploy by connecting to the GitHub repository.
@@ -135,12 +130,19 @@ For details, see the [External Storage Configuration Guide](../docs/EXTERNAL_STO
 
 Where to put them: Cloudflare in Settings → Variables and Secrets; EdgeOne in the project's environment variables; Vercel / Netlify in the project settings; Node / Docker in the `.env` file at the root.
 
-### Variable reference
+### These two are all you need
 
 | Variable | Required? | Notes |
 |---|---|---|
 | `JWT_SECRET` | **Required** | Signs sessions, encrypts credentials, authenticates scheduled tasks. Generate with `openssl rand -hex 32` |
 | `ADMIN_PASS` | Optional | Set it to skip the setup wizard and create the admin account with this password |
+
+You do not need any of the others. Set a variable only when you use the feature it belongs to.
+
+### Fill these when you need them
+
+| Variable | When to fill | Notes |
+|---|---|---|
 | `DB_DRIVER` | Optional, `auto` | Where data is stored. `auto` tries the external database first, then platform-native storage; use it when unsure. Values: `kv` `d1` `r2` `blob` `cfkv` `do` `neon` `turso` `pgrest` `pghttp` `mysqlhttp` `upstash` `s3` `hyperdrive` `netlifyblobs` `mysql` (Node only) |
 | `DB_FORMAT` | Optional, `map` | `map` keeps the whole store in one JSON — fewest requests; `key` stores one record per entity, lighter than `map` when there are many; `sql` uses relational tables and can share a database with the Go version of OpenList |
 | `DATABASE_URL` | With an external database | Generic connection string; the vendor is detected from the protocol and hostname. Usually this one is enough |

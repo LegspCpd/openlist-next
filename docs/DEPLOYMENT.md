@@ -205,7 +205,11 @@ EO_KV_URLS=https://openlist.example.com
 
 ## 3. Vercel
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/LegspCpd/openlist-next)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FLegspCpd%2Fopenlist-next&project-name=openlist-next&env=JWT_SECRET,ADMIN_PASS&envDescription=Only%20these%20two%20are%20needed.%20JWT_SECRET%3A%20run%20%60openssl%20rand%20-hex%2032%60.%20ADMIN_PASS%3A%20your%20admin%20password%2C%20it%20skips%20the%20setup%20wizard.&envLink=https%3A%2F%2Fgithub.com%2FLegspCpd%2Fopenlist-next%23%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F)
+
+部署页只会问两个变量：`JWT_SECRET`（必填，用 `openssl rand -hex 32` 生成）和 `ADMIN_PASS`
+（选填，管理员密码，填了就跳过安装向导）。其余变量都留空即可 —— 用到哪个功能再填哪个，
+见 [README 的「环境变量」章](../README.md#环境变量)。
 
 Vercel 没有平台级 KV，**必须配置外部数据库**。最省事的方式：在部署页下方的
 **Marketplace Database Providers** 里「一键连接数据库」（Neon / Upstash /
@@ -230,10 +234,17 @@ pnpm run deploy:vercel -- --url https://<你的域名>
 
 | 字段 | 值 | 说明 |
 |---|---|---|
+| `installCommand` | `pnpm install --no-frozen-lockfile` | 前端产物从 GitHub 拉，本地 lockfile 可能与源仓库不同步 |
 | `buildCommand` | `pnpm run build` | 先拉官方前端产物，再打包后端 |
 | `outputDirectory` | `dist` | 前端静态资源目录 |
-| `functions["api/[...route].ts"]` | `runtime=nodejs22.x`, `maxDuration=60`, `memory=1024` | 后端入口；默认 10s 对大目录不够 |
+| `cleanUrls` | `true` | 去掉 URL 末尾的 `.html` |
 | `rewrites` | `/api`、`/d`、`/sd`、`/p` → `/api/[...route]`；其余 → `/index.html` | 后端路由 + SPA 回退 |
+
+> 这里刻意**不写 `functions` 块**。`functions.*.runtime` 只接受 npm 包名加版本
+> （如 `now-php@1.0.0`），写内置运行时（`nodejs22.x`）会让构建在校验阶段整体中止：
+> `Error: Function Runtimes must have a valid version`；Node 版本由 `package.json` 的
+> `engines.node`（`22.x`）决定。另外 `functions` 的 key 是 glob，`api/[...route].ts`
+> 里的方括号会被当成字符集，连它自己都匹配不到，写了也不生效。
 
 > `api/_makers.ts`（EdgeOne 云函数入口）与 `api/html.d.ts` **不会**被 Vercel
 > 当成函数：Vercel 会忽略 `/api` 下以下划线开头、以 `.` 开头、以 `.d.ts`
@@ -242,11 +253,12 @@ pnpm run deploy:vercel -- --url https://<你的域名>
 也可以手工配环境变量：
 
 ```bash
-# Project Settings → Environment Variables
+# Project Settings → Environment Variables —— 只有第一个是必填
 JWT_SECRET=<openssl rand -hex 32>
-DATABASE_URL=postgres://user:pass@ep-xxx.neon.tech/neondb
-DB_DRIVER=auto        # 留空即为 auto，会按变量自动识别
-DB_FORMAT=map
+ADMIN_PASS=<管理员密码>   # 选填，填了就跳过安装向导
+
+# 其余一律留空。接了外部数据库再填连接串，DB_DRIVER 保持默认的 auto 即可自动识别。
+DATABASE_URL=postgres://user:pass@ep-xxx.neon.tech/neondb   # 用得上再填
 ```
 
 > Vercel Functions 单次执行上限默认 10s（Pro 60s）。

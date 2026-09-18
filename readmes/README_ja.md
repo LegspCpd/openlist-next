@@ -60,16 +60,11 @@ OpenList Next は、複数のクラウドストレージ、オブジェクトス
 
 | Vercel | Netlify |
 | :---: | :---: |
-| [![Vercel でデプロイ](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/LegspCpd/openlist-next) | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/LegspCpd/openlist-next) |
+| [![Vercel でデプロイ](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FLegspCpd%2Fopenlist-next&project-name=openlist-next&env=JWT_SECRET,ADMIN_PASS&envDescription=Only%20these%20two%20are%20needed.%20JWT_SECRET%3A%20run%20%60openssl%20rand%20-hex%2032%60.%20ADMIN_PASS%3A%20your%20admin%20password%2C%20it%20skips%20the%20setup%20wizard.&envLink=https%3A%2F%2Fgithub.com%2FLegspCpd%2Fopenlist-next%2Fblob%2Fmain%2Freadmes%2FREADME_ja.md%23%25E7%2592%25B0%25E5%25A2%2583%25E5%25A4%2589%25E6%2595%25B0 | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/LegspCpd/openlist-next) |
 
 </div>
 
-デプロイ後は環境変数の設定が必要です。`JWT_SECRET` は必須（`openssl rand -hex 32` で生成）。各変数の意味と設定場所は[環境変数](#環境変数)を参照してください。
-
-- EdgeOne：[国際版コンソール](https://console.edgeone.ai/makers) · [中国版コンソール](https://console.cloud.tencent.com/edgeone/makers)
-- Cloudflare：[Worker 管理画面](https://dash.cloudflare.com/)
-- Vercel：プロジェクト設定 → Environment Variables
-- Netlify：Site configuration → Environment variables
+Vercel のデプロイ画面で聞かれるのは 2 つだけです：`JWT_SECRET`（`openssl rand -hex 32` で生成）と `ADMIN_PASS`（管理者パスワード。設定すると初回アクセス時のインストールウィザードを省略できます）。残りの変数は空のままで構いません。使う機能が出てきたときに設定してください。詳細は[環境変数](#環境変数)を参照。
 
 > [!IMPORTANT]
 > Cloudflare から「リポジトリの内容を取得できません」と表示された場合は、まず本リポジトリを [Fork](https://github.com/LegspCpd/openlist-next/fork) し、改めて「GitHub リポジトリに接続」する方法でデプロイしてください。
@@ -135,12 +130,19 @@ OpenList Next は、複数のクラウドストレージ、オブジェクトス
 
 設定場所：Cloudflare は Settings → Variables and Secrets、EdgeOne はプロジェクトの「環境変数」、Vercel / Netlify はプロジェクト設定、Node / Docker はルートの `.env` です。
 
-### 変数一覧
+### 設定するのはこの 2 つだけ
 
 | 変数名 | 設定 | 説明 |
 |---|---|---|
 | `JWT_SECRET` | **必須** | セッション署名、資格情報の暗号化、定期タスクの認証に使用。`openssl rand -hex 32` で生成 |
 | `ADMIN_PASS` | 任意 | 設定するとインストールウィザードを飛ばし、このパスワードで管理者アカウントを作成 |
+
+残りの変数は設定不要です。使う機能があるときだけ、その変数を設定してください。
+
+### 使うときだけ設定
+
+| 変数名 | 設定するとき | 説明 |
+|---|---|---|
 | `DB_DRIVER` | 任意、既定 `auto` | データの保存先。`auto` は「外部データベース → プラットフォーム標準ストレージ」の順に選びます。迷ったらこれ。指定可能：`kv` `d1` `r2` `blob` `cfkv` `do` `neon` `turso` `pgrest` `pghttp` `mysqlhttp` `upstash` `s3` `hyperdrive` `netlifyblobs` `mysql`（Node のみ） |
 | `DB_FORMAT` | 任意、既定 `map` | `map` は全体を 1 つの JSON として保存しリクエストが最も少なくて済みます。`key` はエンティティごとに 1 件で、多いときは `map` より通信量を抑えられます。`sql` はリレーショナルテーブルを使い、Go 版 OpenList と同じデータベースを共有できます |
 | `DATABASE_URL` | 外部 DB を使う場合 | 汎用の接続文字列。プロトコルとホスト名からベンダーを判別します。通常はこれ 1 つで十分 |

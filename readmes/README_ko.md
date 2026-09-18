@@ -60,16 +60,11 @@ OpenList Next는 여러 클라우드 드라이브, 오브젝트 스토리지, �
 
 | Vercel | Netlify |
 | :---: | :---: |
-| [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/LegspCpd/openlist-next) | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/LegspCpd/openlist-next) |
+| [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FLegspCpd%2Fopenlist-next&project-name=openlist-next&env=JWT_SECRET,ADMIN_PASS&envDescription=Only%20these%20two%20are%20needed.%20JWT_SECRET%3A%20run%20%60openssl%20rand%20-hex%2032%60.%20ADMIN_PASS%3A%20your%20admin%20password%2C%20it%20skips%20the%20setup%20wizard.&envLink=https%3A%2F%2Fgithub.com%2FLegspCpd%2Fopenlist-next%2Fblob%2Fmain%2Freadmes%2FREADME_ko.md%23%25ED%2599%2598%25EA%25B2%25BD-%25EB%25B3%2580%25EC%2588%2598 | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/LegspCpd/openlist-next) |
 
 </div>
 
-배포 후에는 환경 변수를 설정해야 합니다. `JWT_SECRET`은 필수(`openssl rand -hex 32`로 생성). 각 변수의 의미와 설정 위치는 [환경 변수](#환경-변수)를 참고하세요.
-
-- EdgeOne: [인터내셔널 콘솔](https://console.edgeone.ai/makers) · [중국 콘솔](https://console.cloud.tencent.com/edgeone/makers)
-- Cloudflare: [Worker 백엔드](https://dash.cloudflare.com/)
-- Vercel: 프로젝트 설정 → Environment Variables
-- Netlify: Site configuration → Environment variables
+Vercel 배포 페이지에서 묻는 변수는 두 개뿐입니다: `JWT_SECRET`(`openssl rand -hex 32`로 생성)과 `ADMIN_PASS`(관리자 비밀번호. 설정하면 첫 접속 시 설치 마법사를 건너뜁니다). 나머지 변수는 비워 두면 되고, 쓰는 기능이 생길 때 설정하면 됩니다. 자세한 내용은 [환경 변수](#환경-변수)를 참고하세요.
 
 > [!IMPORTANT]
 > Cloudflare에서 「저장소 콘텐츠를 가져올 수 없음」이 표시되면, 먼저 본 저장소를 [Fork](https://github.com/LegspCpd/openlist-next/fork)한 뒤 「GitHub 저장소 연결」 방식으로 배포하세요.
@@ -135,12 +130,19 @@ OpenList Next는 여러 클라우드 드라이브, 오브젝트 스토리지, �
 
 설정 위치: Cloudflare는 Settings → Variables and Secrets, EdgeOne은 프로젝트의 「환경 변수」, Vercel / Netlify는 프로젝트 설정, Node / Docker는 루트의 `.env` 파일입니다.
 
-### 변수 일람
+### 이 두 개만 설정하면 됩니다
 
 | 변수 이름 | 필수 여부 | 설명 |
 |---|---|---|
 | `JWT_SECRET` | **필수** | 세션 서명, 자격 증명 암호화, 정기 작업 인증에 사용. `openssl rand -hex 32`로 생성 |
 | `ADMIN_PASS` | 선택 | 설정하면 설치 마법사를 건너뛰고 이 비밀번호로 관리자 계정을 만듭니다 |
+
+나머지 변수는 설정하지 않아도 됩니다. 쓰는 기능이 있을 때만 해당 변수를 설정하세요.
+
+### 필요할 때 설정
+
+| 변수 이름 | 언제 설정하나 | 설명 |
+|---|---|---|
 | `DB_DRIVER` | 선택, 기본 `auto` | 데이터 저장 위치. `auto`는 「외부 데이터베이스 → 플랫폼 기본 스토리지」 순으로 고릅니다. 확실치 않으면 그대로 두세요. 값: `kv` `d1` `r2` `blob` `cfkv` `do` `neon` `turso` `pgrest` `pghttp` `mysqlhttp` `upstash` `s3` `hyperdrive` `netlifyblobs` `mysql`(Node 전용) |
 | `DB_FORMAT` | 선택, 기본 `map` | `map`은 전체를 JSON 하나로 저장해 요청이 가장 적고, `key`는 엔티티마다 한 건이라 엔티티가 많을 때 `map`보다 가볍습니다. `sql`은 관계형 테이블을 쓰며 Go 버전 OpenList와 같은 데이터베이스를 공유할 수 있습니다 |
 | `DATABASE_URL` | 외부 DB를 쓸 때 | 범용 연결 문자열. 프로토콜과 호스트명으로 벤더를 알아냅니다. 보통 이 한 줄이면 충분 |
