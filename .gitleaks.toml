@@ -78,3 +78,155 @@ regexes = [
   '''91d4b94689012345abcdef6789012345''',
   '''AKIAIOSFODNN7EXAMPLE''',
 ]
+
+# ── 4. 补充检测规则：AI / 大模型与常见云厂商密钥 ──────────────────────────
+# 上面的 useDefault=true 已继承 gitleaks 官方 700+ 条规则（AWS / Google / GitHub /
+# Stripe / Slack / 私钥 等通用密钥都已覆盖）。下面这一组是**叠加**在默认规则之上的
+# 「AI / LLM 提供商密钥」专项，主要补全官方默认集里没有、或本项目语境下尤其该拦的几种：
+#   - 各类以 sk- / sk_ 开头的 AI Key（OpenAI / Anthropic / DeepSeek / OpenRouter /
+#     Groq / Mistral / Cohere 等新提供商都长这个样），先用一条宽松的 `sk[-_]`
+#     通配兜住，再对具体提供商单独写更紧的规则；
+#   - 腾讯云 SecretId / SecretKey（本项目是腾讯云 EdgeOne 体系，相关密钥很常见）；
+#   - Google / HuggingFace / Telegram / npm / SendGrid / Discord / Cloudflare /
+#     Twilio 等常用 API Key。
+# 命中后由上面的 [[allowlists]] 按值豁免已知误报（测试假值、上游公开客户端常量）。
+# 全部失败方向安全：多报（误报）不会漏报真泄露。
+
+[[rules]]
+id = "olv-ai-sk-generic"
+description = "任意以 sk- / sk_ 开头的 AI / LLM 密钥（OpenAI / Anthropic / DeepSeek 等通用兜底）"
+regex = '''[sS][kK][-_][0-9a-zA-Z]{20,}'''
+tags = ["ai", "llm", "api-key"]
+
+[[rules]]
+id = "olv-anthropic"
+description = "Anthropic / Claude API Key（sk-ant- 开头）"
+regex = '''sk-ant-[a-zA-Z0-9\-]{20,}'''
+tags = ["ai", "anthropic", "api-key"]
+
+[[rules]]
+id = "olv-openrouter"
+description = "OpenRouter API Key（sk-or-v1- 开头）"
+regex = '''sk-or-v1-[0-9a-f]{64}'''
+tags = ["ai", "openrouter", "api-key"]
+
+[[rules]]
+id = "olv-groq"
+description = "Groq API Key（gsk_ 开头）"
+regex = '''gsk_[0-9a-zA-Z]{20,}'''
+tags = ["ai", "groq", "api-key"]
+
+[[rules]]
+id = "olv-mistral"
+description = "Mistral API Key（mistral. 开头）"
+regex = '''(?i)mistral\.[0-9a-zA-Z]{20,}'''
+tags = ["ai", "mistral", "api-key"]
+
+[[rules]]
+id = "olv-cohere"
+description = "Cohere API Key（lk_ 开头）"
+regex = '''(?i)lk_[0-9a-zA-Z]{32}'''
+tags = ["ai", "cohere", "api-key"]
+
+[[rules]]
+id = "olv-deepseek"
+description = "DeepSeek API Key（sk- 后接 32 位十六进制）"
+regex = '''(?i)sk-[a-f0-9]{32}'''
+tags = ["ai", "deepseek", "api-key"]
+
+[[rules]]
+id = "olv-google-api"
+description = "Google API Key（AIza 开头）"
+regex = '''AIza[0-9A-Za-z_\-]{35}'''
+tags = ["google", "api-key"]
+
+[[rules]]
+id = "olv-google-oauth"
+description = "Google OAuth Access Token（ya29. 开头）"
+regex = '''ya29\.[0-9A-Za-z\-_]+'''
+tags = ["google", "oauth", "token"]
+
+[[rules]]
+id = "olv-tencent-secret-id"
+description = "腾讯云 SecretId（AKID 开头）"
+regex = '''AKID[A-Za-z0-9]{32}'''
+tags = ["tencent", "cloud", "secret-id"]
+
+[[rules]]
+id = "olv-tencent-secret-key"
+description = "腾讯云 SecretKey（环境变量 TENCENTCLOUD_SECRET_KEY 赋值）"
+regex = '''(?i)TENCENTCLOUD_SECRET_KEY["'\s:=]+[0-9A-Za-z/+]{20,}'''
+tags = ["tencent", "cloud", "secret-key"]
+
+[[rules]]
+id = "olv-github-pat"
+description = "GitHub Personal Access Token（ghp_/gho_/ghu_/ghs_/ghr_/github_pat_）"
+regex = '''(?:ghp|gho|ghu|ghs|ghr)_[0-9a-zA-Z]{36}|github_pat_[0-9a-zA-Z_]{22,}'''
+tags = ["github", "token"]
+
+[[rules]]
+id = "olv-gitlab-pat"
+description = "GitLab Personal Access Token（glpat- 开头）"
+regex = '''glpat-[0-9a-zA-Z_\-]{20}'''
+tags = ["gitlab", "token"]
+
+[[rules]]
+id = "olv-stripe"
+description = "Stripe Secret / Restricted Key（sk_live_ / rk_live_ 开头）"
+regex = '''(?i)(?:sk|rk)_live_[0-9a-zA-Z]{24}'''
+tags = ["stripe", "api-key"]
+
+[[rules]]
+id = "olv-slack"
+description = "Slack Token（xoxb-/xoxp-/xoxa-/xoxr-/xoxs- 开头）"
+regex = '''xox[baprs]-[0-9a-zA-Z\-]{10,}'''
+tags = ["slack", "token"]
+
+[[rules]]
+id = "olv-telegram"
+description = "Telegram Bot Token（<id>:<hash> 形式）"
+regex = '''\d{8,10}:[0-9A-Za-z\-_]{35}'''
+tags = ["telegram", "bot", "token"]
+
+[[rules]]
+id = "olv-huggingface"
+description = "Hugging Face Token（hf_ 开头）"
+regex = '''hf_[0-9a-zA-Z]{34}'''
+tags = ["huggingface", "token"]
+
+[[rules]]
+id = "olv-npm"
+description = "npm Token（npm_ 开头）"
+regex = '''npm_[0-9A-Za-z]{36}'''
+tags = ["npm", "token"]
+
+[[rules]]
+id = "olv-sendgrid"
+description = "SendGrid API Key（SG.<id>.<key> 形式）"
+regex = '''SG\.[0-9A-Za-z_\-]{22}\.[0-9A-Za-z_\-]{43}'''
+tags = ["sendgrid", "api-key"]
+
+[[rules]]
+id = "olv-discord"
+description = "Discord Bot / User Token"
+regex = '''[MN][A-Za-z0-9]{23,25}\.[A-Za-z0-9_\-]{6,}\.[A-Za-z0-9_\-]{27,}'''
+tags = ["discord", "token"]
+
+[[rules]]
+id = "olv-cloudflare"
+description = "Cloudflare API Token（cf_api_token / cloudflare_api_token 赋值）"
+regex = '''(?i)(?:cf_api_token|cloudflare_api_token)["'\s:=]+[0-9a-zA-Z]{40,}'''
+tags = ["cloudflare", "api-token"]
+
+[[rules]]
+id = "olv-twilio"
+description = "Twilio API Key SID（SK 开头 + 32 位十六进制）"
+regex = '''SK[0-9a-fA-F]{32}'''
+tags = ["twilio", "api-key"]
+
+[[rules]]
+id = "olv-generic-credential"
+description = "通用兜底：KEY/TOKEN/SECRET/PASSWORD 等赋值且熵值偏高（捕捉默认规则未覆盖的未知提供商）"
+regex = '''(?i)(?:api[_-]?key|secret|token|password|passwd|access[_-]?key|private[_-]?key)["'\s:=]+[0-9a-zA-Z\/\+]{16,}'''
+entropy = 4.0
+tags = ["generic", "api-key", "secret"]
