@@ -78,12 +78,12 @@ OpenList-Worker est un portage TypeScript + Serverless du projet officiel [OpenL
 
 - **Disques cloud chinois** : Alibaba Cloud Drive (plateforme ouverte/partage), Quark Cloud (plateforme ouverte/version UC TV), Baidu Netdisk (albums), 115 Cloud (plateforme ouverte/partage), 123 Cloud (plateforme ouverte/partage), Tianyi Cloud (189/PC/TV), China Mobile Cloud (139/Hecaiyun), Wo Cloud, Xunlei Cloud, Tencent Weiyun, Lanzou Cloud, PikPak (partage), Doubao Cloud, Guangya Cloud, Chaoxing Group Cloud, Lenovo NAS (partage), Teambition Cloud, WPS Cloud, Alibaba Docs, HalalCloud, MediaTrack, etc.
 - **Disques cloud internationaux** : Google Drive (albums), OneDrive (application/lien de partage), Dropbox, MEGA, MediaFire, Proton Drive, Yandex Disk, Degoo, Bunny Storage, TeraBox, etc.
-- **Stockage d'objets** : compatible S3 (AWS/OSS/COS/MinIO, etc.), UPYUN USS, Azure Blob, WebDAV, FTP, SFTP, SMB, IPFS, etc.
+- **Stockage d'objets** : compatible S3 (AWS/OSS/COS/MinIO, etc.), UPYUN USS, Azure Blob, WebDAV, IPFS, etc.
 - **Hébergement de code** : GitHub, GitHub Releases, CNB Releases
 - **Logiciels de cloud disque** : OpenList (partage), AList V3, Cloudreve V3/V4, Kodbox (Kedaoyun), Seafile, Teldrive, Febbox, etc.
 - **Autres pilotes** : NetEase Cloud Music, Misskey, Emby, hébergement d'images Cloudflare, etc.
 
-Outre les stockages réels ci-dessus, des pilotes virtuels/fonctionnels tels que `Local`, `Alias`, `UrlTree`, `AutoIndex`, `Strm`, `Crypt`, `Virtual`, `Chunk` sont également fournis, utilisables pour le montage local, les alias d'adresse, les listes d'URL, le stockage chiffré et le découpage (chunking).
+Outre les stockages réels ci-dessus, des pilotes virtuels/fonctionnels tels que `Alias`, `UrlTree`, `AutoIndex`, `Strm`, `Crypt`, `Virtual`, `Chunk` sont également fournis, utilisables pour les alias d'adresse, les listes d'URL, le stockage chiffré et le découpage (chunking).
 
 ### Capacités principales
 

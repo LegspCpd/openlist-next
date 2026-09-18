@@ -4042,11 +4042,39 @@ const driverConfigs: Record<string, any> = {
   },
 }
 
+/**
+ * 只在 Node / Docker 里跑得起来的驱动，边缘运行时不下发：
+ *   - FTP / SFTP 走原生 TCP，边缘构建会把 drivers/{ftp,sftp} 整个换成「构造即抛错」的空实现
+ *   - SMB 依赖原生 smb2 模块，边缘装不上
+ * 这几种列进「新增存储」的下拉里，用户只会选完、填完，保存时才发现报错。
+ *
+ * 只过滤下发给前端的那份清单：driverConfigs 本身保持完整，
+ * 否则 normalizeDriver() 的名字匹配和 /driver/info 会跟着变。
+ */
+const NODE_ONLY_DRIVERS = ["FTP", "SFTP", "SMB"]
+
+/** 当前是否跑在 Node（含容器）里；判定方式与 store/driver/mysql.ts、drivers/smb/driver.ts 一致 */
+function isNodeRuntime(): boolean {
+  return typeof process !== "undefined" && process.release?.name === "node"
+}
+
 adminRouter.get("/driver/list", (c) => {
+  if (isNodeRuntime()) {
+    return c.json({
+      code: 200,
+      message: "success",
+      data: driverConfigs,
+    })
+  }
+  const edgeSafeDriverConfigs = Object.fromEntries(
+    Object.entries(driverConfigs).filter(
+      ([driverName]) => !NODE_ONLY_DRIVERS.includes(driverName),
+    ),
+  )
   return c.json({
     code: 200,
     message: "success",
-    data: driverConfigs,
+    data: edgeSafeDriverConfigs,
   })
 })
 

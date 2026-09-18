@@ -78,12 +78,12 @@ OpenList-Worker는 공식 [OpenListTeam/OpenList](https://github.com/OpenListTea
 
 - **국내 네트워크 드라이브**: 알리바바 클라우드 드라이브(오픈 플랫폼/공유), 콰르크 네트워크 드라이브(오픈 플랫폼/UC TV 버전), 바이두 네트워크 드라이브(앨범), 115 네트워크 드라이브(오픈 플랫폼/공유), 123 클라우드 드라이브(오픈 플랫폼/공유), 티안이 클라우드 드라이브(189/PC/TV), 차이나 모바일 클라우드 드라이브(139/허차이윈), 워자 클라우드 드라이브, 선더 네트워크 드라이브, 텐센트 Weiyun, 란조우윈, PikPak(공유), 더우바오 네트워크 드라이브, 광야 디스크, 차오싱 그룹 네트워크 드라이브, 레노버 NAS 공유, Teambition 네트워크 드라이브, WPS 네트워크 드라이브, 알리바바 문서, HalalCloud, MediaTrack 등
 - **해외 네트워크 드라이브**: Google Drive(앨범), OneDrive(앱/공유 링크), Dropbox, MEGA, MediaFire, Proton Drive, Yandex Disk, Degoo, Bunny Storage, TeraBox 등
-- **객체 스토리지**: S3 호환(AWS/OSS/COS/MinIO 등), Upaiyun USS, Azure Blob, WebDAV, FTP, SFTP, SMB, IPFS 등
+- **객체 스토리지**: S3 호환(AWS/OSS/COS/MinIO 등), Upaiyun USS, Azure Blob, WebDAV, IPFS 등
 - **코드 호스팅**: GitHub, GitHub Releases, CNB Releases
 - **네트워크 드라이브 프로그램**: OpenList(공유), AList V3, Cloudreve V3/V4, Kodbox(커다오윈), Seafile, Teldrive, Febbox 등
 - **기타 드라이버**: NetEase Cloud Music, Misskey, Emby, Cloudflare 이미지 호스팅 등
 
-위의 실제 스토리지 외에도 `Local`, `Alias`, `UrlTree`, `AutoIndex`, `Strm`, `Crypt`, `Virtual`, `Chunk` 같은 가상/기능형 드라이버를 제공하여 로컬 마운트, 주소 별칭, URL 목록, 암호화 저장, 청크 분할 등의 상황에 사용할 수 있습니다.
+위의 실제 스토리지 외에도 `Alias`, `UrlTree`, `AutoIndex`, `Strm`, `Crypt`, `Virtual`, `Chunk` 같은 가상/기능형 드라이버를 제공하여 주소 별칭, URL 목록, 암호화 저장, 청크 분할 등의 상황에 사용할 수 있습니다.
 
 ### 핵심 기능
 
