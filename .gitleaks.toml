@@ -60,6 +60,7 @@ regexes = [
   '''da2-vs6twz5vnjdavpqndtbzg3prra''',
   '''bR4SJwOkvnG5WvVJ''',
   '''0CoJUm6Qyw8W8jud''',
+  '''lanZouY-disk-app''',
 ]
 
 # ── 3. 测试与本地检查脚本里的占位值 ────────────────────────────────────────
@@ -77,6 +78,7 @@ regexes = [
   '''0123456789abcdef0123456789abcdef''',
   '''91d4b94689012345abcdef6789012345''',
   '''AKIAIOSFODNN7EXAMPLE''',
+  '''test_client_secret''',
 ]
 
 # ── 4. 补充检测规则：AI / 大模型与常见云厂商密钥 ──────────────────────────
@@ -224,7 +226,63 @@ description = "Twilio API Key SID（SK 开头 + 32 位十六进制）"
 regex = '''SK[0-9a-fA-F]{32}'''
 tags = ["twilio", "api-key"]
 
-# 注：通用兜底（KEY/TOKEN/SECRET/PASSWORD 赋值 + 高熵）**故意不写**。
-# 实测它会把源码里的 `generateSecureToken` / `ThunderTokenResp` / `overrideClientSecret`
-# 这类变量名、函数名、测试常量当成泄露报出来（误报），直接让 CI 红。通用密钥的
-# 兜底由 gitleaks 官方默认规则集（useDefault=true）负责，比这条更准，不必重复造。
+# ── 5. 补充检测规则：更具通用性的密钥形态与文件 ───────────────────────────
+# 这一组补全「不绑定某家厂商、但同样是高危泄露」的形态，以及官方默认集覆盖不到、
+# 本项目语境下尤其该拦的几种：
+#   - PEM 私钥块标记（BEGIN ... PRIVATE KEY）—— 真私钥几乎必然带这个头；
+#   - JWT 三段式（eyJ.xxx.eyJ.xxx.xxx）—— 别处生成/粘贴的长效令牌；
+#   - Google OAuth Client Secret（GOCSPX-）；
+#   - Slack Incoming Webhook URL（hooks.slack.com/services/...）；
+#   - Azure Storage 连接串里的 AccountKey；
+#   - AWS_SESSION_TOKEN 这类临时凭据；
+#   - **带赋值约束的通用密钥**：变量名以 api_key/secret/token/password/access_key
+#     等结尾、且紧跟 `=`/`:` 与一段高熵字符串。要求变量名是「完整词 + 边界」，
+#     所以 `generateSecureToken` / `overrideClientSecret` 这种标识符里的子串不会被
+#     命中（它们没有词边界、后面也不跟赋值），这是相对「纯关键词兜底」更稳的做法。
+
+[[rules]]
+id = "olv-private-key"
+description = "PEM 私钥块标记（RSA / EC / OPENSSH / PGP / DSA 等 PRIVATE KEY）"
+regex = '''-----BEGIN (?:RSA |EC |OPENSSH |PGP |DSA |ENCRYPTED )?PRIVATE KEY-----'''
+tags = ["private-key", "pem"]
+
+[[rules]]
+id = "olv-jwt"
+description = "JSON Web Token（eyJ 三段式，Base64url 头部/载荷/签名）"
+regex = '''eyJ[A-Za-z0-9_\-]{10,}\.eyJ[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}'''
+tags = ["jwt", "token"]
+
+[[rules]]
+id = "olv-google-oauth-client"
+description = "Google OAuth Client Secret（GOCSPX- 开头）"
+regex = '''GOCSPX-[0-9A-Za-z_\-]{28}'''
+tags = ["google", "oauth", "secret"]
+
+[[rules]]
+id = "olv-slack-webhook"
+description = "Slack Incoming Webhook URL（hooks.slack.com/services/...）"
+regex = '''https://hooks\.slack\.com/services/T[A-Z0-9]+/B[A-Z0-9]+/[A-Za-z0-9]+'''
+tags = ["slack", "webhook"]
+
+[[rules]]
+id = "olv-azure-storage"
+description = "Azure Storage 连接串中的 AccountKey（Base64 长串）"
+regex = '''(?i)AccountKey=[A-Za-z0-9+/=]{40,}'''
+tags = ["azure", "storage", "secret"]
+
+[[rules]]
+id = "olv-aws-session"
+description = "AWS 临时会话令牌（AWS_SESSION_TOKEN 赋值）"
+regex = '''(?i)AWS_SESSION_TOKEN["'\s:=]+[0-9A-Za-z/+]{16,}'''
+tags = ["aws", "session-token"]
+
+[[rules]]
+id = "olv-assigned-secret"
+description = "硬编码到代码里的密钥字面量：密钥类变量名（api_key/secret/token/password/access_key 等，完整词边界）被赋值为一段带引号的字符串。要求带引号，避免命中 this.addition.token 这类变量互赋值。"
+regex = '''(?i)\b(?:api[_-]?key|secret|client[_-]?secret|access[_-]?key|private[_-]?key|token|password|passwd|auth[_-]?token|encryption[_-]?key)\b["'\s]*[:=]\s*["']([0-9A-Za-z/+_.\-]{16,})["']'''
+tags = ["generic", "assigned-secret"]
+
+# 注：早期那条「纯关键词兜底（KEY/TOKEN/SECRET 赋值 + 高熵，无词边界约束）」已弃用——
+# 它会把 `generateSecureToken` / `overrideClientSecret` 这类标识符子串误报为泄露，直接让 CI 红。
+# 上方 `olv-assigned-secret` 是其替代：强制变量名为「完整词 + 边界」且紧跟赋值，
+# 既能抓到真硬编码密钥，又躲开了变量名误报。通用密钥兜底仍由官方默认规则集负责。
